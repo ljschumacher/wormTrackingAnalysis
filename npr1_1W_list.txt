@@ -1,0 +1,14 @@
+/data2/shared/data/Results/recording 28.7 green 100-200 TIFF/recording 28.7 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 29.5 green 100-200 TIFF/recording 29.5 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 29.9 green 100-200 TIFF/recording 29.9 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 31.3 green 100-200 TIFF/recording 31.3 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 32.7 green 100-200 TIFF/recording 32.7 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 33.8 green 100-200 TIFF/recording 33.8 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 34.6 green 100-200 TIFF/recording 34.6 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 35.7 green 100-200 TIFF/recording 35.7 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 35.8 green 100-200 TIFF/recording 35.8 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 37.7 green 100-200 TIFF/recording 37.7 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 38.6 green 100-200 TIFF/recording 38.6 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 39.2 green 100-200 TIFF/recording 39.2 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 39.3 green 100-200 TIFF/recording 39.3 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording 42.2 green 100-200 TIFF/recording 42.2 green_X1_skeletons.hdf5
