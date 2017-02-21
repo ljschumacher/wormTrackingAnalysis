@@ -3,4 +3,3 @@
 /data2/shared/data/twoColour/Results/recording53/recording53.3g100-250TIFF/recording53.3g_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording54/recording54.5g100-250TIFF/recording54.5g_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording55/recording55.4g100-250TIFF/recording55.4g_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording56/recording56.4g100-250TIFF/recording56.4g_X1_skeletons.hdf5
