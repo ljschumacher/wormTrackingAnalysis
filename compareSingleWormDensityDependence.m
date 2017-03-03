@@ -91,7 +91,7 @@ for strainCtr = 1:length(strains)
     xlabel(speedFig.Children,'speed (\mum/s)')
     ylabel(speedFig.Children,'P')
     legend(wormnums)
-    figurename = ['singleWorm/' strains{strainCtr} '_speeddistributions'];
+    figurename = ['figures/singleWorm/' strains{strainCtr} '_speeddistributions'];
     exportfig(speedFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

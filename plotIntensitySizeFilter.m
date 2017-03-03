@@ -22,7 +22,7 @@ ylabel('P')
 xlabel('pixel intensity')
 title(figurename,'FontWeight','normal')
 set(SIfig,'PaperUnits','centimeters')
-filename = ['diagnostics/sizeVintensity_' strrep(figurename,' ','_')];
+filename = ['figures/diagnostics/sizeVintensity_' strrep(figurename,' ','_')];
 exportfig(SIfig,[filename '.eps'],exportOptions)
 system(['epstopdf ' filename '.eps']);
 system(['rm ' filename '.eps']);

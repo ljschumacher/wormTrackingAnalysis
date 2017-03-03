@@ -109,7 +109,7 @@ for numCtr = 1:length(wormnums)
                 xlabel('x (mm)'), ylabel('y (mm)')
                 title([strains{strainCtr} ' ' strrep(filename(end-38:end-23),'/','')])
                 set(siteVisitFig,'PaperUnits','centimeters')
-                figurename = ['individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-38:end-23),' ',''),'/','') '_sitesVisited'];
+                figurename = ['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-38:end-23),' ',''),'/','') '_sitesVisited'];
                 exportfig(siteVisitFig,[figurename '.eps'],exportOptions)
                 system(['epstopdf ' figurename '.eps']);
                 system(['rm ' figurename '.eps']);
