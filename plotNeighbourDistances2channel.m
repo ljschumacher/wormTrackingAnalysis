@@ -37,6 +37,8 @@ for numCtr = 1:length(wormnums)
         numFiles = length(filenames_g);
         assert(length(filenames_r)==numFiles,'Number of files for two channels do not match.')
         pairDistances = cell(numFiles,1);
+        nnDistances = cell(numFiles,1);
+        nnnDistances = cell(numFiles,1);
         clustercount = cell(numFiles,1);
         for fileCtr = 1:numFiles
             filename_g = filenames_g{fileCtr};
@@ -72,15 +74,25 @@ for numCtr = 1:length(wormnums)
                 logical(trajData_r.is_good_skel);
             %% calculate stats
             pairDistances{fileCtr} = cell(numFrames,1);
+            nnDistances{fileCtr} = cell(numFrames,1);
+            nnnDistances{fileCtr} = cell(numFrames,1);
             for frameCtr = 1:numFrames
                 frame = framesAnalyzed(frameCtr);
                 [x_g, y_g] = getWormPositions(trajData_g, frame);
                 [x_r, y_r] = getWormPositions(trajData_r, frame);
                 if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
-                    redToGreenDistances = pdist2([x_r y_r],[x_g y_g]).*pixelsize; % distance of every red worm to every green
+                    redToGreenDistances = sort(pdist2([x_r y_r],[x_g y_g]).*pixelsize,2); % distance of every red worm to every green
                     pairDistances{fileCtr}{frameCtr} = redToGreenDistances(:);
+                    nnDistances{fileCtr}{frameCtr} = redToGreenDistances(:,1); % nearest neighbours
+                    if size(redToGreenDistances,2)>1
+                        nnnDistances{fileCtr}{frameCtr} = redToGreenDistances(:,2); % next-nearest neighbours
+                    else
+                        nnnDistances{fileCtr}{frameCtr} = NaN(size(x_r));
+                    end
                 else
-                    pairDistances{fileCtr}{frameCtr} = single(NaN);
+                    pairDistances{fileCtr}{frameCtr} = NaN;
+                    nnDistances{fileCtr}{frameCtr} = NaN;
+                    nnnDistances{fileCtr}{frameCtr} = NaN;
                 end
             end
             % count how many worms are within clusterthreshold
@@ -93,6 +105,21 @@ for numCtr = 1:length(wormnums)
             'DisplayStyle','stairs')
         histogram(clustFig.Children,vertcat(clustercount{:}),'Normalization','Probability',...
             'DisplayStyle','stairs')
+        % nearest vs next-nearest neighbours
+        nnDistances = cellfun(@(x) {vertcat(x{:})},nnDistances);
+        nnnDistances = cellfun(@(x) {vertcat(x{:})},nnnDistances);
+        nnFig = figure;
+        histogram2(vertcat(nnDistances{:}),vertcat(nnnDistances{:}),...
+            'Normalization','Probability','DisplayStyle','tile','EdgeColor','none')
+        xlim([0 4000]), ylim([0 4000])
+        title(nnFig.Children,[wormnum ' ' strains{strainCtr}],'FontWeight','normal');
+        set(nnFig,'PaperUnits','centimeters')
+        xlabel(nnFig.Children,'nn distance (\mum)')
+        ylabel(nnFig.Children,'nnn distance (\mum)')
+        figurename = ['nearestneighbourdistance_rg_' wormnum '_' strains{strainCtr}];
+        exportfig(nnFig,[figurename '.eps'],exportOptions)
+        system(['epstopdf ' figurename '.eps']);
+        system(['rm ' figurename '.eps']);
     end
     %% format and export figures
     title(distFig.Children,wormnum,'FontWeight','normal');
@@ -110,7 +137,7 @@ for numCtr = 1:length(wormnums)
     set(clustFig,'PaperUnits','centimeters')
     clustFig.Children.XLim = [0 40];
     clustFig.Children.YLim = [0 0.25];
-    xlabel(clustFig.Children,['number of neigbbours within ' num2str(clusterthreshold) '\mum'])
+    xlabel(clustFig.Children,['# neighbours within ' num2str(clusterthreshold) ' \mum'])
     ylabel(clustFig.Children,'P')
     legend(clustFig.Children,strains)
     figurename = ['clusthist_rg_' wormnum];

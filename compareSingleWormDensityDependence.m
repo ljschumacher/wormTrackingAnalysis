@@ -18,8 +18,8 @@ exportOptions = struct('Format','eps2',...
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'HA','npr1','N2'};
-wormnums = {'HD','40','1W'};
+strains = {'npr1','HA','N2'};
+wormnums = {'40','HD','1W'};
 intensityThresholds = [50, 40, 100];
 maxBlobSize = 1e4;
 plotDiagnostics = false;
