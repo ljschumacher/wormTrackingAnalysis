@@ -3,8 +3,8 @@
 /data2/shared/data/twoColour/Results/recording53/recording53.3r100-200TIFF/recording53.3r_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording54/recording54.5r100-150TIFF/recording54.5r_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording55/recording55.4r100-150TIFF/recording55.4r_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording57/recording57.2r100-150TIFF/recording57.2r_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording57/recording57.4r100-150TIFF/recording57.4r_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording58/recording58.3r100-150TIFF/recording58.3r_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording61/recording61.2r100-150TIFF/recording61.2r_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording62/recording62.2r100-150TIFF/recording62.2r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording57/recording57.2r100-200TIFF/recording57.2r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording57/recording57.4r100-200TIFF/recording57.4r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording58/recording58.3r100-200TIFF/recording58.3r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording61/recording61.2r100-200TIFF/recording61.2r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording62/recording62.2r100-200TIFF/recording62.2r_X1_skeletons.hdf5
