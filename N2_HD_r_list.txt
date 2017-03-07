@@ -8,3 +8,4 @@
 /data2/shared/data/twoColour/Results/recording58/recording58.5r100-200TIFF/recording58.5r_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording61/recording61.1r100-200TIFF/recording61.1r_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording63/recording63.1r100-200TIFF/recording63.1r_X1_skeletons.hdf5
+/data2/shared/data/twoColour/Results/recording63/recording63.2r100-200TIFF/recording63.2r_X1_skeletons.hdf5
