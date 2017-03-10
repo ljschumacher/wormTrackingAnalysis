@@ -17,7 +17,7 @@ hold on
 plot(intensityThreshold*[1 1],[0 maxBlobSize],'r--')
 plot([intensityThreshold 255],[maxBlobSize maxBlobSize],'r--')
 yyaxis right
-histogram(blobFeats.intensity_mean,'DisplayStyle','stairs','Normalization','Probability')
+histogram(blobFeats.intensity_mean,'DisplayStyle','stairs','Normalization','pdf')
 ylabel('P')
 xlabel('pixel intensity')
 title(figurename,'FontWeight','normal')
