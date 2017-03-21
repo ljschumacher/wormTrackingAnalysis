@@ -39,6 +39,7 @@ for strainCtr = 1:length(strains)
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
+            featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = h5readatt(filename,'/plate_worms','expected_fps');
             maxNumFrames = numel(unique(trajData.frame_number));
             numFrames = round(maxNumFrames/frameRate);
@@ -68,6 +69,10 @@ for strainCtr = 1:length(strains)
                     mindist{fileCtr}{frameCtr} = NaN;
                 end
             end
+            % find for which worms features have been calculated
+            featData.filtered = ismember(int32(features.worm_index),...
+                unique(trajData.worm_index_joined(trajData.filtered)));
+% % % %             % filter features for whether worms are lone or in cluster?
         end
         %% plot data
         % pool data from all frames for each file, then for all files
@@ -79,11 +84,10 @@ for strainCtr = 1:length(strains)
             loneWorms = horzcat(mindist{:})>=2500;  
             speedscatenated = speedscatenated(loneWorms);
         end
-        % filter for speeds
+        % plot speed distribution
         speedscatenated = speedscatenated(speedscatenated<=maxSpeed);
         histogram(speedscatenated(randperm(numel(speedscatenated),numSamples)),...
                 'DisplayStyle','stairs','Normalization','Probability','BinLimits',[0 maxSpeed])
-        %% also fix bins... or pool data from multiple recordings
     end
     %% format and export figures
     title(speedFig.Children,[strains{strainCtr} ', ' num2str(numSamples) ' samples'],'FontWeight','normal');
