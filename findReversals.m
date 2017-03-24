@@ -13,7 +13,8 @@ for revCtr = 1:length(revStartInd)
         revEndIndMatched(revCtr) = revEndInd(find(revEndInd>revStartInd(revCtr),1,'first'));
         if features.worm_index(revStartInd(revCtr)) ~= features.worm_index(revEndIndMatched(revCtr))
             % reversal 'end' is actually from a different worm, which means
-            % that the reversal end is not tracked
+            % that the reversal end is not tracked (at least not under the
+            % same identity)
             revEndIndMatched(revCtr) = NaN;
         end
     else % reversal still ongoing when tracking ends

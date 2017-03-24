@@ -1,11 +1,11 @@
-/data2/shared/data/Results/recording 31.7 green 100-350 TIFF/recording 31.7 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 32.1 green 100-350 TIFF/recording 32.1 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 32.2 green 100-350 TIFF/recording 32.2 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 33.1 green 100-350 TIFF/recording 33.1 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 34.7 green 100-350 TIFF/recording 34.7 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 35.3 green 100-350 TIFF/recording 35.3 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 36.1 green 100-350 TIFF/recording 36.1 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 37.4 green 100-350 TIFF/recording 37.4 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 40.3 green 100-350 TIFF/recording 40.3 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 41.3 green 100-350 TIFF/recording 41.3 green_X1_skeletons.hdf5
-/data2/shared/data/Results/recording 42.4 green 100-350 TIFF/recording 42.4 green_X1_skeletons.hdf5
+/data2/shared/data/Results/recording31.7g100-350/recording31.7g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording32.1g100-350/recording32.1g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording32.2g100-350/recording32.2g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording33.1g100-350/recording33.1g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording34.7g100-350/recording34.7g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording35.3g100-350/recording35.3g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording36.1g100-350/recording36.1g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording37.4g100-350/recording37.4g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording40.3g100-350/recording40.3g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording41.3g100-350/recording41.3g_X1_skeletons.hdf5
+/data2/shared/data/Results/recording42.4g100-350/recording42.4g_X1_skeletons.hdf5
