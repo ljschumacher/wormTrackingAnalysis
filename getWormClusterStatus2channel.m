@@ -14,7 +14,7 @@ function [ inCluster, loneWorms, rest ] = getWormClusterStatus2channel(...
 if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
     redToGreenDistances = pdist2([x_r y_r],[x_g y_g]).*pixelsize; % distance of every red worm to every green
     % find lone worms
-    mindist = min(redToGreenDistances,[],2);
+    mindist = min(redToGreenDistances,[],2)'; % transpose for conistency with getWormClusterStatus.m
     loneWorms = mindist>=maxNeighbourDist;
     % find worms in clusters
     numCloseNeighbours = sum(redToGreenDistances<inClusterRadius,2);
@@ -22,9 +22,9 @@ if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate 
     % rest is worms neither in cluster nor lone
     rest = ~loneWorms&~inCluster;
 else
-    inCluster = false(size(x_r));
-    loneWorms = false(size(x_r));
-    rest = true(size(x_r));
+    inCluster = false(size(x_r'));
+    loneWorms = false(size(x_r'));
+    rest = true(size(x_r'));
 end
 end
 

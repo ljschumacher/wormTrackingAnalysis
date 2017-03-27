@@ -17,9 +17,9 @@ if numel(x)>1 % need at least two worms in frame to calculate distances
     % rest is worms neither in cluster nor lone
     rest = ~loneWorms&~inCluster;
 else
-    inCluster = false(size(x));
-    loneWorms = false(size(x));
-    rest = true(size(x));
+    inCluster = false(size(x'));
+    loneWorms = false(size(x'));
+    rest = true(size(x'));
 end
 end
 
