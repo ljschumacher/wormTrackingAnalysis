@@ -19,14 +19,16 @@ exportOptions = struct('Format','eps2',...
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2'};
-wormnums = {'1W','40'};%,'HD'};
+wormnums = {'1W','40','HD'};
+intensityThresholds_g = [100, 60, 40];
+maxBlobSize_g = 1e4;
 midbodyIndcs = 19:33;
 plotColors = lines(length(wormnums));
 
 for strainCtr = 1:length(strains)
     revFreqFig = figure; hold on
-    revDurFig = figure; hold on
     for numCtr = 1:length(wormnums)
+        revDurFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
         filenames = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
@@ -47,28 +49,25 @@ for strainCtr = 1:length(strains)
             if ~strcmp(wormnum,'1W')
                 filename_g = filenames_g{fileCtr};
                 trajData_g = h5read(filename_g,'/trajectories_data');
+                % filter data
+                blobFeats_g = h5read(filename_g,'/blob_features');
+                trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
+                    (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
             end
             % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
-            maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = maxNumFrames;
-            framesAnalyzed = unique(trajData.frame_number);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                loneWorms = cell(numFrames,1);
-                inCluster = cell(numFrames,1);
-                for frameCtr = 1:numFrames
-                    frame = framesAnalyzed(frameCtr);
-                    %%% need to update this for 2 channel case
-                    [~, loneWorms_rr, ~] = ...
-                        getWormClusterStatus(trajData, frame, pixelsize, 1300, 500, 3);
-                    [inCluster{frameCtr}, loneWorms_rg, ~] = ...
-                    getWormClusterStatus2channel(trajData, trajData_g, frame, pixelsize, 1900, 500, 3);
-                    loneWorms{frameCtr} = loneWorms_rr&loneWorms_rg;
+                if ~isfield(trajData,'min_neighbor_dist_rr')||~isfield(trajData,'min_neighbor_dist_rg')||~isfield(trajData,'num_close_neighbours_rg')
+                    [trajData.min_neighbor_dist_rr, trajData.min_neighbor_dist_rg, trajData.num_close_neighbours_rg] ...
+                        = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
+                    % write stats to hdf5-file
+                    h5write(filename,'/min_neighbor_dist_rr',trajData.min_neighbor_dist_rr)
+                    h5write(filename,'/min_neighbor_dist_rr',trajData.min_neighbor_dist_rg)
+                    h5write(filename,'/num_close_neighbours_rg',trajData.num_close_neighbours_rg)
                 end
-                % pool data from all frames
-                loneWorms = horzcat(loneWorms{:});
-                inCluster = vertcat(inCluster{:});
+                loneWorms = trajData.min_neighbor_dist_rr>=1100&trajData.min_neighbor_dist_rg>=1600;
+                inCluster = trajData.num_close_neighbours_rg>=3;
             else
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
@@ -114,18 +113,33 @@ for strainCtr = 1:length(strains)
             reversaldurations_incluster{fileCtr} = revDuration(inclusterReversals)/frameRate;
         end
         %% plot data
+        boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
+            'Notch','off')
+        boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
+            'Notch','off','Colors','r')
+        revFreqFig.Children.XLim = [0 length(wormnums)+1];
+        %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
         reversaldurations_incluster = vertcat(reversaldurations_incluster{:});
         histogram(revDurFig.Children,reversaldurations_lone,0:1/3:30,...
             'Normalization','pdf','DisplayStyle','stairs','EdgeColor',plotColors(numCtr,:));
         histogram(revDurFig.Children,reversaldurations_incluster,0:1/3:30,...
             'Normalization','pdf','EdgeColor','none','FaceColor',plotColors(numCtr,:));
-        
-        boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
-            'Notch','off')
-        boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
-            'Notch','off')
-        revFreqFig.Children.XLim = [0 length(wormnums)+1];
+        %
+        title(revDurFig.Children,strains{strainCtr},'FontWeight','normal');
+        set(revDurFig,'PaperUnits','centimeters')
+        xlabel(revDurFig.Children,'time (s)')
+        ylabel(revDurFig.Children,'P')
+        revDurFig.Children.XLim = [0 15];
+        if ~strcmp(wormnum,'1W')
+            legend(revDurFig.Children,{'lone worms','in cluster'})
+        else
+            legend(revDurFig.Children,'single worms')
+        end
+        figurename = ['figures/' strains{strainCtr} '_' wormnum '_reversaldurations'];
+        exportfig(revDurFig,[figurename '.eps'],exportOptions)
+        system(['epstopdf ' figurename '.eps']);
+        system(['rm ' figurename '.eps']);
     end
     %% format and export figures
     title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
@@ -134,19 +148,10 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XTickLabel = wormnums;
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals/time';
-    revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/singleWorm/' strains{strainCtr} '_reversals'];
+    revFreqFig.Children.YLim = [0 15];
+    figurename = ['figures/' strains{strainCtr} '_reversals'];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
-    %
-    title(revDurFig.Children,strains{strainCtr},'FontWeight','normal');
-    set(revDurFig,'PaperUnits','centimeters')
-    xlabel(revDurFig.Children,'time (s)')
-    ylabel(revDurFig.Children,'P')
-    legend(revDurFig.Children,wormnums)
-    figurename = ['figures/singleWorm/' strains{strainCtr} '_reversaldurations'];
-    exportfig(revDurFig,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
+
 end

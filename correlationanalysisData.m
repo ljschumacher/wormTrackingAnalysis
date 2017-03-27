@@ -28,9 +28,9 @@ dircorrxticks = 0:50:250;
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'npr1','N2','HA'};
+strains = {'npr1','N2'};
 wormnums = {'40','HD'};
-intensityThresholds = [50, 40];
+intensityThresholds = [60, 40];
 maxBlobSize = 1e4;
 plotDiagnostics = false;
 visitfreqFig = figure; hold on
@@ -41,7 +41,7 @@ for numCtr = 1:length(wormnums)
         dircorrFig = figure; hold on
         poscorrFig = figure; hold on
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_list.txt']);
+        filenames = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
         numFiles = length(filenames);
         if wormnum == '40'
            visitfreq = cell(numFiles,1); 
@@ -50,7 +50,7 @@ for numCtr = 1:length(wormnums)
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
-            frameRate = h5readatt(filename,'/plate_worms','expected_fps');
+            frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
             numFrames = round(maxNumFrames/frameRate/5);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
@@ -99,7 +99,7 @@ for numCtr = 1:length(wormnums)
                 'alpha','transparency',1/max(numFiles,2),poscorrFig.Children)
             % heat map of sites visited - this only makes sense for 40 worm
             % dataset where we don't move the camera
-            if wormnum == '40'
+            if strcmp(wormnum,'40')&& plotDiagnostics
                 siteVisitFig = figure;
                 h=histogram2(trajData.coord_x*pixelsize/1000,trajData.coord_y*pixelsize/1000,...
                     'DisplayStyle','tile','EdgeColor','none','Normalization','probability');
@@ -126,10 +126,11 @@ for numCtr = 1:length(wormnums)
         %
         speedFig.Children.YLim = [0 400];
         speedFig.Children.XLim = [0 2000];
+        speedFig.Children.Box = 'on';
 %         set(speedFig.Children,'XTick',speedxticks,'XTickLabel',num2str(speedxticks'))
         ylabel(speedFig.Children,'speed (\mum/s)')
         xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
-        figurename = [strains{strainCtr} '_' wormnum '_speedvsneighbourdistance'];
+        figurename = ['figures/' strains{strainCtr} '_' wormnum '_speedvsneighbourdistance'];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -139,7 +140,7 @@ for numCtr = 1:length(wormnums)
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(dircorrFig.Children,'directional cross-correlation')
         xlabel(dircorrFig.Children,'distance between pair (\mum)')
-        figurename = [strains{strainCtr} '_' wormnum '_dircrosscorr'];
+        figurename = ['figures/' strains{strainCtr} '_' wormnum '_dircrosscorr'];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -148,7 +149,7 @@ for numCtr = 1:length(wormnums)
         poscorrFig.Children.XLim = [0 2000];
         ylabel(poscorrFig.Children,'radial distribution function g(r)')
         xlabel(poscorrFig.Children,'distance r (\mum)')
-        figurename = [strains{strainCtr} '_' wormnum '_radialdistributionfunction'];
+        figurename = ['figures/' strains{strainCtr} '_' wormnum '_radialdistributionfunction'];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -160,7 +161,7 @@ for numCtr = 1:length(wormnums)
         xlabel(visitfreqFig.Children,'site visit frequency, f')
         ylabel(visitfreqFig.Children,'probability p(f)')
         legend(visitfreqFig.Children,strains)
-        figurename = [wormnum '_visitfreq'];
+        figurename = ['figures/' wormnum '_visitfreq'];
         exportfig(visitfreqFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);

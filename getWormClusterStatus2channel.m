@@ -1,6 +1,6 @@
-function [ inCluster, loneWorms, rest ] = getWormClusterStatus2channel(...
+function [ numCloseNeighbours, mindist ] = getWormClusterStatus2channel(...
     trajData_r,trajData_g, frame,...
-    pixelsize, maxNeighbourDist, inClusterRadius, inClusterNeighbourNum)
+    pixelsize, inClusterRadius)
 % for a given frame, computes which worms are in/out of cluster based on
 % positions
 % returns logical vectors to index worms in/out of cluster
@@ -15,16 +15,11 @@ if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate 
     redToGreenDistances = pdist2([x_r y_r],[x_g y_g]).*pixelsize; % distance of every red worm to every green
     % find lone worms
     mindist = min(redToGreenDistances,[],2)'; % transpose for conistency with getWormClusterStatus.m
-    loneWorms = mindist>=maxNeighbourDist;
     % find worms in clusters
-    numCloseNeighbours = sum(redToGreenDistances<inClusterRadius,2);
-    inCluster = numCloseNeighbours>=inClusterNeighbourNum;
-    % rest is worms neither in cluster nor lone
-    rest = ~loneWorms&~inCluster;
+    numCloseNeighbours = sum(redToGreenDistances<inClusterRadius,2)'; % transpose for conistency with getWormClusterStatus.m
 else
-    inCluster = false(size(x_r'));
-    loneWorms = false(size(x_r'));
-    rest = true(size(x_r'));
+    numCloseNeighbours = NaN(size(x_r'));
+    mindist = NaN(size(x_r'));
 end
 end
 
