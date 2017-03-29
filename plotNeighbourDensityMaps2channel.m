@@ -23,7 +23,7 @@ wormnums = {'40','HD'};
 intensityThresholds_g = [60, 40];
 maxBlobSize_g = 1e4;
 maxBlobSize_r = 2.5e5;
-clusterthreshold = 1000;
+clusterthreshold = 500;
 plotDiagnostics = false;
 
 for numCtr = 1:length(wormnums)
