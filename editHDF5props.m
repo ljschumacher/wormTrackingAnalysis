@@ -10,7 +10,7 @@ for strainCtr = 1:length(strains)
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         numFiles = length(filenames);
         for fileCtr = 1:numFiles
             filename = filenames{fileCtr};

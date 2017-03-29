@@ -28,19 +28,22 @@ dircorrxticks = 0:50:250;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2'};
-wormnums = {'40','HD'};
-intensityThresholds = [60, 40];
+nStrains = length(strains);
+plotColors = lines(nStrains);
+wormnums = fliplr({'40','HD'});
+intensityThresholds = fliplr([60, 40]);
 maxBlobSize = 1e4;
 plotDiagnostics = false;
 visitfreqFig = figure; hold on
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
-    for strainCtr = 1:length(strains)
-        speedFig = figure; hold on
-        dircorrFig = figure; hold on
-        poscorrFig = figure; hold on
+    speedFig = figure; hold on
+    dircorrFig = figure; hold on
+    poscorrFig = figure; hold on
+    lineHandles = NaN(nStrains,1);
+    for strainCtr = 1:nStrains
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         numFiles = length(filenames);
         if wormnum == '40'
             visitfreq = cell(numFiles,1);
@@ -117,20 +120,20 @@ for numCtr = 1:length(wormnums)
             {@median,mad1});
         %% plot data
         bins = (0:numel(s_med)-1).*distBinwidth;
-        boundedline(bins,smooth(s_med),[smooth(s_mad), smooth(s_mad)],...
-            'alpha',speedFig.Children)
+        [lineHandles(strainCtr), ~] = boundedline(bins,smooth(s_med),[smooth(s_mad), smooth(s_mad)],...
+            'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
         bins = (0:numel(c_med)-1).*distBinwidth;
         boundedline(bins,smooth(c_med),[smooth(c_mad), smooth(c_mad)],...
-            'alpha',dircorrFig.Children)
+            'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
         gr = cat(2,gr{:});
-        boundedline(distBins(2:end)-distBinwidth/2,mean(gr,2),[mad(gr,0,2) mad(gr,0,2)],...
-            'alpha',poscorrFig.Children)
+        boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),[nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
+            'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
         if  strcmp(wormnum,'40')&& plotDiagnostics
             histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','probability')
         end
-        %% format and export figures
+    end
+    %% format and export figures
         for figHandle = [speedFig, dircorrFig, poscorrFig] % common formating for both figures
-            title(figHandle.Children,strains{strainCtr},'FontWeight','normal');
             set(figHandle,'PaperUnits','centimeters')
         end
         %
@@ -140,7 +143,8 @@ for numCtr = 1:length(wormnums)
         speedFig.Children.XDir = 'reverse';
         ylabel(speedFig.Children,'speed (\mum/s)')
         xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
-        figurename = ['figures/' strains{strainCtr} '_' wormnum '_speedvsneighbourdistance'];
+        legend(speedFig.Children,lineHandles,strains)
+        figurename = ['figures/speedvsneighbourdistance_' wormnum];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -150,7 +154,8 @@ for numCtr = 1:length(wormnums)
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(dircorrFig.Children,'directional cross-correlation')
         xlabel(dircorrFig.Children,'distance between pair (\mum)')
-        figurename = ['figures/' strains{strainCtr} '_' wormnum '_dircrosscorr'];
+        legend(dircorrFig.Children,lineHandles,strains)
+        figurename = ['figures/dircrosscorr_' wormnum];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -160,11 +165,12 @@ for numCtr = 1:length(wormnums)
         poscorrFig.Children.Box = 'on';
         ylabel(poscorrFig.Children,'radial distribution function g(r)')
         xlabel(poscorrFig.Children,'distance r (\mum)')
-        figurename = ['figures/' strains{strainCtr} '_' wormnum '_radialdistributionfunction'];
+        legend(poscorrFig.Children,lineHandles,strains)
+        figurename = ['figures/radialdistributionfunction_' wormnum];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
-    end
+        
     if  strcmp(wormnum,'40')&& plotDiagnostics
         visitfreqFig.Children.XScale = 'log';
         visitfreqFig.Children.YScale = 'log';
@@ -172,7 +178,7 @@ for numCtr = 1:length(wormnums)
         xlabel(visitfreqFig.Children,'site visit frequency, f')
         ylabel(visitfreqFig.Children,'probability p(f)')
         legend(visitfreqFig.Children,strains)
-        figurename = ['figures/' wormnum '_visitfreq'];
+        figurename = ['figures/visitfreq_' wormnum];
         exportfig(visitfreqFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);

@@ -29,7 +29,7 @@ for strainCtr = 1:length(strains)
         revDurFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         if ~strcmp(wormnum,'1W')
             filenames_g = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
         else
@@ -81,11 +81,13 @@ for strainCtr = 1:length(strains)
                 end
                 loneWorms = min_neighbor_dist_rr>=1100&min_neighbor_dist_rg>=1600;
                 inCluster = num_close_neighbours_rg>=3;
+                neitherClusterNorLone = num_close_neighbours_rg==1|num_close_neighbours_rg==2;
+                %~inCluster&~loneWorms;
             else
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
+                neitherClusterNorLone = false(size(trajData.frame_number));
             end
-            neitherClusterNorLone = ~inCluster&~loneWorms;
             %% calculate overall midbody speeds, until we can link
             % trajectories and features from the tracker
             skelData = h5read(filename,'/skeleton');
@@ -161,7 +163,7 @@ for strainCtr = 1:length(strains)
         else
             legend(revDurFig.Children,'single worms')
         end
-        figurename = ['figures/' strains{strainCtr} '_' wormnum '_reversaldurations'];
+        figurename = ['figures/reversaldurations_' strains{strainCtr} '_' wormnum];
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -174,7 +176,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/' strains{strainCtr} '_reversals'];
+    figurename = ['figures/reversals_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

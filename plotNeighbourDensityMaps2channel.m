@@ -117,7 +117,7 @@ for numCtr = 1:length(wormnums)
         nnnDistances = cellfun(@(x) {vertcat(x{:})},nnnDistances);
         nnFig = figure;
         histogram2(vertcat(nnDistances{:}),vertcat(nnnDistances{:}),...
-            'Normalization','Probability','DisplayStyle','tile','EdgeColor','none')
+            'BinWidth',clusterthreshold*[1 1]/2,'Normalization','Probability','DisplayStyle','tile','EdgeColor','none')
         xlim([0 4000]), ylim([0 4000])
         title(nnFig.Children,[wormnum ' ' strains{strainCtr}],'FontWeight','normal');
         set(nnFig,'PaperUnits','centimeters')

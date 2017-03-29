@@ -29,7 +29,7 @@ for numCtr = 1:length(wormnums)
     distFig = figure; hold on
     for strainCtr = 1:length(strains)
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         numFiles = length(filenames);
         pairDistances = cell(numFiles,1);
         for fileCtr = 1:numFiles

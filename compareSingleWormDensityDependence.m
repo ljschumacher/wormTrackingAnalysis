@@ -31,7 +31,7 @@ for strainCtr = 1:length(strains)
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         numFiles = length(filenames);
         speeds = cell(numFiles,1);
         loneWorms = cell(numFiles,1);
