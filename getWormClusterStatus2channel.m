@@ -18,7 +18,7 @@ if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate 
     % find worms in clusters
     numCloseNeighbours = sum(redToGreenDistances<inClusterRadius,2)'; % transpose for conistency with getWormClusterStatus.m
 else
-    numCloseNeighbours = NaN(size(x_r'));
+    numCloseNeighbours = zeros(size(x_r'));
     mindist = NaN(size(x_r'));
 end
 end

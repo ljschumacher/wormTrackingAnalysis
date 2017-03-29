@@ -2,8 +2,6 @@
 % on plate
 
 % issues / todo:
-% - should distances be calculated only to other moving worms, or to any
-% object (ie also worms that won't appear in the next frame)?
 
 clear
 close all
@@ -43,6 +41,8 @@ for strainCtr = 1:length(strains)
         reversaldurations_lone = cell(numFiles,1);
         reversalfreq_incluster = NaN(numFiles,1);
         reversaldurations_incluster = cell(numFiles,1);
+        reversalfreq_neither = NaN(numFiles,1);
+        reversaldurations_neither = cell(numFiles,1);
         for fileCtr = 1:numFiles % can be parfor?
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -58,21 +58,35 @@ for strainCtr = 1:length(strains)
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                if ~isfield(trajData,'min_neighbor_dist_rr')||~isfield(trajData,'min_neighbor_dist_rg')||~isfield(trajData,'num_close_neighbours_rg')
-                    [trajData.min_neighbor_dist_rr, trajData.min_neighbor_dist_rg, trajData.num_close_neighbours_rg] ...
+                 try 
+                     min_neighbor_dist_rr = h5read(filename,'/min_neighbor_dist_rr');
+                     min_neighbor_dist_rg = h5read(filename,'/min_neighbor_dist_rg');
+                     num_close_neighbours_rg = h5read(filename,'/num_close_neighbours_rg');
+                 catch
+                    [min_neighbor_dist_rr, min_neighbor_dist_rg, num_close_neighbours_rg] ...
                         = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
                     % write stats to hdf5-file
-                    h5write(filename,'/min_neighbor_dist_rr',trajData.min_neighbor_dist_rr)
-                    h5write(filename,'/min_neighbor_dist_rr',trajData.min_neighbor_dist_rg)
-                    h5write(filename,'/num_close_neighbours_rg',trajData.num_close_neighbours_rg)
+                    h5create(filename,'/min_neighbor_dist_rr',...
+                        size(min_neighbor_dist_rr))
+                    h5write(filename,'/min_neighbor_dist_rr',...
+                        single(min_neighbor_dist_rr))
+                    h5create(filename,'/min_neighbor_dist_rg',...
+                        size(min_neighbor_dist_rg))
+                    h5write(filename,'/min_neighbor_dist_rg',...
+                        single(min_neighbor_dist_rg))
+                    h5create(filename,'/num_close_neighbours_rg',...
+                        size(num_close_neighbours_rg))
+                    h5write(filename,'/num_close_neighbours_rg',...
+                        uint16(num_close_neighbours_rg))
                 end
-                loneWorms = trajData.min_neighbor_dist_rr>=1100&trajData.min_neighbor_dist_rg>=1600;
-                inCluster = trajData.num_close_neighbours_rg>=3;
+                loneWorms = min_neighbor_dist_rr>=1100&min_neighbor_dist_rg>=1600;
+                inCluster = num_close_neighbours_rg>=3;
             else
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
             end
-            %% temporary: calculate overall midbody speeds, until we can link
+            neitherClusterNorLone = ~inCluster&~loneWorms;
+            %% calculate overall midbody speeds, until we can link
             % trajectories and features from the tracker
             skelData = h5read(filename,'/skeleton');
             % centroids of midbody skeleton
@@ -98,33 +112,44 @@ for strainCtr = 1:length(strains)
             midbodySpeedSigned(trajData.is_good_skel~=1)=NaN;
             % find reversals in midbody speed
             [revStartInd, revDuration] = findReversals(...
-                struct('midbody_speed',midbodySpeedSigned,'worm_index',trajData.worm_index_joined));
+                midbodySpeedSigned,trajData.worm_index_joined);
             loneReversals = ismember(revStartInd,find(loneWorms));
             inclusterReversals = ismember(revStartInd,find(inCluster));
+            neitherClusterNorLoneReversals = ismember(revStartInd,find(neitherClusterNorLone));
             Nrev_lone = nnz(loneReversals);
-            Nrev_incluster = nnz(inCluster);
+            Nrev_incluster = nnz(inclusterReversals);
+            Nrev_neither = nnz(neitherClusterNorLoneReversals);
             T_lone = nnz(loneWorms)/frameRate;
             T_incluster = nnz(inCluster)/frameRate;
+            T_neither = nnz(neitherClusterNorLone)/frameRate;
             Trev_lone = nnz(midbodySpeedSigned(loneWorms)<0)/frameRate;
             Trev_incluster = nnz(midbodySpeedSigned(inCluster)<0)/frameRate;
+            Trev_neither = nnz(midbodySpeedSigned(neitherClusterNorLoneReversals)<0)/frameRate;
             reversalfreq_lone(fileCtr) = Nrev_lone./(T_lone - Trev_lone);
             reversalfreq_incluster(fileCtr) = Nrev_incluster./(T_incluster - Trev_incluster);
+            reversalfreq_neither(fileCtr) = Nrev_neither./(T_neither - Trev_neither);
             reversaldurations_lone{fileCtr} = revDuration(loneReversals)/frameRate;
             reversaldurations_incluster{fileCtr} = revDuration(inclusterReversals)/frameRate;
+            reversaldurations_neither{fileCtr} = revDuration(neitherClusterNorLoneReversals)/frameRate;
         end
         %% plot data
         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
             'Notch','off')
+        boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
+            'Notch','off','Colors',0.5*ones(1,3))
         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
             'Notch','off','Colors','r')
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
         reversaldurations_incluster = vertcat(reversaldurations_incluster{:});
-        histogram(revDurFig.Children,reversaldurations_lone,0:1/3:30,...
-            'Normalization','pdf','DisplayStyle','stairs','EdgeColor',plotColors(numCtr,:));
-        histogram(revDurFig.Children,reversaldurations_incluster,0:1/3:30,...
-            'Normalization','pdf','EdgeColor','none','FaceColor',plotColors(numCtr,:));
+        reversaldurations_neither = vertcat(reversaldurations_neither{:});
+         histogram(revDurFig.Children,reversaldurations_lone,0:1/frameRate:15,...
+            'Normalization','pdf','DisplayStyle','stairs');
+        histogram(revDurFig.Children,reversaldurations_neither,0:1/frameRate:15,...
+            'Normalization','pdf','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
+        histogram(revDurFig.Children,reversaldurations_incluster,0:1/frameRate:15,...
+            'Normalization','pdf','DisplayStyle','stairs','EdgeColor','r');
         %
         title(revDurFig.Children,strains{strainCtr},'FontWeight','normal');
         set(revDurFig,'PaperUnits','centimeters')
@@ -132,7 +157,7 @@ for strainCtr = 1:length(strains)
         ylabel(revDurFig.Children,'P')
         revDurFig.Children.XLim = [0 15];
         if ~strcmp(wormnum,'1W')
-            legend(revDurFig.Children,{'lone worms','in cluster'})
+            legend(revDurFig.Children,{'lone worms','neither','in cluster'})
         else
             legend(revDurFig.Children,'single worms')
         end
@@ -145,10 +170,10 @@ for strainCtr = 1:length(strains)
     title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
     set(revFreqFig,'PaperUnits','centimeters')
     revFreqFig.Children.XTick = 1:length(wormnums);
-    revFreqFig.Children.XTickLabel = wormnums;
+    revFreqFig.Children.XTickLabel = strrep(wormnums,'HD','200');
     revFreqFig.Children.XLabel.String = 'worm number';
-    revFreqFig.Children.YLabel.String = 'reversals/time';
-    revFreqFig.Children.YLim = [0 15];
+    revFreqFig.Children.YLabel.String = 'reversals (1/s)';
+    revFreqFig.Children.YLim = [0 1];
     figurename = ['figures/' strains{strainCtr} '_reversals'];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);

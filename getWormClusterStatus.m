@@ -13,7 +13,7 @@ if numel(x)>1 % need at least two worms in frame to calculate distances
     % find worms in clusters
     numCloseNeighbours = sum(D<inClusterRadius,2);
 else
-    numCloseNeighbours = NaN(size(x'));
+    numCloseNeighbours = zeros(size(x'));
     mindist = NaN(size(x'));
 end
 end
