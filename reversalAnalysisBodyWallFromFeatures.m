@@ -19,7 +19,10 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 strains = {'npr1','N2'};
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = [100, 60, 40];
+maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
+minSkelLength = 850;
+maxSkelLength = 1500;
 midbodyIndcs = 19:33;
 plotColors = lines(length(wormnums));
 
@@ -46,6 +49,8 @@ for strainCtr = 1:length(strains)
         for fileCtr = 1:numFiles % can be parfor?
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
+            blobFeats = h5read(filename,'/blob_features');
+            skelData = h5read(filename,'/skeleton');
             if ~strcmp(wormnum,'1W')
                 filename_g = filenames_g{fileCtr};
                 trajData_g = h5read(filename_g,'/trajectories_data');
@@ -56,6 +61,19 @@ for strainCtr = 1:length(strains)
             end
             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+            % filter by blob size and intensity
+            if contains(filename,'55')||contains(filename,'54')
+                intensityThreshold = 70;
+            else
+                intensityThreshold = 35;
+            end
+            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
+                (blobFeats.intensity_mean>=intensityThreshold)&...
+                logical(trajData.is_good_skel);
+            % filter by skeleton length
+            skelLengths = sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2)));
+            trajData.filtered(skelLengths>maxSkelLength|skelLengths<minSkelLength)...
+                = false;
             %% calculate stats
             if ~strcmp(wormnum,'1W')
                  try 
@@ -91,6 +109,8 @@ for strainCtr = 1:length(strains)
             end
             % features from the tracker
             midbodySpeedSigned = featData.midbody_speed;
+            % ignore data otherwise filtered out
+            midbodySpeedSigned(ismember(featData.skeleton_id+1,find(~trajData.filtered))) = NaN;
             % smooth speed to denoise
             midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
             %%
@@ -164,7 +184,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/reversalfrequency_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequencyFromFeatures_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

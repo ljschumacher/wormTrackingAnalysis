@@ -19,7 +19,10 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 strains = {'N2','npr1'};
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = [100, 60, 40];
+maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
+minSkelLength = 850;
+maxSkelLength = 1500;
 midbodyIndcs = 19:33;
 plotColors = lines(length(wormnums));
 
@@ -46,6 +49,8 @@ for strainCtr = 1:length(strains)
         for fileCtr = 1:numFiles % can be parfor?
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
+            blobFeats = h5read(filename,'/blob_features');
+            skelData = h5read(filename,'/skeleton');
             if ~strcmp(wormnum,'1W')
                 filename_g = filenames_g{fileCtr};
                 trajData_g = h5read(filename_g,'/trajectories_data');
@@ -56,6 +61,19 @@ for strainCtr = 1:length(strains)
             end
             % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+            % filter by blob size and intensity
+            if contains(filename,'55')||contains(filename,'54')
+                intensityThreshold = 70;
+            else
+                intensityThreshold = 35;
+            end
+            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
+                (blobFeats.intensity_mean>=intensityThreshold)&...
+                logical(trajData.is_good_skel);
+            % filter by skeleton length
+            skelLengths = sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2)));
+            trajData.filtered(skelLengths>maxSkelLength|skelLengths<minSkelLength)...
+                = false;
             %% calculate stats
             if ~strcmp(wormnum,'1W')
                  try 
@@ -88,9 +106,7 @@ for strainCtr = 1:length(strains)
                 inCluster = false(size(trajData.frame_number));
                 neitherClusterNorLone = false(size(trajData.frame_number));
             end
-            %% calculate overall midbody speeds, until we can link
-            % trajectories and features from the tracker
-            skelData = h5read(filename,'/skeleton');
+            %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
             % centroids of midbody skeleton
             midbody_x = mean(squeeze(skelData(1,midbodyIndcs,:)))*pixelsize;
             midbody_y = mean(squeeze(skelData(2,midbodyIndcs,:)))*pixelsize;
@@ -105,13 +121,15 @@ for strainCtr = 1:length(strains)
             [~, dmidbody_xds] = gradient(squeeze(skelData(1,midbodyIndcs,:)),-1);
             % sign speed based on relative orientation of velocity to midbody
             midbodySpeedSigned = sign(sum(midbodyVelocity.*[mean(dmidbody_xds); mean(dmidbody_yds)])).*midbodySpeed;
-            % smooth speed to denoise
-            midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
             % ignore first and last frames of each worm's track
             wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
             midbodySpeedSigned(wormChangeIndcs)=NaN;
             % ignore frames with bad skeletonization
             midbodySpeedSigned(trajData.is_good_skel~=1)=NaN;
+            % ignore skeletons otherwise filtered out
+            midbodySpeedSigned(~trajData.filtered) = NaN;
+            % smooth speed to denoise
+            midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
             % find reversals in midbody speed
             [revStartInd, revDuration] = findReversals(...
                 midbodySpeedSigned,trajData.worm_index_joined);
@@ -179,7 +197,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/reversalfrequencyFromFeatures_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequency_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
