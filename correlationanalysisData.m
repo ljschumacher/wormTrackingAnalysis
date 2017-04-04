@@ -33,7 +33,7 @@ plotColors = lines(nStrains);
 wormnums = fliplr({'40','HD'});
 intensityThresholds = fliplr([60, 40]);
 maxBlobSize = 1e4;
-plotDiagnostics = false;
+plotDiagnostics = true;
 visitfreqFig = figure; hold on
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
@@ -65,7 +65,7 @@ for numCtr = 1:length(wormnums)
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
                     intensityThresholds(numCtr),maxBlobSize,...
-                    [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-38:end-23),'/','')])
+                    [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
             end
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
@@ -106,9 +106,10 @@ for numCtr = 1:length(wormnums)
                 cb = colorbar; cb.Label.String = '# visited';
                 axis equal
                 xlabel('x (mm)'), ylabel('y (mm)')
-                title([strains{strainCtr} ' ' strrep(filename(end-38:end-23),'/','')])
+                title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
                 set(siteVisitFig,'PaperUnits','centimeters')
-                figurename = ['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-38:end-23),' ',''),'/','') '_sitesVisited'];
+                figurename = ['figures/individualRecordings/' strains{strainCtr}...
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited'];
                 exportfig(siteVisitFig,[figurename '.eps'],exportOptions)
                 system(['epstopdf ' figurename '.eps']);
                 system(['rm ' figurename '.eps']);

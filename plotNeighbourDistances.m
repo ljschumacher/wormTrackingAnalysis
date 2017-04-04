@@ -22,7 +22,7 @@ strains = {'npr1','N2','HA'};
 wormnums = {'40','HD'};
 intensityThresholds = [50, 40, 100];
 maxBlobSize = 1e4;
-plotDiagnostics = false;
+plotDiagnostics = true;
 
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
@@ -41,11 +41,6 @@ for numCtr = 1:length(wormnums)
             numFrames = round(maxNumFrames/frameRate/10);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
-            if plotDiagnostics
-                plotIntensitySizeFilter(blobFeats,pixelsize,...
-                    intensityThresholds(numCtr),maxBlobSize,...
-                    [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-38:end-23),'/','')])
-            end
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
             %% calculate stats

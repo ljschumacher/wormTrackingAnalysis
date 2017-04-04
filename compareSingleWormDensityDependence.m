@@ -44,11 +44,6 @@ for strainCtr = 1:length(strains)
             numFrames = round(maxNumFrames/frameRate);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
-            if plotDiagnostics
-                plotIntensitySizeFilter(blobFeats,pixelsize,...
-                    intensityThresholds(numCtr),maxBlobSize,...
-                    [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-38:end-23),'/','')])
-            end
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
             %% calculate stats
