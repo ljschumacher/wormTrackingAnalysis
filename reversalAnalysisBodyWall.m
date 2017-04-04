@@ -16,7 +16,7 @@ exportOptions = struct('Format','eps2',...
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'npr1','N2'};
+strains = {'N2','npr1'};
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = [100, 60, 40];
 maxBlobSize_g = 1e4;
@@ -99,7 +99,7 @@ for strainCtr = 1:length(strains)
             dmidbody_ydt = gradient(midbody_y)*frameRate;
             % midbody speed and velocity
             midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./gradient(double(trajData.frame_number))';
-            midbodyVelocity = [dmidbody_xdt.^2; dmidbody_ydt]./gradient(double(trajData.frame_number))';
+            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./gradient(double(trajData.frame_number))';
             % direction of segments pointing along midbody
             [~, dmidbody_yds] = gradient(squeeze(skelData(2,midbodyIndcs,:)),-1);
             [~, dmidbody_xds] = gradient(squeeze(skelData(1,midbodyIndcs,:)),-1);
@@ -179,7 +179,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/reversals_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequencyFromFeatures_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

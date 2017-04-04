@@ -164,7 +164,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim = [0 1];
-    figurename = ['figures/reversalfrequencyFromFeatures_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequency_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
