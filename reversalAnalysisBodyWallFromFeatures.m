@@ -31,7 +31,7 @@ for strainCtr = 1:length(strains)
         %% load data
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         if ~strcmp(wormnum,'1W')
-            filenames_g = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         else
             filenames_g = {};
         end
