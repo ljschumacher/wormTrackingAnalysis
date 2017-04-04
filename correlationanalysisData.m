@@ -59,7 +59,7 @@ for numCtr = 1:length(wormnums)
             blobFeats = h5read(filename,'/blob_features');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate/10);
+            numFrames = round(maxNumFrames/frameRate/5);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
@@ -82,7 +82,7 @@ for numCtr = 1:length(wormnums)
                     speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(u,v,true); % directional correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
-                    gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','probability'); % radial distribution function
+                    gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','pdf'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth); % normalization
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
@@ -93,7 +93,7 @@ for numCtr = 1:length(wormnums)
             end
             % pool data from frames
             speeds{fileCtr} = vertcat(speeds{fileCtr}{:});
-            dxcorr{fileCtr} = horzcat(dxcorr{fileCtr}{:});
+            dxcorr{fileCtr} = (horzcat(dxcorr{fileCtr}{:}));
             pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
             mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
@@ -101,7 +101,7 @@ for numCtr = 1:length(wormnums)
             if strcmp(wormnum,'40')&& plotDiagnostics
                 siteVisitFig = figure;
                 h=histogram2(trajData.coord_x*pixelsize/1000,trajData.coord_y*pixelsize/1000,...
-                    'DisplayStyle','tile','EdgeColor','none','Normalization','probability');
+                    'DisplayStyle','tile','EdgeColor','none','Normalization','pdf');
                 visitfreq{fileCtr} = h.Values(:);
                 cb = colorbar; cb.Label.String = '# visited';
                 axis equal
@@ -126,10 +126,11 @@ for numCtr = 1:length(wormnums)
         boundedline(bins,smooth(c_med),[smooth(c_mad), smooth(c_mad)],...
             'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
         gr = cat(2,gr{:});
-        boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),[nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
+        boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),...
+            [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
             'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
         if  strcmp(wormnum,'40')&& plotDiagnostics
-            histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','probability')
+            histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','pdf')
         end
     end
     %% format and export figures
@@ -152,7 +153,7 @@ for numCtr = 1:length(wormnums)
         dircorrFig.Children.YLim = [-1 1];
         dircorrFig.Children.XLim = [0 250];
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-        ylabel(dircorrFig.Children,'directional cross-correlation')
+        ylabel(dircorrFig.Children,'orientational correlation')
         xlabel(dircorrFig.Children,'distance between pair (\mum)')
         legend(dircorrFig.Children,lineHandles,strains)
         figurename = ['figures/dircrosscorr_' wormnum];
@@ -163,7 +164,7 @@ for numCtr = 1:length(wormnums)
         poscorrFig.Children.YLim = [0 10];
         poscorrFig.Children.XLim = [0 2000];
         poscorrFig.Children.Box = 'on';
-        ylabel(poscorrFig.Children,'radial distribution function g(r)')
+        ylabel(poscorrFig.Children,'positional correlation g(r)')
         xlabel(poscorrFig.Children,'distance r (\mum)')
         legend(poscorrFig.Children,lineHandles,strains)
         figurename = ['figures/radialdistributionfunction_' wormnum];
@@ -176,7 +177,7 @@ for numCtr = 1:length(wormnums)
         visitfreqFig.Children.YScale = 'log';
         visitfreqFig.Children.XLim = [4e-5 1e-1];
         xlabel(visitfreqFig.Children,'site visit frequency, f')
-        ylabel(visitfreqFig.Children,'probability p(f)')
+        ylabel(visitfreqFig.Children,'pdf p(f)')
         legend(visitfreqFig.Children,strains)
         figurename = ['figures/visitfreq_' wormnum];
         exportfig(visitfreqFig,[figurename '.eps'],exportOptions)
