@@ -31,7 +31,7 @@ for strainCtr = 1:length(strains)
         %% load data
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         if ~strcmp(wormnum,'1W')
-            filenames_g = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         else
             filenames_g = {};
         end
@@ -135,12 +135,15 @@ for strainCtr = 1:length(strains)
             reversaldurations_neither{fileCtr} = revDuration(neitherClusterNorLoneReversals)/frameRate;
         end
         %% plot data
-        boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
-            'Notch','off')
-        boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
-            'Notch','off','Colors',0.5*ones(1,3))
-        boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
-            'Notch','off','Colors','r')
+                set(0,'CurrentFigure',revFreqFig)
+        notBoxPlot([reversalfreq_lone,reversalfreq_neither,reversalfreq_incluster],...
+            numCtr+[-1/4 0 1/4],'markMedian',true,'style','line','jitter',0.25)
+%         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
+%             'Notch','off')
+%         boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
+%             'Notch','off','Colors',0.5*ones(1,3))
+%         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
+%             'Notch','off','Colors','r')
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
