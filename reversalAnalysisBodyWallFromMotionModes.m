@@ -23,14 +23,13 @@ maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength = 850;
 maxSkelLength = 1500;
-midbodyIndcs = 19:33;
+
 plotColors = lines(length(wormnums));
 
 for strainCtr = 1:length(strains)
     revFreqFig = figure; hold on
     for numCtr = 1:length(wormnums)
         revDurFig = figure; hold on
-        revInterTimeFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
@@ -46,9 +45,6 @@ for strainCtr = 1:length(strains)
         reversaldurations_incluster = cell(numFiles,1);
         reversalfreq_neither = NaN(numFiles,1);
         reversaldurations_neither = cell(numFiles,1);
-        interreversaltime_lone = cell(numFiles,1);
-        interreversaltime_incluster = cell(numFiles,1);
-        interreversaltime_neither = cell(numFiles,1);
         for fileCtr = 1:numFiles % can be parfor?
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -62,7 +58,7 @@ for strainCtr = 1:length(strains)
                 trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
                     (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
             end
-            % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
+            featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
@@ -79,12 +75,12 @@ for strainCtr = 1:length(strains)
                 = false;
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                try
-                    min_neighbor_dist_rr = h5read(filename,'/min_neighbor_dist_rr');
-                    min_neighbor_dist_rg = h5read(filename,'/min_neighbor_dist_rg');
-                    num_close_neighbours_rg = h5read(filename,'/num_close_neighbours_rg');
-                catch
-                    disp(['Calculating cluster status from ' filename ])
+                 try 
+                     min_neighbor_dist_rr = h5read(filename,'/min_neighbor_dist_rr');
+                     min_neighbor_dist_rg = h5read(filename,'/min_neighbor_dist_rg');
+                     num_close_neighbours_rg = h5read(filename,'/num_close_neighbours_rg');
+                 catch
+                     disp(['Calculating cluster status from ' filename ])
                     [min_neighbor_dist_rr, min_neighbor_dist_rg, num_close_neighbours_rg] ...
                         = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
                     % write stats to hdf5-file
@@ -110,66 +106,30 @@ for strainCtr = 1:length(strains)
                 inCluster = false(size(trajData.frame_number));
                 neitherClusterNorLone = false(size(trajData.frame_number));
             end
-            %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
-            % centroids of midbody skeleton
-            midbody_x = mean(squeeze(skelData(1,midbodyIndcs,:)))*pixelsize;
-            midbody_y = mean(squeeze(skelData(2,midbodyIndcs,:)))*pixelsize;
-            % change in centroid position over time (issue of worm shifts?)
-            dmidbody_xdt = gradient(midbody_x)*frameRate;
-            dmidbody_ydt = gradient(midbody_y)*frameRate;
-            % midbody speed and velocity
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./gradient(double(trajData.frame_number))';
-            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./gradient(double(trajData.frame_number))';
-            % direction of segments pointing along midbody
-            [~, dmidbody_yds] = gradient(squeeze(skelData(2,midbodyIndcs,:)),-1);
-            [~, dmidbody_xds] = gradient(squeeze(skelData(1,midbodyIndcs,:)),-1);
-            % sign speed based on relative orientation of velocity to midbody
-            midbodySpeedSigned = sign(sum(midbodyVelocity.*[mean(dmidbody_xds); mean(dmidbody_yds)])).*midbodySpeed;
-            % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
-            midbodySpeedSigned(wormChangeIndcs)=NaN;
-            % ignore frames with bad skeletonization
-            midbodySpeedSigned(trajData.is_good_skel~=1)=NaN;
-            % ignore skeletons otherwise filtered out
-            midbodySpeedSigned(~trajData.filtered) = NaN;
-            % smooth speed to denoise
-            midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
-            % find reversals in midbody speed
+            % features from the tracker
+            % ignore data otherwise filtered out
+            featData.motion_modes(ismember(featData.skeleton_id+1,find(~trajData.filtered))) = NaN;
+            %%
+            % find reversals in motion modes
             [revStartInd, revDuration] = findReversals(...
-                midbodySpeedSigned,trajData.worm_index_joined);
+                featData.motion_modes,featData.worm_index);
             % detect cluster status of reversals and features
-            loneReversals = ismember(revStartInd,find(loneWorms));
-            inclusterReversals = ismember(revStartInd,find(inCluster));
-            neitherClusterNorLoneReversals = ismember(revStartInd,find(neitherClusterNorLone));
+            loneReversals = ismember(featData.skeleton_id(revStartInd)+1,find(loneWorms));
+            inclusterReversals = ismember(featData.skeleton_id(revStartInd)+1,find(inCluster));
+            neitherClusterNorLoneReversals = ismember(featData.skeleton_id(revStartInd)+1,find(neitherClusterNorLone));
+            loneWormsFeats = ismember(featData.skeleton_id+1,find(loneWorms));
+            inClusterFeats = ismember(featData.skeleton_id+1,find(inCluster));
+            neitherClusterNorLoneFeats = ismember(featData.skeleton_id+1,find(neitherClusterNorLone));
             % estimate reversal frequencies and durations
-            interRevTimes = diff(revStartInd);
-            interRevTimesLone = diff(revStartInd(loneReversals));
-            interRevTimesCluster = diff(revStartInd(inclusterReversals));
-            interRevTimesNeither = diff(revStartInd(neitherClusterNorLoneReversals));
-            % ignore those inter-reversal times that arise from
-            % non-contiguous reversal sequences
-            interRevTimesLone(diff(find(loneReversals))~=1) = NaN;
-            interRevTimesCluster(diff(find(inclusterReversals))~=1) = NaN;
-            interRevTimesNeither(diff(find(neitherClusterNorLoneReversals))~=1) = NaN;
-            revDurationLone = revDuration(loneReversals);
-            revDurationCluster = revDuration(inclusterReversals);
-            revDurationNeither = revDuration(neitherClusterNorLoneReversals);
-            % subtracting revDuration will more accurately reflect the
-            % inter reversal time, and also set any data to NaN where
-            % worm_index changed (where revDuration == NaN)
-            interreversaltime_lone{fileCtr} = (interRevTimesLone - revDurationLone(1:end-1))/frameRate;
-            interreversaltime_incluster{fileCtr} = (interRevTimesCluster - revDurationCluster(1:end-1))/frameRate;
-            interreversaltime_neither{fileCtr} = (interRevTimesNeither - revDurationNeither(1:end-1))/frameRate;
-            % counting reversal events
             Nrev_lone = nnz(loneReversals);
             Nrev_incluster = nnz(inclusterReversals);
             Nrev_neither = nnz(neitherClusterNorLoneReversals);
-            T_lone = nnz(loneWorms)/frameRate;
-            T_incluster = nnz(inCluster)/frameRate;
+            T_lone = nnz(loneWormsFeats)/frameRate;
+            T_incluster = nnz(inClusterFeats)/frameRate;
             T_neither = nnz(neitherClusterNorLone)/frameRate;
-            Trev_lone = nnz(midbodySpeedSigned(loneWorms)<0)/frameRate;
-            Trev_incluster = nnz(midbodySpeedSigned(inCluster)<0)/frameRate;
-            Trev_neither = nnz(midbodySpeedSigned(neitherClusterNorLoneReversals)<0)/frameRate;
+            Trev_lone = nnz(featData.motion_modes(loneWormsFeats)<0)/frameRate;
+            Trev_incluster = nnz(featData.motion_modes(inClusterFeats)<0)/frameRate;
+            Trev_neither = nnz(featData.motion_modes(neitherClusterNorLoneFeats)<0)/frameRate;
             reversalfreq_lone(fileCtr) = Nrev_lone./(T_lone - Trev_lone);
             reversalfreq_incluster(fileCtr) = Nrev_incluster./(T_incluster - Trev_incluster);
             reversalfreq_neither(fileCtr) = Nrev_neither./(T_neither - Trev_neither);
@@ -177,44 +137,16 @@ for strainCtr = 1:length(strains)
             reversaldurations_incluster{fileCtr} = revDuration(inclusterReversals)/frameRate;
             reversaldurations_neither{fileCtr} = revDuration(neitherClusterNorLoneReversals)/frameRate;
         end
-        %pool data from all files
-        interreversaltime_lone = vertcat(interreversaltime_lone{:});
-        interreversaltime_incluster = vertcat(interreversaltime_incluster{:});
-        interreversaltime_neither = vertcat(interreversaltime_neither{:});
         %% plot data
-        set(0,'CurrentFigure',revInterTimeFig)
-        ecdf(interreversaltime_lone,'Bounds','on','function','survivor')
-        hold on
-        if ~strcmp(wormnum,'1W')
-            ecdf(interreversaltime_incluster,'Bounds','on','function','survivor')
-            ecdf(interreversaltime_neither,'Bounds','on','function','survivor')
-        end
-        set(revInterTimeFig.Children,'YScale','log')
-        title(revInterTimeFig.Children,[strains{strainCtr} wormnum],'FontWeight','normal');
-        set(revInterTimeFig,'PaperUnits','centimeters')
-        revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
-        revInterTimeFig.Children.YLabel.String = 'cumulative probability';
-        revInterTimeFig.Children.YLim(1) = 1e-2;
-        revInterTimeFig.Children.XLim(2) = 120;
-        if ~strcmp(wormnum,'1W')
-            legend(revInterTimeFig.Children,{'lone worms','neither','in cluster'})
-        else
-            legend(revInterTimeFig.Children,'single worms')
-        end
-        figurename = ['figures/reversalintertime_' strains{strainCtr} '_' wormnum];
-        exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
         set(0,'CurrentFigure',revFreqFig)
         notBoxPlot([reversalfreq_lone,reversalfreq_neither,reversalfreq_incluster],...
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
-        %         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
-        %             'Notch','off')
-        %         boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
-        %             'Notch','off','Colors',0.5*ones(1,3))
-        %         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
-        %             'Notch','off','Colors','r')
+%         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
+%             'Notch','off')
+%         boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
+%             'Notch','off','Colors',0.5*ones(1,3))
+%         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
+%             'Notch','off','Colors','r')
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
@@ -237,7 +169,7 @@ for strainCtr = 1:length(strains)
         else
             legend(revDurFig.Children,'single worms')
         end
-        figurename = ['figures/reversaldurations_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversaldurationsFromMotionModes_' strains{strainCtr} '_' wormnum];
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -250,7 +182,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    figurename = ['figures/reversalfrequency_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequencyFromMotionModes_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
