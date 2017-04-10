@@ -51,9 +51,9 @@ for strainCtr = 1:length(strains)
         reversaldurations_incluster = cell(numFiles,1);
         reversalfreq_neither = NaN(numFiles,1);
         reversaldurations_neither = cell(numFiles,1);
-        interreversaltime_lone = cell(numFiles,1);
-        interreversaltime_incluster = cell(numFiles,1);
-        interreversaltime_neither = cell(numFiles,1);
+        interrevT_lone = cell(numFiles,1);
+        interrevT_incluster = cell(numFiles,1);
+        interrevT_neither = cell(numFiles,1);
         for fileCtr = 1:numFiles % can be parfor?
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -148,9 +148,9 @@ for strainCtr = 1:length(strains)
             % subtracting revDuration will more accurately reflect the
             % inter reversal time, and also set any data to NaN where
             % worm_index changed (where revDuration == NaN)
-            interreversaltime_lone{fileCtr} = (interRevTimesLone - revDurationLone(1:end-1))/frameRate;
-            interreversaltime_incluster{fileCtr} = (interRevTimesCluster - revDurationCluster(1:end-1))/frameRate;
-            interreversaltime_neither{fileCtr} = (interRevTimesNeither - revDurationNeither(1:end-1))/frameRate;
+            interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone(1:end-1))/frameRate;
+            interrevT_incluster{fileCtr} = (interRevTimesCluster - revDurationCluster(1:end-1))/frameRate;
+            interrevT_neither{fileCtr} = (interRevTimesNeither - revDurationNeither(1:end-1))/frameRate;
             % counting reversal events
             Nrev_lone = nnz(loneReversals);
             Nrev_incluster = nnz(inclusterReversals);
@@ -169,26 +169,26 @@ for strainCtr = 1:length(strains)
             reversaldurations_neither{fileCtr} = revDuration(neitherClusterNorLoneReversals)/frameRate;
         end
         %pool data from all files
-        interreversaltime_lone = vertcat(interreversaltime_lone{:});
-        interreversaltime_incluster = vertcat(interreversaltime_incluster{:});
-        interreversaltime_neither = vertcat(interreversaltime_neither{:});
+        interrevT_lone = vertcat(interrevT_lone{:});
+        interrevT_incluster = vertcat(interrevT_incluster{:});
+        interrevT_neither = vertcat(interrevT_neither{:});
         %% plot data
         set(0,'CurrentFigure',revInterTimeFig)
-        ecdf(interreversaltime_lone,'Bounds','on','function','survivor')
+        ecdf(interrevT_lone,'Bounds','on','function','survivor')
         hold on
         if ~strcmp(wormnum,'1W')
-            ecdf(interreversaltime_incluster,'Bounds','on','function','survivor')
-            ecdf(interreversaltime_neither,'Bounds','on','function','survivor')
+            ecdf(interrevT_incluster,'Bounds','on','function','survivor')
+            ecdf(interrevT_neither,'Bounds','on','function','survivor')
         end
         set(revInterTimeFig.Children,'YScale','log')
-        title(revInterTimeFig.Children,[strains{strainCtr} wormnum],'FontWeight','normal');
+        title(revInterTimeFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
         set(revInterTimeFig,'PaperUnits','centimeters')
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
         revInterTimeFig.Children.YLim(1) = 1e-2;
         revInterTimeFig.Children.XLim(2) = 120;
         if ~strcmp(wormnum,'1W')
-            legend(revInterTimeFig.Children,{'lone worms','neither','in cluster'})
+            legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','in cluster','neither'})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
@@ -218,7 +218,7 @@ for strainCtr = 1:length(strains)
         histogram(revDurFig.Children,reversaldurations_incluster,0:1/frameRate:15,...
             'Normalization','pdf','DisplayStyle','stairs','EdgeColor','r');
         %
-        title(revDurFig.Children,[strains{strainCtr} wormnum],'FontWeight','normal');
+        title(revDurFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
         set(revDurFig,'PaperUnits','centimeters')
         xlabel(revDurFig.Children,'time (s)')
         ylabel(revDurFig.Children,'P')

@@ -159,7 +159,7 @@ for strainCtr = 1:length(strains)
         histogram(revDurFig.Children,reversaldurations_incluster,0:1/frameRate:15,...
             'Normalization','pdf','DisplayStyle','stairs','EdgeColor','r');
         %
-        title(revDurFig.Children,[strains{strainCtr} wormnum],'FontWeight','normal');
+        title(revDurFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
         set(revDurFig,'PaperUnits','centimeters')
         xlabel(revDurFig.Children,'time (s)')
         ylabel(revDurFig.Children,'P')

@@ -176,7 +176,7 @@ for numCtr = 1:length(wormnums)
     if  strcmp(wormnum,'40')&& plotDiagnostics
         visitfreqFig.Children.XScale = 'log';
         visitfreqFig.Children.YScale = 'log';
-        visitfreqFig.Children.XLim = [4e-5 1e-1];
+%         visitfreqFig.Children.XLim = [4e-5 1e-1];
         xlabel(visitfreqFig.Children,'site visit frequency, f')
         ylabel(visitfreqFig.Children,'pdf p(f)')
         legend(visitfreqFig.Children,strains)
