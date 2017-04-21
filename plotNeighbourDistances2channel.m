@@ -32,8 +32,8 @@ for numCtr = 1:length(wormnums)
     clustFig = figure; hold on
     for strainCtr = 1:length(strains)
         %% load data
-        filenames_g = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
-        filenames_r = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames_g);
         assert(length(filenames_r)==numFiles,'Number of files for two channels do not match.')
         pairDistances = cell(numFiles,1);
@@ -59,9 +59,9 @@ for numCtr = 1:length(wormnums)
                     intensityThreshold_r = 40;
                 end
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
-                    intensityThreshold_g(numCtr),maxBlobSize_g);
+                    intensityThresholds_g(numCtr),maxBlobSize_g);
                 trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
-                    intensityThreshold_r(numCtr),maxBlobSize_r)&...
+                    intensityThreshold_r,maxBlobSize_r)&...
                     logical(trajData_r.is_good_skel);
                 %% calculate stats
                 pairDistances{fileCtr} = cell(numFrames,1);

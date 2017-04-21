@@ -10,7 +10,7 @@ if nargin<6
     end
 end
 
-skelLengths = sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2)));
+skelLengths = squeeze(sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2))));
 filtered = skelLengths<=maxSkelLength&skelLengths>=minSkelLength;
 
 if plotDiagnostics

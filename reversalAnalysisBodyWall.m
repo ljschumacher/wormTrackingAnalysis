@@ -59,8 +59,8 @@ for strainCtr = 1:length(strains)
                 trajData_g = h5read(filename_g,'/trajectories_data');
                 % filter data
                 blobFeats_g = h5read(filename_g,'/blob_features');
-                trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
-                    (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
+                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
+                    intensityThresholds_g(numCtr),maxBlobSize_g);
             end
             % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
