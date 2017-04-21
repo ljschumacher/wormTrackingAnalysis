@@ -66,17 +66,15 @@ for strainCtr = 1:length(strains)
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
-                intensityThreshold = 70;
+                intensityThreshold = 80;
             else
-                intensityThreshold = 35;
+                intensityThreshold = 40;
             end
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThreshold)&...
-                logical(trajData.is_good_skel);
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                    intensityThreshold,maxBlobSize);
             % filter by skeleton length
-            skelLengths = sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2)));
-            trajData.filtered(skelLengths>maxSkelLength|skelLengths<minSkelLength)...
-                = false;
+            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
+                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
                 try

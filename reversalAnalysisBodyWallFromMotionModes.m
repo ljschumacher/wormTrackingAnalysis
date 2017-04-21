@@ -55,24 +55,22 @@ for strainCtr = 1:length(strains)
                 trajData_g = h5read(filename_g,'/trajectories_data');
                 % filter data
                 blobFeats_g = h5read(filename_g,'/blob_features');
-                trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
-                    (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
+                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
+                    intensityThresholds_g(numCtr),maxBlobSize_g);
             end
             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
-                intensityThreshold = 70;
+                intensityThreshold = 80;
             else
-                intensityThreshold = 35;
+                intensityThreshold = 40;
             end
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThreshold)&...
-                logical(trajData.is_good_skel);
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                    intensityThreshold,maxBlobSize);
             % filter by skeleton length
-            skelLengths = sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2)));
-            trajData.filtered(skelLengths>maxSkelLength|skelLengths<minSkelLength)...
-                = false;
+            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
+                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
                  try 

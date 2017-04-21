@@ -11,7 +11,7 @@ exportOptions = struct('Format','eps2',...
 
 SIfig = figure;
 histogram2(blobFeats.intensity_mean,blobFeats.area*pixelsize^2,...
-    'DisplayStyle','tile','EdgeColor','none','YBinLimits',[0 4e4])
+    'DisplayStyle','tile','EdgeColor','none','YBinLimits',[0 2*maxBlobSize])
 ylabel('area (\mum^2)')
 hold on
 plot(intensityThreshold*[1 1],[0 maxBlobSize],'r--')
@@ -21,11 +21,13 @@ histogram(blobFeats.intensity_mean,'DisplayStyle','stairs','Normalization','Prob
 ylabel('P')
 xlabel('pixel intensity')
 title(figurename,'FontWeight','normal')
-set(SIfig,'PaperUnits','centimeters')
-filename = ['figures/diagnostics/sizeVintensity_' strrep(figurename,' ','_')];
-exportfig(SIfig,[filename '.eps'],exportOptions)
-system(['epstopdf ' filename '.eps']);
-system(['rm ' filename '.eps']);
+if ~isempty(figurename)
+    set(SIfig,'PaperUnits','centimeters')
+    filename = ['figures/diagnostics/sizeVintensity_' strrep(figurename,' ','_')];
+    exportfig(SIfig,[filename '.eps'],exportOptions)
+    system(['epstopdf ' filename '.eps']);
+    system(['rm ' filename '.eps']);
+end
 close(SIfig)
 
 end
