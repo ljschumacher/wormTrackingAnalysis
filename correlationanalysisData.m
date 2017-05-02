@@ -33,7 +33,7 @@ plotColors = lines(nStrains);
 wormnums = fliplr({'40','HD'});
 intensityThresholds = fliplr([60, 40]);
 maxBlobSize = 1e4;
-plotDiagnostics = true;
+plotDiagnostics = false;
 visitfreqFig = figure; hold on
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
@@ -82,8 +82,9 @@ for numCtr = 1:length(wormnums)
                     speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(u,v,true); % directional correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
-                    gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','pdf'); % radial distribution function
-                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth); % normalization
+                    gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
+                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
+                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
                     if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
