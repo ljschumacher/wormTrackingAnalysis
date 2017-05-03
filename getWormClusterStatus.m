@@ -4,7 +4,7 @@ function [ numCloseNeighbours, mindist] = getWormClusterStatus(trajData, frame,.
 % positions
 % returns logical vectors to index worms in/out of cluster
 
-[x, y] = getWormPositions(trajData, frame);
+[x, y] = getWormPositions(trajData, frame, false);
 
 if numel(x)>1 % need at least two worms in frame to calculate distances
     D = squareform(pdist([x y]).*pixelsize); % distance of every worm to every other

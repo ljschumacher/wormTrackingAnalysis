@@ -47,7 +47,7 @@ for numCtr = 1:length(wormnums)
             pairDistances{fileCtr} = cell(numFrames,1);
             for frameCtr = 1:numFrames
                 frame = framesAnalyzed(frameCtr);
-                [x, y] = getWormPositions(trajData, frame);
+                [x, y] = getWormPositions(trajData, frame, true);
                 if numel(x)>1 % need at least two worms in frame to calculate distances
                     pairDistances{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance of every worm to every other
                 end

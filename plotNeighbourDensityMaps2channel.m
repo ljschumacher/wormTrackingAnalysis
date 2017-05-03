@@ -69,8 +69,8 @@ for numCtr = 1:length(wormnums)
                 nnnDistances{fileCtr} = cell(numFrames,1);
                 for frameCtr = 1:numFrames
                     frame = framesAnalyzed(frameCtr);
-                    [x_g, y_g] = getWormPositions(trajData_g, frame);
-                    [x_r, y_r] = getWormPositions(trajData_r, frame);
+                    [x_g, y_g] = getWormPositions(trajData_g, frame, true);
+                    [x_r, y_r] = getWormPositions(trajData_r, frame, true);
                     if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
                         redToGreenDistances = sort(pdist2([x_r y_r],[x_g y_g]).*pixelsize,2); % distance of every red worm to every green
                         pairDistances{fileCtr}{frameCtr} = redToGreenDistances(:);

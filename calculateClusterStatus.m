@@ -8,7 +8,6 @@ min_neighbor_dist_rg = cell(numFrames,1);
 num_close_neighbours_rg = cell(numFrames,1);
 for frameCtr = 1:numFrames
     frame = frames(frameCtr);
-    %%% need to update this for 2 channel case
     [~, min_neighbor_dist_rr{frameCtr}] = ...
         getWormClusterStatus(trajData, frame, pixelsize, inClusterRadius);
     [num_close_neighbours_rg{frameCtr}, min_neighbor_dist_rg{frameCtr}] = ...

@@ -8,8 +8,8 @@ function [ numCloseNeighbours, mindist ] = getWormClusterStatus2channel(...
 % distances to green worms
 % currently ignores neighbourship of red worms to each other
 
-[x_r, y_r] = getWormPositions(trajData_r, frame);
-[x_g, y_g] = getWormPositions(trajData_g, frame);
+[x_r, y_r] = getWormPositions(trajData_r, frame, false);
+[x_g, y_g] = getWormPositions(trajData_g, frame, true);
 
 if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
     redToGreenDistances = pdist2([x_r y_r],[x_g y_g]).*pixelsize; % distance of every red worm to every green
