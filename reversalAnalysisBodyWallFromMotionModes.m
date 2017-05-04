@@ -67,38 +67,18 @@ for strainCtr = 1:length(strains)
                 intensityThreshold = 40;
             end
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
-                    intensityThreshold,maxBlobSize);
+                intensityThreshold,maxBlobSize);
             % filter by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
                 filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                 try 
-                     min_neighbor_dist_rr = h5read(filename,'/min_neighbor_dist_rr');
-                     min_neighbor_dist_rg = h5read(filename,'/min_neighbor_dist_rg');
-                     num_close_neighbours_rg = h5read(filename,'/num_close_neighbours_rg');
-                 catch
-                     disp(['Calculating cluster status from ' filename ])
-                    [min_neighbor_dist_rr, min_neighbor_dist_rg, num_close_neighbours_rg] ...
-                        = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
-                    % write stats to hdf5-file
-                    h5create(filename,'/min_neighbor_dist_rr',...
-                        size(min_neighbor_dist_rr))
-                    h5write(filename,'/min_neighbor_dist_rr',...
-                        single(min_neighbor_dist_rr))
-                    h5create(filename,'/min_neighbor_dist_rg',...
-                        size(min_neighbor_dist_rg))
-                    h5write(filename,'/min_neighbor_dist_rg',...
-                        single(min_neighbor_dist_rg))
-                    h5create(filename,'/num_close_neighbours_rg',...
-                        size(num_close_neighbours_rg))
-                    h5write(filename,'/num_close_neighbours_rg',...
-                        uint16(num_close_neighbours_rg))
-                end
-                loneWorms = min_neighbor_dist_rr>=1100&min_neighbor_dist_rg>=1600;
-                inCluster = num_close_neighbours_rg>=3;
-                neitherClusterNorLone = num_close_neighbours_rg==1|num_close_neighbours_rg==2;
-                %~inCluster&~loneWorms;
+                min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
+                min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
+                num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
+                loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
+                inCluster = num_close_neighbrs_rg>=3;
+                neitherClusterNorLone = num_close_neighbrs_rg==1|num_close_neighbrs_rg==2;
             else
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
@@ -139,12 +119,12 @@ for strainCtr = 1:length(strains)
         set(0,'CurrentFigure',revFreqFig)
         notBoxPlot([reversalfreq_lone,reversalfreq_neither,reversalfreq_incluster],...
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
-%         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
-%             'Notch','off')
-%         boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
-%             'Notch','off','Colors',0.5*ones(1,3))
-%         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
-%             'Notch','off','Colors','r')
+        %         boxplot(revFreqFig.Children,reversalfreq_lone,'Positions',numCtr-1/4,...
+        %             'Notch','off')
+        %         boxplot(revFreqFig.Children,reversalfreq_neither,'Positions',numCtr,...
+        %             'Notch','off','Colors',0.5*ones(1,3))
+        %         boxplot(revFreqFig.Children,reversalfreq_incluster,'Positions',numCtr+1/4,...
+        %             'Notch','off','Colors','r')
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});

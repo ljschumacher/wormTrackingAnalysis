@@ -1,5 +1,5 @@
-function [ numCloseNeighbours, mindist ] = getWormClusterStatus2channel(...
-    trajData_r,trajData_g, frame,...
+function [ numCloseNeighbrs, mindist ] = getWormClusterStatus2channel(...
+    trajData_a,trajData_b, frame,...
     pixelsize, inClusterRadius)
 % for a given frame, computes which worms are in/out of cluster based on
 % positions
@@ -8,18 +8,18 @@ function [ numCloseNeighbours, mindist ] = getWormClusterStatus2channel(...
 % distances to green worms
 % currently ignores neighbourship of red worms to each other
 
-[x_r, y_r] = getWormPositions(trajData_r, frame, false);
-[x_g, y_g] = getWormPositions(trajData_g, frame, true);
+[x_a, y_a] = getWormPositions(trajData_a, frame, false);% don't use filtered objects, as we want as many data as entries in the original
+[x_b, y_b] = getWormPositions(trajData_b, frame, true); % do filter for the object to which the distance is calculated (don't care if close to some artefact)
 
-if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
-    redToGreenDistances = pdist2([x_r y_r],[x_g y_g]).*pixelsize; % distance of every red worm to every green
+if numel(x_b)>=1&&numel(x_a)>=1 % need at least two worms in frame to calculate distances
+    a2bDistances = pdist2([x_a y_a],[x_b y_b]).*pixelsize; % distance of every red worm to every green
     % find lone worms
-    mindist = min(redToGreenDistances,[],2)'; % transpose for conistency with getWormClusterStatus.m
+    mindist = min(a2bDistances,[],2)'; % transpose for conistency with getWormClusterStatus.m
     % find worms in clusters
-    numCloseNeighbours = sum(redToGreenDistances<inClusterRadius,2)'; % transpose for conistency with getWormClusterStatus.m
+    numCloseNeighbrs = sum(a2bDistances<inClusterRadius,2)'; % transpose for conistency with getWormClusterStatus.m
 else
-    numCloseNeighbours = zeros(size(x_r'));
-    mindist = NaN(size(x_r'));
+    numCloseNeighbrs = zeros(size(x_a'));
+    mindist = NaN(size(x_a'));
 end
 end
 

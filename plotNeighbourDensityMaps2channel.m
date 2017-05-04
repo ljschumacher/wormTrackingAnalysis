@@ -113,7 +113,7 @@ for numCtr = 1:length(wormnums)
         set(nnFig,'PaperUnits','centimeters')
         xlabel(nnFig.Children,'nn distance (\mum)')
         ylabel(nnFig.Children,'nnn distance (\mum)')
-        figurename = ['nearestneighbourdistance_rg_' wormnum '_' strains{strainCtr}];
+        figurename = ['nearestneighbrdistance_rg_' wormnum '_' strains{strainCtr}];
         exportfig(nnFig,['figures/' figurename '.eps'],exportOptions)
         system(['epstopdf figures/' figurename '.eps']);
         system(['rm figures/' figurename '.eps']);

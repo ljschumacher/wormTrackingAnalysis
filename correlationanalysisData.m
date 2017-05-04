@@ -1,4 +1,4 @@
-% calculate speed vs neighbour distance, directional correlation, and
+% calculate speed vs neighbr distance, directional correlation, and
 % radial distribution functions
 
 % issues/to-do:
@@ -147,7 +147,7 @@ for numCtr = 1:length(wormnums)
         ylabel(speedFig.Children,'speed (\mum/s)')
         xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
         legend(speedFig.Children,lineHandles,strains)
-        figurename = ['figures/speedvsneighbourdistance_' wormnum];
+        figurename = ['figures/speedvsneighbrdistance_' wormnum];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
