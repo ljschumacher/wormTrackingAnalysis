@@ -14,7 +14,7 @@ skelLengths = squeeze(sum(sqrt(sum((diff(skelData,1,2)*pixelsize).^2))));
 filtered = skelLengths<=maxSkelLength&skelLengths>=minSkelLength;
 
 if plotDiagnostics
-    plotSkelLengthDist(skelData(:,:,trajData.filtered),pixelsize,...
+    plotSkelLengthDist(skelData(:,:,filtered),pixelsize,...
         minSkelLength,maxSkelLength,plotName);
 end
 

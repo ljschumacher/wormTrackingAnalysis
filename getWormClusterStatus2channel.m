@@ -13,8 +13,11 @@ function [ numCloseNeighbrs, mindist ] = getWormClusterStatus2channel(...
 
 if numel(x_b)>=1&&numel(x_a)>=1 % need at least two worms in frame to calculate distances
     a2bDistances = pdist2([x_a y_a],[x_b y_b]).*pixelsize; % distance of every red worm to every green
+    % sometimes we may be using this to calculate distances where a and b
+    % are the same. for this case set distances to self to Inf
+    a2bDistances(a2bDistances==0) = Inf;
     % find lone worms
-    mindist = min(a2bDistances,[],2)'; % transpose for conistency with getWormClusterStatus.m
+    mindist = min(a2bDistances,[],2)'; % transpose for consistency with getWormClusterStatus.m
     % find worms in clusters
     numCloseNeighbrs = sum(a2bDistances<inClusterRadius,2)'; % transpose for conistency with getWormClusterStatus.m
 else

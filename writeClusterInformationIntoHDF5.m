@@ -6,7 +6,7 @@ close all
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'N2','npr1'};
+strains = {'npr1','N2'};
 wormnums = {'40','HD'};
 intensityThresholds_g = [100, 60, 40];
 maxBlobSize = 2.5e5;
@@ -15,7 +15,6 @@ minSkelLength = 850;
 maxSkelLength = 1500;
 
 for strainCtr = 1:length(strains)
-    revFreqFig = figure; hold on
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         %% load data
@@ -45,11 +44,11 @@ for strainCtr = 1:length(strains)
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
                 filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats - red files
-            try
-                min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
-            catch
+% %             try
+% %                 min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
+% %                 min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
+% %                 num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
+% %             catch
                 disp(['Calculating cluster status from ' filename ])
                 [min_neighbr_dist_rr, min_neighbr_dist_rg, num_close_neighbrs_rg] ...
                     = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
@@ -58,19 +57,19 @@ for strainCtr = 1:length(strains)
                 assert(length(min_neighbr_dist_rg)==length(trajData.frame_number))
                 assert(length(num_close_neighbrs_rg)==length(trajData.frame_number))
                 % write stats to hdf5-file
-                h5create(filename,'/min_neighbr_dist_rr',...
-                    size(min_neighbr_dist_rr),'Datatype','single')
+% %                 h5create(filename,'/min_neighbr_dist_rr',...
+% %                     size(min_neighbr_dist_rr),'Datatype','single')
                 h5write(filename,'/min_neighbr_dist_rr',...
                     single(min_neighbr_dist_rr))
-                h5create(filename,'/min_neighbr_dist_rg',...
-                    size(min_neighbr_dist_rg),'Datatype','single')
+% %                 h5create(filename,'/min_neighbr_dist_rg',...
+% %                     size(min_neighbr_dist_rg),'Datatype','single')
                 h5write(filename,'/min_neighbr_dist_rg',...
                     single(min_neighbr_dist_rg))
-                h5create(filename,'/num_close_neighbrs_rg',...
-                    size(num_close_neighbrs_rg),'Datatype','uint16')
+% %                 h5create(filename,'/num_close_neighbrs_rg',...
+% %                     size(num_close_neighbrs_rg),'Datatype','uint16')
                 h5write(filename,'/num_close_neighbrs_rg',...
                     uint16(num_close_neighbrs_rg))
-            end
+% %             end
         end
     end
 end
