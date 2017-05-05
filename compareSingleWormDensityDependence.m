@@ -47,6 +47,8 @@ for strainCtr = 1:length(strains)
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
             %% calculate stats
+            % beware that this ordering is frames first, not worms first
+            % (as the saved files)
             speeds{fileCtr} = cell(numFrames,1);
             loneWorms{fileCtr} = cell(numFrames,1);
             for frameCtr = 1:numFrames
