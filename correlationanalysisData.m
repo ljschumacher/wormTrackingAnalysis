@@ -70,6 +70,8 @@ for numCtr = 1:length(wormnums)
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
             %% calculate stats
+            % beware that this ordering is frames first, not worms first
+            % (as the saved files)
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
             pairdist{fileCtr} = cell(numFrames,1);
@@ -94,7 +96,7 @@ for numCtr = 1:length(wormnums)
             end
             % pool data from frames
             speeds{fileCtr} = vertcat(speeds{fileCtr}{:});
-            dxcorr{fileCtr} = (horzcat(dxcorr{fileCtr}{:}));
+            dxcorr{fileCtr} = horzcat(dxcorr{fileCtr}{:});
             pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
             mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
