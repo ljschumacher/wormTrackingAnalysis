@@ -6,8 +6,8 @@ close all
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'npr1','N2'};
-wormnums = {'40','HD'};
+strains = {'N2'}%,'N2'};
+wormnums = {'HD'}%,'HD'};
 intensityThresholds_g = [100, 60, 40];
 maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
@@ -21,7 +21,7 @@ for strainCtr = 1:length(strains)
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         numFiles = length(filenames);
-        parfor fileCtr = 1:numFiles % can be parfor?
+        for fileCtr = 1:numFiles % can be parfor
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
@@ -45,30 +45,30 @@ for strainCtr = 1:length(strains)
                 filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats - red files
             try
-                min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
+                neighbr_distances = h5read(filename,'/neighbr_distances');
+                min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
             catch
                 disp(['Calculating cluster status from ' filename ])
-                [min_neighbr_dist_rr, min_neighbr_dist_rg, num_close_neighbrs_rg] ...
+                [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
                     = calculateClusterStatus(trajData,trajData_g,pixelsize,500);
                 % check lengths
-                assert(length(min_neighbr_dist_rr)==length(trajData.frame_number))
-                assert(length(min_neighbr_dist_rg)==length(trajData.frame_number))
-                assert(length(num_close_neighbrs_rg)==length(trajData.frame_number))
+                assert(size(neighbr_distances,1)==length(trajData.frame_number))
+                assert(size(neighbr_distances,2)==10)
+                assert(length(min_neighbr_dist)==length(trajData.frame_number))
+                assert(length(num_close_neighbrs)==length(trajData.frame_number))
                 % write stats to hdf5-file
-                h5create(filename,'/min_neighbr_dist_rr',...
-                    size(min_neighbr_dist_rr),'Datatype','single')
-                h5write(filename,'/min_neighbr_dist_rr',...
-                    single(min_neighbr_dist_rr))
-                h5create(filename,'/min_neighbr_dist_rg',...
-                    size(min_neighbr_dist_rg),'Datatype','single')
-                h5write(filename,'/min_neighbr_dist_rg',...
-                    single(min_neighbr_dist_rg))
-                h5create(filename,'/num_close_neighbrs_rg',...
-                    size(num_close_neighbrs_rg),'Datatype','uint16')
-                h5write(filename,'/num_close_neighbrs_rg',...
-                    uint16(num_close_neighbrs_rg))
+                h5create(filename,'/neighbr_distances',size(neighbr_distances),...
+                    'Datatype','single')
+                h5write(filename,'/neighbr_distances',single(neighbr_distances))
+                h5create(filename,'/min_neighbr_dist',...
+                    size(min_neighbr_dist),'Datatype','single')
+                h5write(filename,'/min_neighbr_dist',...
+                    single(min_neighbr_dist))
+                h5create(filename,'/num_close_neighbrs',...
+                    size(num_close_neighbrs),'Datatype','uint16')
+                h5write(filename,'/num_close_neighbrs',...
+                    uint16(num_close_neighbrs))
             end
         end
     end

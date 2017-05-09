@@ -55,8 +55,8 @@ for strainCtr = 1:length(strains)
                 frame = framesAnalyzed(frameCtr);
                 [~, ~, u, v] = calculateWormSpeeds(trajData, frame);
                 speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
-                [~, loneWorms{fileCtr}{frameCtr}, ~] = ...
-                    getWormClusterStatus(trajData, frame, pixelsize, 2500,500,2);
+% %                 [~, loneWorms{fileCtr}{frameCtr}, ~] = ...
+% %                     getWormClusterStatus(trajData, frame, pixelsize, 2500,500,2);
                 if (numel(speeds{fileCtr}{frameCtr})~=numel(loneWorms{fileCtr}{frameCtr}))
                     error(['Inconsistent number of variables in frame ' num2str(frame) ' of ' filename ])
                 end
