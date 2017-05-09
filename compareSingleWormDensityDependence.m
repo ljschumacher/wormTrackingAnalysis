@@ -25,6 +25,7 @@ maxBlobSize = 1e4;
 plotDiagnostics = false;
 numSamples = 8500;
 maxSpeed = 1e3;
+minNeighbrDist = 1500;
 
 for strainCtr = 1:length(strains)
     speedFig = figure; hold on
@@ -40,38 +41,32 @@ for strainCtr = 1:length(strains)
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
             frameRate = h5readatt(filename,'/plate_worms','expected_fps');
-            maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate);
-            framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(numCtr));
+            if ~strcmp(wormnum,'1W') % filter for lone worms
+                min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
+                trajData.filtered = trajData.filtered&min_neighbr_dist>=minNeighbrDist;
+            end
+            %% select frames from filtered data only
+            uniqueFrames = unique(trajData.frame_number(trajData.filtered));
+            maxNumFrames = numel(uniqueFrames);
+            numFrames = round(maxNumFrames/frameRate);
+            framesAnalyzed = randsample(uniqueFrames,numFrames); % randomly sample frames without replacement
             %% calculate stats
             % beware that this ordering is frames first, not worms first
             % (as the saved files)
             speeds{fileCtr} = cell(numFrames,1);
-            loneWorms{fileCtr} = cell(numFrames,1);
             for frameCtr = 1:numFrames
                 frame = framesAnalyzed(frameCtr);
-                [~, ~, u, v] = calculateWormSpeeds(trajData, frame);
+                [~, ~, u, v] = calculateWormSpeeds(trajData, frame, true);
                 speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
-% %                 [~, loneWorms{fileCtr}{frameCtr}, ~] = ...
-% %                     getWormClusterStatus(trajData, frame, pixelsize, 2500,500,2);
-                if (numel(speeds{fileCtr}{frameCtr})~=numel(loneWorms{fileCtr}{frameCtr}))
-                    error(['Inconsistent number of variables in frame ' num2str(frame) ' of ' filename ])
-                end
             end
         end
         %% plot data
         % pool data from all frames for each file, then for all files
         speeds = cellfun(@(x) {vertcat(x{:})},speeds);
-        loneWorms = cellfun(@(x) {horzcat(x{:})},loneWorms);
         speedscatenated = vertcat(speeds{:});
-        if ~strcmp(wormnum,'1W')
-            % if it is multiworm data, we need to filter for isolated worms
-            loneWorms = horzcat(loneWorms{:});  
-            speedscatenated = speedscatenated(loneWorms);
-        end
         % plot speed distribution
         speedscatenated = speedscatenated(speedscatenated<=maxSpeed);
         histogram(speedscatenated(randperm(numel(speedscatenated),numSamples)),...
@@ -83,7 +78,7 @@ for strainCtr = 1:length(strains)
     xlabel(speedFig.Children,'speed (\mum/s)')
     ylabel(speedFig.Children,'P')
     legend(wormnums)
-    figurename = ['figures/singleWorm/' strains{strainCtr} '_speeddistributions'];
+    figurename = ['figures/singleWorm/speeddistributions_' strains{strainCtr}];
     exportfig(speedFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

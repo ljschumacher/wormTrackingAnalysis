@@ -1,20 +1,20 @@
 function [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] = ...
-    calculateClusterStatus(trajData,trajData_g,pixelsize,inClusterRadius)
+    calculateClusterStatus(trajData_a,trajData_b,pixelsize,inClusterRadius)
 % loops through all frames and calculates number of close neighbrs, and
 % minimum distance to a neighbr for determining in cluster / lone status
-numFrames = numel(unique(trajData.frame_number));
-frames = unique(trajData.frame_number);
+numFrames = numel(unique(trajData_a.frame_number));
+frames = unique(trajData_a.frame_number);
 numNeighbrDists = 10;
-neighbr_distances = NaN(length(trajData.frame_number),numNeighbrDists);
-min_neighbr_dist = NaN(size(trajData.frame_number));
-num_close_neighbrs = zeros(size(trajData.frame_number));
+neighbr_distances = NaN(length(trajData_a.frame_number),numNeighbrDists);
+min_neighbr_dist = NaN(size(trajData_a.frame_number));
+num_close_neighbrs = zeros(size(trajData_a.frame_number));
 for frameCtr = 1:numFrames
     frame = frames(frameCtr);
-    frameLogIdcs = trajData.frame_number==frame;    % put calculated distances and neighbour numbers into the right entries
+    frameLogIdcs = trajData_a.frame_number==frame;    % put calculated distances and neighbour numbers into the right entries
     [neighbr_distances_rr, ~, ~] = ... % use 2-channel function here to filter the red objects to which distance is calculated, but not ones distance is calculated from
-        getWormClusterStatus2channel(trajData, trajData, frame, pixelsize, inClusterRadius);
+        getWormClusterStatus2channel(trajData_a, trajData_a, frame, pixelsize, inClusterRadius);
     [neighbr_distances_rg, ~, ~] = ...
-        getWormClusterStatus2channel(trajData, trajData_g, frame, pixelsize, inClusterRadius);
+        getWormClusterStatus2channel(trajData_a, trajData_b, frame, pixelsize, inClusterRadius);
     % combine distances to red and green neighbours
     neighbr_distances_combined = sort([neighbr_distances_rr, neighbr_distances_rg],2);
     if size(neighbr_distances_combined,2)<numNeighbrDists

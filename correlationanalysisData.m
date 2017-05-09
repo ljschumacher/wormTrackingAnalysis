@@ -79,7 +79,7 @@ for numCtr = 1:length(wormnums)
             gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
             for frameCtr = 1:numFrames
                 frame = framesAnalyzed(frameCtr);
-                [x, y, u, v] = calculateWormSpeeds(trajData, frame);
+                [x, y, u, v] = calculateWormSpeeds(trajData, frame, rue);
                 if numel(x)>1 % need at least two worms in frame
                     speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(u,v,true); % directional correlation
