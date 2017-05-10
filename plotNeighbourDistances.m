@@ -20,16 +20,15 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2','HA'};
 wormnums = {'40','HD'};
-intensityThresholds = [50, 40, 100];
+intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = true;
 
-for numCtr = 1:length(wormnums)
-    wormnum = wormnums{numCtr};
+for wormnum = wormnums
     distFig = figure; hold on
     for strainCtr = 1:length(strains)
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.txt']);
         numFiles = length(filenames);
         pairDistances = cell(numFiles,1);
         for fileCtr = 1:numFiles
@@ -42,7 +41,7 @@ for numCtr = 1:length(wormnums)
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(numCtr));
+                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
             %% calculate stats
             pairDistances{fileCtr} = cell(numFrames,1);
             for frameCtr = 1:numFrames
@@ -60,13 +59,13 @@ for numCtr = 1:length(wormnums)
             'DisplayStyle','stairs')
     end
     %% format and export figures
-    title(distFig.Children,wormnum,'FontWeight','normal');
+    title(distFig.Children,wormnum{1},'FontWeight','normal');
     set(distFig,'PaperUnits','centimeters')
     xlim([0 1.2e4])
     xlabel(distFig.Children,'pair distance (\mum)')
     ylabel(distFig.Children,'P')
     legend(strains)
-    figurename = ['pairdistance_' wormnum];
+    figurename = ['pairdistance_' wormnum{1}];
     exportfig(distFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

@@ -14,17 +14,16 @@ maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength = 850;
 maxSkelLength = 1500;
-intensityThresholds_g = [60, 40, NaN];
+intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-for numCtr = 1:length(wormnums)
-    wormnum = wormnums{numCtr};
+for wormnum = wormnums
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};     
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_r_list.txt']);
         numFiles = length(filenames);
-        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
         for fileCtr=1:numFiles
             filename = filenames{fileCtr};
             filename_g = filenames_g{fileCtr};
@@ -49,7 +48,7 @@ for numCtr = 1:length(wormnums)
                     &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
                 % filter green channel by blob size and intensity
                 trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
-                    (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
+                    (blobFeats_g.intensity_mean>=intensityThresholds_g(wormnum{1}));
                 % filter for in-cluster
                 num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg')';
                 trajData.filtered = trajData.filtered&num_close_neighbrs_rg>=minNumNeighbrs;
@@ -84,8 +83,8 @@ for numCtr = 1:length(wormnums)
                 end
                 %% export figure
                 figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
-                set(inClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
-                figFileName = ['figures/diagnostics/sampleInClusterWorms_' strain '_' wormnum '_' figName '.eps'];
+                set(inClusterWormsFig,'Name',[strain ' ' wormnum{1} ' ' figName])
+                figFileName = ['figures/diagnostics/sampleInClusterWorms_' strain '_' wormnum{1} '_' figName '.eps'];
                 exportfig(inClusterWormsFig,figFileName,'Color','rgb')
                 system(['epstopdf ' figFileName]);
                 system(['rm ' figFileName]);

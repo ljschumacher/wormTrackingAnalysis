@@ -20,7 +20,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','HA','N2'};
 wormnums = {'40','HD','1W'};
-intensityThresholds = [50, 40, 100];
+intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
 numSamples = 8500;
@@ -29,10 +29,9 @@ minNeighbrDist = 1500;
 
 for strainCtr = 1:length(strains)
     speedFig = figure; hold on
-    for numCtr = 1:length(wormnums)
-        wormnum = wormnums{numCtr};
+    for wormnum = wormnums
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.txt']);
         numFiles = length(filenames);
         speeds = cell(numFiles,1);
         loneWorms = cell(numFiles,1);
@@ -43,8 +42,8 @@ for strainCtr = 1:length(strains)
             frameRate = h5readatt(filename,'/plate_worms','expected_fps');
             %% filter worms
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(numCtr));
-            if ~strcmp(wormnum,'1W') % filter for lone worms
+                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
+            if ~strcmp(wormnum{1},'1W') % filter for lone worms
                 min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
                 trajData.filtered = trajData.filtered&min_neighbr_dist>=minNeighbrDist;
             end

@@ -30,22 +30,21 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 strains = {'npr1','N2'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
-wormnums = fliplr({'40','HD'});
-intensityThresholds = fliplr([60, 40]);
+wormnums = {'40','HD'};
+intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
 visitfreqFig = figure; hold on
-for numCtr = 1:length(wormnums)
-    wormnum = wormnums{numCtr};
+for wormnum = wormnums
     speedFig = figure; hold on
     dircorrFig = figure; hold on
     poscorrFig = figure; hold on
     lineHandles = NaN(nStrains,1);
     for strainCtr = 1:nStrains
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
         numFiles = length(filenames);
-        if wormnum == '40'
+        if wormnum{1} == '40'
             visitfreq = cell(numFiles,1);
         end
         speeds = cell(numFiles,1);
@@ -64,11 +63,11 @@ for numCtr = 1:length(wormnums)
             %% filter worms
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
-                    intensityThresholds(numCtr),maxBlobSize,...
-                    [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
+                    intensityThresholds(wormnum{1}),maxBlobSize,...
+                    [wormnum{1} ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
             end
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(numCtr));
+                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
             %% calculate stats
             % beware that this ordering is frames first, not worms first
             % (as the saved files)
@@ -101,7 +100,7 @@ for numCtr = 1:length(wormnums)
             mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
             % dataset where we don't move the camera
-            if strcmp(wormnum,'40')&& plotDiagnostics
+            if strcmp(wormnum{1},'40')&& plotDiagnostics
                 siteVisitFig = figure;
                 h=histogram2(trajData.coord_x*pixelsize/1000,trajData.coord_y*pixelsize/1000,...
                     'DisplayStyle','tile','EdgeColor','none','Normalization','pdf');
@@ -133,7 +132,7 @@ for numCtr = 1:length(wormnums)
         boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),...
             [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
             'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
-        if  strcmp(wormnum,'40')&& plotDiagnostics
+        if  strcmp(wormnum{1},'40')&& plotDiagnostics
             histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','pdf')
         end
     end
@@ -149,7 +148,7 @@ for numCtr = 1:length(wormnums)
         ylabel(speedFig.Children,'speed (\mum/s)')
         xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
         legend(speedFig.Children,lineHandles,strains)
-        figurename = ['figures/speedvsneighbrdistance_' wormnum];
+        figurename = ['figures/speedvsneighbrdistance_' wormnum{1}];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -160,7 +159,7 @@ for numCtr = 1:length(wormnums)
         ylabel(dircorrFig.Children,'orientational correlation')
         xlabel(dircorrFig.Children,'distance between pair (\mum)')
         legend(dircorrFig.Children,lineHandles,strains)
-        figurename = ['figures/dircrosscorr_' wormnum];
+        figurename = ['figures/dircrosscorr_' wormnum{1}];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -171,19 +170,19 @@ for numCtr = 1:length(wormnums)
         ylabel(poscorrFig.Children,'positional correlation g(r)')
         xlabel(poscorrFig.Children,'distance r (\mum)')
         legend(poscorrFig.Children,lineHandles,strains)
-        figurename = ['figures/radialdistributionfunction_' wormnum];
+        figurename = ['figures/radialdistributionfunction_' wormnum{1}];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         
-    if  strcmp(wormnum,'40')&& plotDiagnostics
+    if  strcmp(wormnum{1},'40')&& plotDiagnostics
         visitfreqFig.Children.XScale = 'log';
         visitfreqFig.Children.YScale = 'log';
 %         visitfreqFig.Children.XLim = [4e-5 1e-1];
         xlabel(visitfreqFig.Children,'site visit frequency, f')
         ylabel(visitfreqFig.Children,'pdf p(f)')
         legend(visitfreqFig.Children,strains)
-        figurename = ['figures/visitfreq_' wormnum];
+        figurename = ['figures/visitfreq_' wormnum{1}];
         exportfig(visitfreqFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);

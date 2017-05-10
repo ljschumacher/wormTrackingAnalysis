@@ -20,20 +20,19 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
-intensityThresholds_g = [60, 40];
+intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_g = 1e4;
 maxBlobSize_r = 2.5e5;
 clusterthreshold = 500;
 plotDiagnostics = false;
 
-for numCtr = 1:length(wormnums)
-    wormnum = wormnums{numCtr};
+for wormnum = wormnums
     distFig = figure; hold on
     clustFig = figure; hold on
     for strainCtr = 1:length(strains)
         %% load data
-        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
-        filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
+        filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_r_list.txt']);
         numFiles = length(filenames_g);
         assert(length(filenames_r)==numFiles,'Number of files for two channels do not match.')
         pairDistances = cell(numFiles,1);
@@ -59,7 +58,7 @@ for numCtr = 1:length(wormnums)
                     intensityThreshold_r = 40;
                 end
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
-                    intensityThresholds_g(numCtr),maxBlobSize_g);
+                    intensityThresholds_g(wormnum{1}),maxBlobSize_g);
                 trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
                     intensityThreshold_r,maxBlobSize_r)&...
                     logical(trajData_r.is_good_skel);
@@ -109,35 +108,35 @@ for numCtr = 1:length(wormnums)
         histogram2(vertcat(nnDistances{:}),vertcat(nnnDistances{:}),...
             'BinWidth',clusterthreshold*[1 1]/2,'Normalization','Probability','DisplayStyle','tile','EdgeColor','none')
         xlim([0 4000]), ylim([0 4000])
-        title(nnFig.Children,[wormnum ' ' strains{strainCtr}],'FontWeight','normal');
+        title(nnFig.Children,[wormnum{1} ' ' strains{strainCtr}],'FontWeight','normal');
         set(nnFig,'PaperUnits','centimeters')
         xlabel(nnFig.Children,'nn distance (\mum)')
         ylabel(nnFig.Children,'nnn distance (\mum)')
-        figurename = ['nearestneighbrdistance_rg_' wormnum '_' strains{strainCtr}];
+        figurename = ['nearestneighbrdistance_rg_' wormnum{1} '_' strains{strainCtr}];
         exportfig(nnFig,['figures/' figurename '.eps'],exportOptions)
         system(['epstopdf figures/' figurename '.eps']);
         system(['rm figures/' figurename '.eps']);
     end
     %% format and export figures
-    title(distFig.Children,wormnum,'FontWeight','normal');
+    title(distFig.Children,wormnum{1},'FontWeight','normal');
     set(distFig,'PaperUnits','centimeters')
     distFig.Children.XLim = [0 1.2e4];
     xlabel(distFig.Children,'r-g pair distance (\mum)')
     ylabel(distFig.Children,'P')
     legend(distFig.Children,strains)
-    figurename = ['pairdistance_rg_' wormnum];
+    figurename = ['pairdistance_rg_' wormnum{1}];
     exportfig(distFig,['figures/' figurename '.eps'],exportOptions)
     system(['epstopdf figures/' figurename '.eps']);
     system(['rm figures/' figurename '.eps']);
     %
-    title(clustFig.Children,wormnum,'FontWeight','normal');
+    title(clustFig.Children,wormnum{1},'FontWeight','normal');
     set(clustFig,'PaperUnits','centimeters')
     clustFig.Children.XLim = [0 40];
     clustFig.Children.YLim = [0 0.25];
     xlabel(clustFig.Children,['# neighbours within ' num2str(clusterthreshold) ' \mum'])
     ylabel(clustFig.Children,'P')
     legend(clustFig.Children,strains)
-    figurename = ['clusthist_rg_' wormnum];
+    figurename = ['clusthist_rg_' wormnum{1}];
     exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)
     system(['epstopdf figures/' figurename '.eps']);
     system(['rm figures/' figurename '.eps']);

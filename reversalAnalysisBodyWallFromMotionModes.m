@@ -18,7 +18,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'N2','npr1'};
 wormnums = {'1W','40','HD'};
-intensityThresholds_g = [100, 60, 40];
+intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength = 850;
@@ -56,18 +56,18 @@ for strainCtr = 1:length(strains)
                 % filter data
                 blobFeats_g = h5read(filename_g,'/blob_features');
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
-                    intensityThresholds_g(numCtr),maxBlobSize_g);
+                    intensityThresholds_g(wormnum),maxBlobSize_g);
             end
             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
-                intensityThreshold = 80;
+                intensityThreshold_r = 80;
             else
-                intensityThreshold = 40;
+                intensityThreshold_r = 40;
             end
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
-                intensityThreshold,maxBlobSize);
+                intensityThreshold_r,maxBlobSize);
             % filter by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
                 filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
