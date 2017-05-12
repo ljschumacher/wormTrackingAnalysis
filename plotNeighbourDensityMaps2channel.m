@@ -125,9 +125,9 @@ for wormnum = wormnums
     ylabel(distFig.Children,'P')
     legend(distFig.Children,strains)
     figurename = ['pairdistance_rg_' wormnum{1}];
-    exportfig(distFig,['figures/' figurename '.eps'],exportOptions)
-    system(['epstopdf figures/' figurename '.eps']);
-    system(['rm figures/' figurename '.eps']);
+    %exportfig(distFig,['figures/' figurename '.eps'],exportOptions)
+    %system(['epstopdf figures/' figurename '.eps']);
+    %system(['rm figures/' figurename '.eps']);
     %
     title(clustFig.Children,wormnum{1},'FontWeight','normal');
     set(clustFig,'PaperUnits','centimeters')
@@ -137,7 +137,7 @@ for wormnum = wormnums
     ylabel(clustFig.Children,'P')
     legend(clustFig.Children,strains)
     figurename = ['clusthist_rg_' wormnum{1}];
-    exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)
-    system(['epstopdf figures/' figurename '.eps']);
-    system(['rm figures/' figurename '.eps']);
+    %exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)
+    %system(['epstopdf figures/' figurename '.eps']);
+    %system(['rm figures/' figurename '.eps']);
 end
