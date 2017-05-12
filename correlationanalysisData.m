@@ -3,7 +3,9 @@
 
 % issues/to-do:
 % - seperate into individual functions for each statistic?
-
+% - calculate correlation functions separately for worms in/out of clusters
+% (the only non-obvious result may be a difference between clustered worms
+% in social vs asocial strains)
 clear
 close all
 

@@ -39,7 +39,7 @@ for strainCtr = 1:length(strains)
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
-            frameRate = h5readatt(filename,'/plate_worms','expected_fps');
+            frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             %% filter worms
             trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
                 (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
