@@ -88,22 +88,7 @@ for wormnum = wormnums
         system(['epstopdf figures/' figurename '.eps']);
         system(['rm figures/' figurename '.eps']);
     end
-<<<<<<< HEAD
-    %% format and export figures
-    title(distFig.Children,wormnum{1},'FontWeight','normal');
-    set(distFig,'PaperUnits','centimeters')
-    distFig.Children.XLim = [0 1.2e4];
-    xlabel(distFig.Children,'r-g pair distance (\mum)')
-    ylabel(distFig.Children,'P')
-    legend(distFig.Children,strains)
-    figurename = ['pairdistance_rg_' wormnum{1}];
-    %exportfig(distFig,['figures/' figurename '.eps'],exportOptions)
-    %system(['epstopdf figures/' figurename '.eps']);
-    %system(['rm figures/' figurename '.eps']);
-    %
-=======
     %% format and export figures 
->>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
     title(clustFig.Children,wormnum{1},'FontWeight','normal');
     set(clustFig,'PaperUnits','centimeters')
     clustFig.Children.XLim = [0 10];
@@ -112,7 +97,7 @@ for wormnum = wormnums
     ylabel(clustFig.Children,'cumulative P(N\geq 1)')
     legend(clustFig.Children,strains)
     figurename = ['clusthist_rg_' wormnum{1}];
-    %exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)
-    %system(['epstopdf figures/' figurename '.eps']);
-    %system(['rm figures/' figurename '.eps']);
+    exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)
+    system(['epstopdf figures/' figurename '.eps']);
+    system(['rm figures/' figurename '.eps']);
 end
