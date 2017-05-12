@@ -20,35 +20,30 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
-intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
-maxBlobSize_g = 1e4;
 maxBlobSize_r = 2.5e5;
+minSkelLength = 850;
+maxSkelLength = 1500;
 clusterthreshold = 500;
 plotDiagnostics = false;
 
 for wormnum = wormnums
-    distFig = figure; hold on
     clustFig = figure; hold on
     for strainCtr = 1:length(strains)
         %% load data
-        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
         filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_r_list.txt']);
-        numFiles = length(filenames_g);
+        numFiles = length(filenames_r);
         assert(length(filenames_r)==numFiles,'Number of files for two channels do not match.')
-        pairDistances = cell(numFiles,1);
         nnDistances = cell(numFiles,1);
         nnnDistances = cell(numFiles,1);
         clustercount = cell(numFiles,1);
         for fileCtr = 1:numFiles
-            filename_g = filenames_g{fileCtr};
             filename_r = filenames_r{fileCtr};
-            if exist(filename_r,'file')&&exist(filename_g,'file')
-                trajData_g = h5read(filename_g,'/trajectories_data');
+            if exist(filename_r,'file')
                 trajData_r = h5read(filename_r,'/trajectories_data');
-                blobFeats_g = h5read(filename_g,'/blob_features');
                 blobFeats_r = h5read(filename_r,'/blob_features');
-                frameRate = h5readatt(filename_g,'/plate_worms','expected_fps');
-                maxNumFrames = numel(unique(trajData_g.frame_number));
+                skelData_r = h5read(filename_r,'/skeleton');
+                frameRate = h5readatt(filename_r,'/plate_worms','expected_fps');
+                maxNumFrames = numel(unique(trajData_r.frame_number));
                 numFrames = round(maxNumFrames/frameRate/10);
                 framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
                 %% filter worms
@@ -57,53 +52,29 @@ for wormnum = wormnums
                 else
                     intensityThreshold_r = 40;
                 end
-                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
-                    intensityThresholds_g(wormnum{1}),maxBlobSize_g);
                 trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
                     intensityThreshold_r,maxBlobSize_r)&...
-                    logical(trajData_r.is_good_skel);
+                    logical(trajData_r.is_good_skel)&...
+                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
                 %% calculate stats
-                pairDistances{fileCtr} = cell(numFrames,1);
-                nnDistances{fileCtr} = cell(numFrames,1);
-                nnnDistances{fileCtr} = cell(numFrames,1);
-                for frameCtr = 1:numFrames
-                    frame = framesAnalyzed(frameCtr);
-                    [x_g, y_g] = getWormPositions(trajData_g, frame, true);
-                    [x_r, y_r] = getWormPositions(trajData_r, frame, true);
-                    if numel(x_g)>=1&&numel(x_r)>=1 % need at least two worms in frame to calculate distances
-                        redToGreenDistances = sort(pdist2([x_r y_r],[x_g y_g]).*pixelsize,2); % distance of every red worm to every green
-                        pairDistances{fileCtr}{frameCtr} = redToGreenDistances(:);
-                        nnDistances{fileCtr}{frameCtr} = redToGreenDistances(:,1); % nearest neighbours
-                        if size(redToGreenDistances,2)>1
-                            nnnDistances{fileCtr}{frameCtr} = redToGreenDistances(:,2); % next-nearest neighbours
-                        else
-                            nnnDistances{fileCtr}{frameCtr} = NaN(size(x_r));
-                        end
-                    else
-                        pairDistances{fileCtr}{frameCtr} = NaN;
-                        nnDistances{fileCtr}{frameCtr} = NaN;
-                        nnnDistances{fileCtr}{frameCtr} = NaN;
-                    end
-                end
+                neighbr_distances = h5read(filename_r,'/neighbr_distances');
+                nnDistances{fileCtr} = neighbr_distances(trajData_r.filtered,1);
+                nnnDistances{fileCtr} = neighbr_distances(trajData_r.filtered,2);
                 % count how many worms are within clusterthreshold
-                clustercount{fileCtr} = cellfun(@(x) nnz(x<=clusterthreshold), pairDistances{fileCtr});
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
+                clustercount{fileCtr} = num_close_neighbrs(trajData_r.filtered);
             else
                 warning(['Not all necessary tracking results present for ' filename_r ])
-                pairDistances{fileCtr} = {};
-                nnDistances{fileCtr} = {};
-                nnnDistances{fileCtr} = {};
+                nnDistances{fileCtr} = [];
+                nnnDistances{fileCtr} = [];
             end
         end
         %% plot data
         % pool data from all frames for each file, then for all files
-        pairDistances = cellfun(@(x) {vertcat(x{:})},pairDistances);
-        histogram(distFig.Children,vertcat(pairDistances{:}),'Normalization','Probability',...
-            'DisplayStyle','stairs')
-        histogram(clustFig.Children,vertcat(clustercount{:}),'Normalization','Probability',...
-            'DisplayStyle','stairs')
+        ecdf(clustFig.Children,vertcat(clustercount{:}),'function','survivor')
         % nearest vs next-nearest neighbours
-        nnDistances = cellfun(@(x) {vertcat(x{:})},nnDistances);
-        nnnDistances = cellfun(@(x) {vertcat(x{:})},nnnDistances);
+        nnDistances = cellfun(@(x) {vertcat(x)},nnDistances);
+        nnnDistances = cellfun(@(x) {vertcat(x)},nnnDistances);
         nnFig = figure;
         histogram2(vertcat(nnDistances{:}),vertcat(nnnDistances{:}),...
             'BinWidth',clusterthreshold*[1 1]/2,'Normalization','Probability','DisplayStyle','tile','EdgeColor','none')
@@ -117,6 +88,7 @@ for wormnum = wormnums
         system(['epstopdf figures/' figurename '.eps']);
         system(['rm figures/' figurename '.eps']);
     end
+<<<<<<< HEAD
     %% format and export figures
     title(distFig.Children,wormnum{1},'FontWeight','normal');
     set(distFig,'PaperUnits','centimeters')
@@ -129,12 +101,15 @@ for wormnum = wormnums
     %system(['epstopdf figures/' figurename '.eps']);
     %system(['rm figures/' figurename '.eps']);
     %
+=======
+    %% format and export figures 
+>>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
     title(clustFig.Children,wormnum{1},'FontWeight','normal');
     set(clustFig,'PaperUnits','centimeters')
-    clustFig.Children.XLim = [0 40];
-    clustFig.Children.YLim = [0 0.25];
-    xlabel(clustFig.Children,['# neighbours within ' num2str(clusterthreshold) ' \mum'])
-    ylabel(clustFig.Children,'P')
+    clustFig.Children.XLim = [0 10];
+%     clustFig.Children.YLim = [0 0.5];
+    xlabel(clustFig.Children,['# neighbours (n) within ' num2str(clusterthreshold) ' \mum'])
+    ylabel(clustFig.Children,'cumulative P(N\geq 1)')
     legend(clustFig.Children,strains)
     figurename = ['clusthist_rg_' wormnum{1}];
     %exportfig(clustFig,['figures/' figurename '.eps'],exportOptions)

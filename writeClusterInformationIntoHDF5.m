@@ -44,11 +44,11 @@ for strainCtr = 1:length(strains)
             trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
                 filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats - red channel files
-%             try
-%                 neighbr_distances = h5read(filename_r,'/neighbr_distances');
-%                 min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
-%                 num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
-%             catch
+            try
+                neighbr_distances = h5read(filename_r,'/neighbr_distances');
+                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
+            catch
                 disp(['Calculating cluster status from ' filename_r ])
                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
                     = calculateClusterStatus(trajData_r,trajData_g,pixelsize,clusterCutOff);
@@ -58,24 +58,24 @@ for strainCtr = 1:length(strains)
                 assert(length(min_neighbr_dist)==length(trajData_r.frame_number))
                 assert(length(num_close_neighbrs)==length(trajData_r.frame_number))
                 % write stats to hdf5-file
-%                 h5create(filename_r,'/neighbr_distances',size(neighbr_distances),...
-%                     'Datatype','single')
+                h5create(filename_r,'/neighbr_distances',size(neighbr_distances),...
+                    'Datatype','single')
                 h5write(filename_r,'/neighbr_distances',single(neighbr_distances))
-%                 h5create(filename_r,'/min_neighbr_dist',...
-%                     size(min_neighbr_dist),'Datatype','single')
+                h5create(filename_r,'/min_neighbr_dist',...
+                    size(min_neighbr_dist),'Datatype','single')
                 h5write(filename_r,'/min_neighbr_dist',...
                     single(min_neighbr_dist))
-%                 h5create(filename_r,'/num_close_neighbrs',...
-%                     size(num_close_neighbrs),'Datatype','uint16')
+                h5create(filename_r,'/num_close_neighbrs',...
+                    size(num_close_neighbrs),'Datatype','uint16')
                 h5write(filename_r,'/num_close_neighbrs',...
                     uint16(num_close_neighbrs))
-%             end
+            end
             %% calculate stats - green channel files
-%             try
-%                 neighbr_distances = h5read(filename_g,'/neighbr_distances');
-%                 min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');
-%                 num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
-%             catch
+            try
+                neighbr_distances = h5read(filename_g,'/neighbr_distances');
+                min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
+            catch
                 disp(['Calculating cluster status from ' filename_g ])
                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
                     = calculateClusterStatus(trajData_g,trajData_r,pixelsize,clusterCutOff);
@@ -85,18 +85,18 @@ for strainCtr = 1:length(strains)
                 assert(length(min_neighbr_dist)==length(trajData_g.frame_number))
                 assert(length(num_close_neighbrs)==length(trajData_g.frame_number))
                 % write stats to hdf5-file
-%                 h5create(filename_g,'/neighbr_distances',size(neighbr_distances),...
-%                     'Datatype','single')
+                h5create(filename_g,'/neighbr_distances',size(neighbr_distances),...
+                    'Datatype','single')
                 h5write(filename_g,'/neighbr_distances',single(neighbr_distances))
-%                 h5create(filename_g,'/min_neighbr_dist',...
-%                     size(min_neighbr_dist),'Datatype','single')
+                h5create(filename_g,'/min_neighbr_dist',...
+                    size(min_neighbr_dist),'Datatype','single')
                 h5write(filename_g,'/min_neighbr_dist',...
                     single(min_neighbr_dist))
-%                 h5create(filename_g,'/num_close_neighbrs',...
-%                     size(num_close_neighbrs),'Datatype','uint16')
+                h5create(filename_g,'/num_close_neighbrs',...
+                    size(num_close_neighbrs),'Datatype','uint16')
                 h5write(filename_g,'/num_close_neighbrs',...
                     uint16(num_close_neighbrs))
-%             end
+            end
         end
     end
 end
@@ -127,7 +127,7 @@ for strainCtr = 1:length(strains)
             catch
                 disp(['Calculating cluster status from ' filename_g ])
                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
-                    = calculateClusterStatus(trajData_g,trajData_g,pixelsize,clusterCutOff);
+                    = calculateClusterStatus(trajData_g,[],pixelsize,clusterCutOff);
                 % check lengths
                 assert(size(neighbr_distances,1)==length(trajData_g.frame_number))
                 assert(size(neighbr_distances,2)==10)

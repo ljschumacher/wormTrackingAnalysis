@@ -23,6 +23,7 @@ maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength = 850;
 maxSkelLength = 1500;
+minNeighbrDist = 1500;
 
 plotColors = lines(length(wormnums));
 
@@ -32,13 +33,13 @@ for strainCtr = 1:length(strains)
         revDurFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         if ~strcmp(wormnum,'1W')
             filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         else
             filenames_g = {};
         end
-        numFiles = length(filenames);
+        numFiles = length(filenames_r);
         reversalfreq_lone = NaN(numFiles,1);
         reversaldurations_lone = cell(numFiles,1);
         reversalfreq_incluster = NaN(numFiles,1);
@@ -46,10 +47,10 @@ for strainCtr = 1:length(strains)
         reversalfreq_neither = NaN(numFiles,1);
         reversaldurations_neither = cell(numFiles,1);
         for fileCtr = 1:numFiles % can be parfor?
-            filename = filenames{fileCtr};
-            trajData = h5read(filename,'/trajectories_data');
-            blobFeats = h5read(filename,'/blob_features');
-            skelData = h5read(filename,'/skeleton');
+            filename_r = filenames_r{fileCtr};
+            trajData_r = h5read(filename_r,'/trajectories_data');
+            blobFeats_r = h5read(filename_r,'/blob_features');
+            skelData_r = h5read(filename_r,'/skeleton');
             if ~strcmp(wormnum,'1W')
                 filename_g = filenames_g{fileCtr};
                 trajData_g = h5read(filename_g,'/trajectories_data');
@@ -58,46 +59,45 @@ for strainCtr = 1:length(strains)
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             end
-            featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-            frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+            featData_r = h5read(strrep(filename_r,'skeletons','features'),'/features_timeseries');
+            frameRate = double(h5readatt(filename_r,'/plate_worms','expected_fps'));
             % filter by blob size and intensity
-            if contains(filename,'55')||contains(filename,'54')
+            if contains(filename_r,'55')||contains(filename_r,'54')
                 intensityThreshold_r = 80;
             else
                 intensityThreshold_r = 40;
             end
-            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+            trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
                 intensityThreshold_r,maxBlobSize);
             % filter by skeleton length
-            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
-                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+            trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
+                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
-                loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
-                inCluster = num_close_neighbrs_rg>=3;
-                neitherClusterNorLone = num_close_neighbrs_rg==1|num_close_neighbrs_rg==2;
+                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
+                loneWorms = min_neighbr_dist>=minNeighbrDist;
+                inCluster = num_close_neighbrs>=3;
+                neitherClusterNorLone = num_close_neighbrs==1|num_close_neighbrs==2;
             else
-                loneWorms = true(size(trajData.frame_number));
-                inCluster = false(size(trajData.frame_number));
-                neitherClusterNorLone = false(size(trajData.frame_number));
+                loneWorms = true(size(trajData_r.frame_number));
+                inCluster = false(size(trajData_r.frame_number));
+                neitherClusterNorLone = false(size(trajData_r.frame_number));
             end
             % features from the tracker
             % ignore data otherwise filtered out
-            featData.motion_modes(ismember(featData.skeleton_id+1,find(~trajData.filtered))) = NaN;
+            featData_r.motion_modes(ismember(featData_r.skeleton_id+1,find(~trajData_r.filtered))) = NaN;
             %%
             % find reversals in motion modes
             [revStartInd, revDuration] = findReversals(...
-                featData.motion_modes,featData.worm_index);
+                featData_r.motion_modes,featData_r.worm_index);
             % detect cluster status of reversals and features
-            loneReversals = ismember(featData.skeleton_id(revStartInd)+1,find(loneWorms));
-            inclusterReversals = ismember(featData.skeleton_id(revStartInd)+1,find(inCluster));
-            neitherClusterNorLoneReversals = ismember(featData.skeleton_id(revStartInd)+1,find(neitherClusterNorLone));
-            loneWormsFeats = ismember(featData.skeleton_id+1,find(loneWorms));
-            inClusterFeats = ismember(featData.skeleton_id+1,find(inCluster));
-            neitherClusterNorLoneFeats = ismember(featData.skeleton_id+1,find(neitherClusterNorLone));
+            loneReversals = ismember(featData_r.skeleton_id(revStartInd)+1,find(loneWorms));
+            inclusterReversals = ismember(featData_r.skeleton_id(revStartInd)+1,find(inCluster));
+            neitherClusterNorLoneReversals = ismember(featData_r.skeleton_id(revStartInd)+1,find(neitherClusterNorLone));
+            loneWormsFeats = ismember(featData_r.skeleton_id+1,find(loneWorms));
+            inClusterFeats = ismember(featData_r.skeleton_id+1,find(inCluster));
+            neitherClusterNorLoneFeats = ismember(featData_r.skeleton_id+1,find(neitherClusterNorLone));
             % estimate reversal frequencies and durations
             Nrev_lone = nnz(loneReversals);
             Nrev_incluster = nnz(inclusterReversals);
@@ -105,9 +105,9 @@ for strainCtr = 1:length(strains)
             T_lone = nnz(loneWormsFeats)/frameRate;
             T_incluster = nnz(inClusterFeats)/frameRate;
             T_neither = nnz(neitherClusterNorLone)/frameRate;
-            Trev_lone = nnz(featData.motion_modes(loneWormsFeats)<0)/frameRate;
-            Trev_incluster = nnz(featData.motion_modes(inClusterFeats)<0)/frameRate;
-            Trev_neither = nnz(featData.motion_modes(neitherClusterNorLoneFeats)<0)/frameRate;
+            Trev_lone = nnz(featData_r.motion_modes(loneWormsFeats)<0)/frameRate;
+            Trev_incluster = nnz(featData_r.motion_modes(inClusterFeats)<0)/frameRate;
+            Trev_neither = nnz(featData_r.motion_modes(neitherClusterNorLoneFeats)<0)/frameRate;
             reversalfreq_lone(fileCtr) = Nrev_lone./(T_lone - Trev_lone);
             reversalfreq_incluster(fileCtr) = Nrev_incluster./(T_incluster - Trev_incluster);
             reversalfreq_neither(fileCtr) = Nrev_neither./(T_neither - Trev_neither);

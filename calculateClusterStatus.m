@@ -11,14 +11,15 @@ num_close_neighbrs = zeros(size(trajData_a.frame_number));
 for frameCtr = 1:numFrames
     frame = frames(frameCtr);
     frameLogIdcs = trajData_a.frame_number==frame;    % put calculated distances and neighbour numbers into the right entries
-    [neighbr_distances_rr, ~, ~] = ... % use 2-channel function here to filter the red objects to which distance is calculated, but not ones distance is calculated from
+    [neighbr_distances_aa, ~, ~] = ... % use 2-channel function here to filter the objects to which distance is calculated, but not ones distance is calculated from
         getWormClusterStatus2channel(trajData_a, trajData_a, frame, pixelsize, inClusterRadius);
-    [neighbr_distances_rg, ~, ~] = ...
-        getWormClusterStatus2channel(trajData_a, trajData_b, frame, pixelsize, inClusterRadius);
-    % combine distances to red and green neighbours
-    neighbr_distances_combined = sort([neighbr_distances_rr, neighbr_distances_rg],2);
-    if size(neighbr_distances_combined,2)<numNeighbrDists
-        1;
+    if ~isempty(trajData_b)
+        [neighbr_distances_ab, ~, ~] = ...
+            getWormClusterStatus2channel(trajData_a, trajData_b, frame, pixelsize, inClusterRadius);
+        % combine distances to red and green neighbours
+        neighbr_distances_combined = sort([neighbr_distances_aa, neighbr_distances_ab],2);
+    else
+        neighbr_distances_combined = neighbr_distances_aa;
     end
     neighbr_distances(frameLogIdcs,:) = neighbr_distances_combined(:,1:numNeighbrDists);
     min_neighbr_dist(frameLogIdcs) = neighbr_distances_combined(:,1);

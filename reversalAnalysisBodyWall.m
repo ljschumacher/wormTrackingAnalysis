@@ -23,6 +23,7 @@ maxBlobSize = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength = 850;
 maxSkelLength = 1500;
+minNeighbrDist = 1500;
 midbodyIndcs = 19:33;
 plotColors = lines(length(wormnums));
 loneClusterRadius = 2000; % for defining small clusters
@@ -51,10 +52,10 @@ for strainCtr = 1:length(strains)
         interrevT_inCluster = cell(numFiles,1);
         interrevT_smallCluster = cell(numFiles,1);
         for fileCtr = 1:numFiles % can be parfor?
-            filename = filenames{fileCtr};
-            trajData = h5read(filename,'/trajectories_data');
-            blobFeats = h5read(filename,'/blob_features');
-            skelData = h5read(filename,'/skeleton');
+            filename_r = filenames{fileCtr};
+            trajData_r = h5read(filename_r,'/trajectories_data');
+            blobFeats_r = h5read(filename_r,'/blob_features');
+            skelData_r = h5read(filename_r,'/skeleton');
             if ~strcmp(wormnum,'1W')
                 numCloseNeighbr = h5read(filename,'/num_close_neighbrs');
                 neighbrDist = h5read(filename,'/neighbr_distances');
@@ -66,13 +67,20 @@ for strainCtr = 1:length(strains)
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             end
             % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
+<<<<<<< HEAD
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter red data by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
+=======
+            frameRate = double(h5readatt(filename_r,'/plate_worms','expected_fps'));
+            % filter by blob size and intensity
+            if contains(filename_r,'55')||contains(filename_r,'54')
+>>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
                 intensityThreshold_r = 80;
             else
                 intensityThreshold_r = 40;
             end
+<<<<<<< HEAD
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThreshold_r,maxBlobSize);
             % filter red data by skeleton length
@@ -94,34 +102,52 @@ for strainCtr = 1:length(strains)
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
                 smallCluster = false(size(trajData.frame_number));
+=======
+            trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
+                    intensityThreshold_r,maxBlobSize);
+            % filter by skeleton length
+            trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
+                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
+            %% calculate stats
+            if ~strcmp(wormnum,'1W')
+                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
+                loneWorms = min_neighbr_dist>=minNeighbrDist;
+                inCluster = num_close_neighbrs>=3;
+                neitherClusterNorLone = num_close_neighbrs==1|num_close_neighbrs==2;
+            else
+                loneWorms = true(size(trajData_r.frame_number));
+                inCluster = false(size(trajData_r.frame_number));
+                neitherClusterNorLone = false(size(trajData_r.frame_number));
+>>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
             end
             %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
             % centroids of midbody skeleton
-            midbody_x = mean(squeeze(skelData(1,midbodyIndcs,:)))*pixelsize;
-            midbody_y = mean(squeeze(skelData(2,midbodyIndcs,:)))*pixelsize;
+            midbody_x = mean(squeeze(skelData_r(1,midbodyIndcs,:)))*pixelsize;
+            midbody_y = mean(squeeze(skelData_r(2,midbodyIndcs,:)))*pixelsize;
             % change in centroid position over time (issue of worm shifts?)
             dmidbody_xdt = gradient(midbody_x)*frameRate;
             dmidbody_ydt = gradient(midbody_y)*frameRate;
             % midbody speed and velocity
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./gradient(double(trajData.frame_number))';
-            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./gradient(double(trajData.frame_number))';
+            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./gradient(double(trajData_r.frame_number))';
+            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./gradient(double(trajData_r.frame_number))';
             % direction of segments pointing along midbody
-            [~, dmidbody_yds] = gradient(squeeze(skelData(2,midbodyIndcs,:)),-1);
-            [~, dmidbody_xds] = gradient(squeeze(skelData(1,midbodyIndcs,:)),-1);
+            [~, dmidbody_yds] = gradient(squeeze(skelData_r(2,midbodyIndcs,:)),-1);
+            [~, dmidbody_xds] = gradient(squeeze(skelData_r(1,midbodyIndcs,:)),-1);
             % sign speed based on relative orientation of velocity to midbody
             midbodySpeedSigned = sign(sum(midbodyVelocity.*[mean(dmidbody_xds); mean(dmidbody_yds)])).*midbodySpeed;
             % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
+            wormChangeIndcs = gradient(double(trajData_r.worm_index_joined))~=0;
             midbodySpeedSigned(wormChangeIndcs)=NaN;
             % ignore frames with bad skeletonization
-            midbodySpeedSigned(trajData.is_good_skel~=1)=NaN;
+            midbodySpeedSigned(trajData_r.is_good_skel~=1)=NaN;
             % ignore skeletons otherwise filtered out
-            midbodySpeedSigned(~trajData.filtered) = NaN;
+            midbodySpeedSigned(~trajData_r.filtered) = NaN;
             % smooth speed to denoise
             midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
             % find reversals in midbody speed
             [revStartInd, revDuration] = findReversals(...
-                midbodySpeedSigned,trajData.worm_index_joined);
+                midbodySpeedSigned,trajData_r.worm_index_joined);
             % detect cluster status of reversals and features
             loneReversals = ismember(revStartInd,find(loneWorms));
             inClusterReversals = ismember(revStartInd,find(inCluster));
