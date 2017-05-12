@@ -12,7 +12,7 @@ minIntensities_r = [40, 80]; % script takes 40 for all movies but recordings 54 
 maxBlobSize_r = 250000;
 minSkelLength_r = 850;
 pixelsize = 100/19.5; % 100 microns is 19.5 pixels
-loneClusterRadius = 2500;
+loneClusterRadius = 2000;
 inClusterRadius = 500;
 minNumNeighbrs = [2,3,4];
 

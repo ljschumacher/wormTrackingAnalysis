@@ -22,9 +22,9 @@ for numCtr = 1:length(wormnums)
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};
         %% load data
-        filenames = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames);
-        filenames_g = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         for fileCtr=1:numFiles
             filename = filenames{fileCtr};
             filename_g = filenames_g{fileCtr};
@@ -97,10 +97,10 @@ for numCtr = 1:length(wormnums)
                     set(smallClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
                     epsFileName = ['figures/diagnostics/smallCluster/red2/pdf/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.eps'];
                     figFileName = ['figures/diagnostics/smallCluster/red2/fig/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.fig'];
-                    savefig(figFileName)
-                    exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
-                    system(['epstopdf ' epsFileName]);
-                    system(['rm ' epsFileName]);
+                    %savefig(figFileName)
+                    %exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
+                    %system(['epstopdf ' epsFileName]);
+                    %system(['rm ' epsFileName]);
                 end
             end
         end
