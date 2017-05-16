@@ -82,6 +82,7 @@ for numCtr = 1:length(wormnums)
                         hold on
                         % plot red worm trajectory
                         redTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
+                        redTrajIdcsBefore = redTrajIdcsBefore(redTrajIdcsBefore>0); %remove negative values
                         redTrajIdcsAfter = frameIdcs_worm:(frameIdcs_worm+trajFrameNumAfter);
                         sameRedWormBefore = trajData.worm_index_joined(redTrajIdcsBefore);
                         redTrajIdcsBefore(sameRedWormBefore ~=trajData.worm_index_joined(frameIdcs_worm))=[];
@@ -104,6 +105,7 @@ for numCtr = 1:length(wormnums)
                         for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
                             greenTrajInd = greenTrajIdcsList(greenTrajCtr);
                             greenTrajIdcsBefore = (greenTrajInd-trajFrameNumBefore):greenTrajInd;
+                            greenTrajIdcsBefore = greenTrajIdcsBefore(greenTrajIdcsBefore>0); %remove negative values
                             sameGreenWormBefore = trajData_g.worm_index_joined(greenTrajIdcsBefore);
                             greenTrajIdcsBefore(sameGreenWormBefore ~=trajData_g.worm_index_joined(greenTrajInd))=[];
                             greenTrajIdcsAfter = greenTrajInd:(greenTrajInd+trajFrameNumAfter);
@@ -132,8 +134,8 @@ for numCtr = 1:length(wormnums)
                     %% export figure
                     figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
                     set(smallClusterWormsTrajFig,'Name',[strain ' ' wormnum ' ' figName])
-                    epsFileName = ['figures/diagnostics/smallClusterTraj/red2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
-                    figFileName = ['figures/diagnostics/smallClusterTraj/red2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                    epsFileName = ['figures/smallClusterTraj/red2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                    figFileName = ['figures/smallClusterTraj/red2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
                     savefig(figFileName)
                     exportfig(smallClusterWormsTrajFig,epsFileName,'Color','rgb','Width',210,'Height',297)
                     system(['epstopdf ' epsFileName]);
