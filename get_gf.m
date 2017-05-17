@@ -1,3 +1,4 @@
+
 close all; clear; clc;
 
 filename = {'recording34.2g_X1_skeletons.hdf5', 'recording34.5g_X1_skeletons.hdf5', 'recording34.8g_X1_skeletons.hdf5'}
@@ -91,44 +92,143 @@ for movie = 1:num_movies
                 % Adjust the count for the number of worms in the box suitably
                 worm_counts(1,i) = counter;
             end
-
+            
+            % Store the data in appropriate matrixes for plotting later
             data_store(1,n,s)  = mean(worm_counts);
             all_pairs_x(end+1) = mean(worm_counts);
             
             data_store(2,n,s)  = var(worm_counts);
             all_pairs_y(end+1) = var(worm_counts);
-%             rectangle('Position', box_pos)
-%             axis equal
-%             xlim([min(x_data) max(x_data)])
-%             ylim([min(y_data) max(y_data)])
         end
 
     end
-
-    figure(2)
+    
+    % First figure plotting ln(N) against ln(var) for each video
+    figure(1)
     
     subplot(length(filename),1, movie)
     hold on
     for s = 1:length(scale)
-    scatter(data_store(1,:,s), data_store(2,:,s));
+        
+        x = log(data_store(1,:,s));
+        y = log(data_store(2,:,s));
+        x = x(isfinite(x));
+        y = y(isfinite(y));
+        
+        scatter(x, y);
     end
-    hold off
-    legend
-
-    %axis equal
-    xlabel('N')
-    ylabel('var')
+    
+    % Also obtain a linear regression through the cloud of log-log points
+    x = log(all_pairs_x);
+    y = log(all_pairs_y);
+    x = x(isfinite(x));
+    y = y(isfinite(y));
+    
+    % Use the mldivide operator to solve for m
+    b1 = x'\y';
+    y_calc = b1.*x;
+    
+    % Plot this line in addition to the refline y = x
     refline(1,0)
-    %xlim([0 inf])
+   	plot(x,y_calc, 'k')  
+    hold off
+
+    xlabel('ln(N)')
+    ylabel('ln(var)')
 
     title(filename{movie}, 'Interpreter', 'none')
 end
 
+% Also plot points from videos together in separate fig & color accordingly
 figure;
 hold on
 slice = length(all_pairs_x)/num_movies
 for movie = 0:num_movies-1
-    scatter(all_pairs_x((1+slice*movie):(slice*(movie+1))),all_pairs_y((1+slice*movie):(slice*(movie+1))))
+    scatter(log(all_pairs_x((1+slice*movie):(slice*(movie+1)))),log(all_pairs_y((1+slice*movie):(slice*(movie+1)))))
 end
 hold off
+
+% Add plot details and a reference line y = x
+xlabel('ln(N)')
+ylabel('ln(var)')
 refline(1,0)
+legend(filename, 'Interpreter', 'none')
+
+
+%% Attempting to fit linear relationships
+ 
+ x = all_pairs_x;
+ y = all_pairs_y;
+ 
+ % Use the mldivide operator to solve for m
+ format long
+ 
+ b1 = x'\y'
+ y_calc = b1.*x;
+ 
+ figure
+ subplot(2,1,1)
+ scatter(x,y)
+ hold on
+ plot(x,y_calc)
+ refline(1,0)
+ 
+ xlabel('N')
+ ylabel('var')
+ legend({'data', 'a = 1', ['a = ' num2str(b1)]})
+ hold off
+ 
+ % Now try for the log normalised data
+ x = log(all_pairs_x);
+ y = log(all_pairs_y);
+
+ 
+ x = x(isfinite(x));
+ y = y(isfinite(y));
+ 
+ format long
+ 
+ b1 = x'\y'
+ y_calc = b1.*x;
+ 
+ subplot(2,1,2)
+ scatter(x,y)
+ hold on
+ plot(x,y_calc)
+ refline(1,0)
+ 
+ xlabel('ln(N)')
+ ylabel('ln(var)')
+ legend({'data', 'a = 1', ['a = ' num2str(b1)]})
+ hold off
+ 
+% Breaking down the plots
+figure;
+slice = length(all_pairs_x)/num_movies
+
+for movie = 0:num_movies-1
+    x = log(all_pairs_x);
+    y = log(all_pairs_y);
+    
+    x = x((1+slice*movie):(slice*(movie+1)))
+    y = y((1+slice*movie):(slice*(movie+1)))
+    
+    x = x(isfinite(x));
+    y = y(isfinite(y));
+
+    %format long
+    b1 = x'\y'
+    y_calc = b1.*x;
+    
+    subplot(3,1,movie+1)
+    hold on
+    scatter(x,y)
+    plot(x,y_calc)
+    refline(1,0)
+
+    xlabel('ln(N)')
+    ylabel('ln(var)')
+    legend({'data', ['a = ' num2str(b1)], 'a = 1',})
+    title(filename{movie+1}, 'Interpreter', 'none')
+    hold off
+end
