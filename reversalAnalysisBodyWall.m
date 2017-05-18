@@ -96,13 +96,14 @@ for strainCtr = 1:length(strains)
             dmidbody_xdt = gradient(midbody_x)*frameRate;
             dmidbody_ydt = gradient(midbody_y)*frameRate;
             % midbody speed and velocity
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./gradient(double(trajData_r.frame_number))';
-            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./gradient(double(trajData_r.frame_number))';
+            dFramedt = gradient(double(trajData_r.frame_number))';
+            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./dFramedt;
+            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./dFramedt;
             % direction of segments pointing along midbody
             [~, dmidbody_yds] = gradient(squeeze(skelData_r(2,midbodyIndcs,:)),-1);
             [~, dmidbody_xds] = gradient(squeeze(skelData_r(1,midbodyIndcs,:)),-1);
             % sign speed based on relative orientation of velocity to midbody
-            midbodySpeedSigned = sign(sum(midbodyVelocity.*[mean(dmidbody_xds); mean(dmidbody_yds)])).*midbodySpeed;
+            midbodySpeedSigned = getSignedSpeed(midbodyVelocity,[mean(dmidbody_xds); mean(dmidbody_yds)]);
             % ignore first and last frames of each worm's track
             wormChangeIndcs = gradient(double(trajData_r.worm_index_joined))~=0;
             midbodySpeedSigned(wormChangeIndcs)=NaN;

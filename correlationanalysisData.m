@@ -87,7 +87,7 @@ for wormnum = wormnums
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
-                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation
+                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation by N(N-1)
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
                     if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
