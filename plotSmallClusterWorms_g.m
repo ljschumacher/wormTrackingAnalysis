@@ -1,12 +1,17 @@
 % plot small cluster worms with their neighbrs
+% and optionally, their trajectories for the 100 framed preceding/following the randomly chosen frame
+
+% remaining issue: when exporting as pdf via eps, some of the dots get
+% lost, thus script is currently saving both .fig and .pdf files
+
 close all
 clear
 
 % specify data sets
-dataset = 1 % specify which dataset to run the script for. Enter either 1 or 2
+dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
-numFramesSampled = 30; % how many frames to randomly sample per file
+numFramesSampled = 10; % how many frames to randomly sample per file
 
 % set parameters for filtering data
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
@@ -18,13 +23,19 @@ maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
 
+% set parameter for plotting trajectory
+plotTraj = true; % true or false
+trajFrameNumBefore = 100;
+trajFrameNumAfter = 100;
+
+% analysis
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};
         if dataset == 1
             %% load data
-            filenames = importdata([strains{strainCtr} '_' wormnum '_list.txt']);
+            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
             numFiles = length(filenames);
             for fileCtr=1:numFiles
                 filename = filenames{fileCtr};
@@ -45,11 +56,11 @@ for numCtr = 1:length(wormnums)
                 if length(unique(trajData.frame_number(trajData.clusterfiltered)))<numFramesSampled
                     warning(['Not enough frames to plot for ' filename ])
                 else
-                    smallClusterWormsFig = figure;
+                    smallClusterTrajFig = figure;
                     framesAnalyzed = randsample(unique(trajData.frame_number(trajData.clusterfiltered)),numFramesSampled);
                     for frameCtr = 1:numFramesSampled
                         frame=framesAnalyzed(frameCtr);
-                        subplot(6,5,frameCtr)
+                        subplot(2,5,frameCtr)
                         % plot central green worm (in blue)
                         frameIdcs_worm = find(trajData.frame_number==frame&trajData.clusterfiltered);
                         if nnz(frameIdcs_worm)>1 % plot only one green worm if multiple present
@@ -57,13 +68,48 @@ for numCtr = 1:length(wormnums)
                         end
                         worm_xcoord = trajData.coord_x(frameIdcs_worm);
                         worm_ycoord = trajData.coord_y(frameIdcs_worm);
-                        plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',4,'MarkerFaceColor','b')
+                        plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',5,'MarkerFaceColor','b')
                         hold on
+                        % plot central worm trajectory
+                        if plotTraj == true
+                            centTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
+                            centTrajIdcsBefore = centTrajIdcsBefore(centTrajIdcsBefore>0); %remove negative values
+                            centTrajIdcsAfter = frameIdcs_worm:(frameIdcs_worm+trajFrameNumAfter);
+                            sameCentWormBefore = trajData.worm_index_joined(centTrajIdcsBefore);
+                            centTrajIdcsBefore(sameCentWormBefore ~=trajData.worm_index_joined(frameIdcs_worm))=[];
+                            sameWormAfter = trajData.worm_index_joined(centTrajIdcsAfter);
+                            centTrajIdcsAfter(sameWormAfter ~=trajData.worm_index_joined(frameIdcs_worm))=[];
+                            % only keep trajectory indices for the same worm
+                            plot(trajData.coord_x(centTrajIdcsBefore),trajData.coord_y(centTrajIdcsBefore),...
+                                'Color',[0 0 1],'LineWidth',1)
+                            plot(trajData.coord_x(centTrajIdcsAfter),trajData.coord_y(centTrajIdcsAfter),...
+                                'Color',[0 0 0.5],'LineWidth',1)
+                        end
                         % plot other green worms
                         frameLogIdcs_pharynx = trajData.frame_number==frame&trajData.filtered;
                         frameLogIdcs_pharynx(frameIdcs_worm) = false; % exclude the central worm that's just been plotted
                         plot(trajData.coord_x(frameLogIdcs_pharynx),trajData.coord_y(frameLogIdcs_pharynx),...
-                            'ko','MarkerSize',4,'MarkerFaceColor','g')
+                            'ro','MarkerSize',5,'MarkerFaceColor',[0 0.7 0.3])
+                        % plot other green worm trajectories
+                        if plotTraj == true
+                            greenTrajIdcsList = find(frameLogIdcs_pharynx);
+                            numGreenTrajIdcs = length(greenTrajIdcsList);
+                            for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
+                                greenTrajInd = greenTrajIdcsList(greenTrajCtr);
+                                greenTrajIdcsBefore = (greenTrajInd-trajFrameNumBefore):greenTrajInd;
+                                greenTrajIdcsBefore = greenTrajIdcsBefore(greenTrajIdcsBefore>0);
+                                sameGreenWormBefore = trajData.worm_index_joined(greenTrajIdcsBefore);
+                                greenTrajIdcsBefore(sameGreenWormBefore ~=trajData.worm_index_joined(greenTrajInd))=[];
+                                greenTrajIdcsAfter = greenTrajInd:(greenTrajInd+trajFrameNumAfter);
+                                sameGreenWormAfter = trajData.worm_index_joined(greenTrajIdcsAfter);
+                                greenTrajIdcsAfter(sameGreenWormAfter ~=trajData.worm_index_joined(greenTrajInd))=[];
+                                % only keep trajectory indices for the same worm
+                                plot(trajData.coord_x(greenTrajIdcsBefore),trajData.coord_y(greenTrajIdcsBefore),...
+                                    'Color',[0 1 0.3],'LineWidth',1)
+                                plot(trajData.coord_x(greenTrajIdcsAfter),trajData.coord_y(greenTrajIdcsAfter),...
+                                    'Color',[0 0.4 0.3],'LineWidth',1)
+                            end
+                        end
                         axis equal
                         % plot circle of radius neighbrCutOff around each worm
                         viscircles([worm_xcoord worm_ycoord],...
@@ -80,19 +126,25 @@ for numCtr = 1:length(wormnums)
                     end
                     %% export figure
                     figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
-                    set(smallClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
-                    epsFileName = ['figures/diagnostics/smallCluster/green1/pdf/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.eps'];
-                    figFileName = ['figures/diagnostics/smallCluster/green1/fig/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.fig'];
+                    set(smallClusterTrajFig,'Name',[strain ' ' wormnum ' ' figName])
+                    if plotTraj == true
+                        epsFileName = ['figures/smallClusterTraj/green1/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['figures/smallClusterTraj/green1/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                    elseif plotTraj == false
+                        epsFileName = ['figures/smallCluster/green1/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['figures/smallCluster/green1/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
+                    end
                     savefig(figFileName)
-                    exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
+                    exportfig(smallClusterTrajFig,epsFileName,'Color','rgb','Width',210,'Height',297)
                     system(['epstopdf ' epsFileName]);
                     system(['rm ' epsFileName]);
+                    close all
                 end
             end
         elseif dataset == 2
             %% load data
-            filenames = importdata([strains{strainCtr} '_' wormnum '_g_list.txt']);
-            filenames_r = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
+            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
             numFiles = length(filenames);
             for fileCtr=1:numFiles
                 filename = filenames{fileCtr};
@@ -129,11 +181,11 @@ for numCtr = 1:length(wormnums)
                     if length(unique(trajData.frame_number(trajData.clusterfiltered)))<numFramesSampled
                         warning(['Not enough frames to plot for ' filename ])
                     else
-                        smallClusterWormsFig = figure;
+                        smallClusterTrajFig = figure;
                         framesAnalyzed = randsample(unique(trajData.frame_number(trajData.clusterfiltered)),numFramesSampled);
                         for frameCtr = 1:numFramesSampled
                             frame=framesAnalyzed(frameCtr);
-                            subplot(6,5,frameCtr)
+                            subplot(2,5,frameCtr)
                             % plot central green worm (in blue)
                             frameIdcs_worm = find(trajData.frame_number==frame&trajData.clusterfiltered);
                             if nnz(frameIdcs_worm)>1 % plot only one green worm if multiple present
@@ -141,17 +193,72 @@ for numCtr = 1:length(wormnums)
                             end
                             worm_xcoord = trajData.coord_x(frameIdcs_worm);
                             worm_ycoord = trajData.coord_y(frameIdcs_worm);
-                            plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',4,'MarkerFaceColor','b')
+                            plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',5,'MarkerFaceColor','b')
                             hold on
+                            % plot central worm trajectory
+                            if plotTraj == true
+                                centTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
+                                centTrajIdcsBefore = centTrajIdcsBefore(centTrajIdcsBefore>0);
+                                centTrajIdcsAfter = frameIdcs_worm:(frameIdcs_worm+trajFrameNumAfter);
+                                sameCentWormBefore = trajData.worm_index_joined(centTrajIdcsBefore);
+                                centTrajIdcsBefore(sameCentWormBefore ~=trajData.worm_index_joined(frameIdcs_worm))=[];
+                                sameWormAfter = trajData.worm_index_joined(centTrajIdcsAfter);
+                                centTrajIdcsAfter(sameWormAfter ~=trajData.worm_index_joined(frameIdcs_worm))=[];
+                                % only keep trajectory indices for the same worm
+                                plot(trajData.coord_x(centTrajIdcsBefore),trajData.coord_y(centTrajIdcsBefore),...
+                                    'Color',[0.4 0.4 1],'LineWidth',1)
+                                plot(trajData.coord_x(centTrajIdcsAfter),trajData.coord_y(centTrajIdcsAfter),...
+                                    'Color','black','LineWidth',1)
+                            end
                             % plot other green worms
                             frameLogIdcs_pharynx = trajData.frame_number==frame&trajData.filtered;
                             frameLogIdcs_pharynx(frameIdcs_worm) = false; % exclude the central worm that's just been plotted
                             plot(trajData.coord_x(frameLogIdcs_pharynx),trajData.coord_y(frameLogIdcs_pharynx),...
-                                'ko','MarkerSize',4,'MarkerFaceColor','g')
+                                'ro','MarkerSize',5,'MarkerFaceColor',[0 0.7 0.3])
+                            % plot other green worm trajectories
+                            if plotTraj == true
+                                greenTrajIdcsList = find(frameLogIdcs_pharynx);
+                                numGreenTrajIdcs = length(greenTrajIdcsList);
+                                for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
+                                    greenTrajInd = greenTrajIdcsList(greenTrajCtr);
+                                    greenTrajIdcsBefore = (greenTrajInd-trajFrameNumBefore):greenTrajInd;
+                                    greenTrajIdcsBefore = greenTrajIdcsBefore(greenTrajIdcsBefore>0);
+                                    sameGreenWormBefore = trajData.worm_index_joined(greenTrajIdcsBefore);
+                                    greenTrajIdcsBefore(sameGreenWormBefore ~=trajData.worm_index_joined(greenTrajInd))=[];
+                                    greenTrajIdcsAfter = greenTrajInd:(greenTrajInd+trajFrameNumAfter);
+                                    sameGreenWormAfter = trajData.worm_index_joined(greenTrajIdcsAfter);
+                                    greenTrajIdcsAfter(sameGreenWormAfter ~=trajData.worm_index_joined(greenTrajInd))=[];
+                                    % only keep trajectory indices for the same worm
+                                    plot(trajData.coord_x(greenTrajIdcsBefore),trajData.coord_y(greenTrajIdcsBefore),...
+                                        'Color','green','LineWidth',1)
+                                    plot(trajData.coord_x(greenTrajIdcsAfter),trajData.coord_y(greenTrajIdcsAfter),...
+                                        'Color',[0.2 0.6 0.2],'LineWidth',1)
+                                end
+                            end
                             % plot red worms
                             frameLogIdcs_red = trajData_r.frame_number==frame&trajData_r.filtered;
                             plot(trajData_r.coord_x(frameLogIdcs_red),trajData_r.coord_y(frameLogIdcs_red),...
                                 'ko','MarkerSize',4,'MarkerFaceColor','m')
+                            % plot red worm trajectories
+                            if plotTraj == true
+                                redTrajIdcsList = find(frameLogIdcs_red);
+                                numRedTrajIdcs = length(redTrajIdcsList);
+                                for redTrajCtr = 1:numRedTrajIdcs % loop through each red worm
+                                    redTrajInd = redTrajIdcsList(redTrajCtr);
+                                    redTrajIdcsBefore = (redTrajInd-trajFrameNumBefore):redTrajInd;
+                                    redTrajIdcsBefore = redTrajIdcsBefore(redTrajIdcsBefore>0);
+                                    sameRedWormBefore = trajData.worm_index_joined(redTrajIdcsBefore);
+                                    redTrajIdcsBefore(sameRedWormBefore ~=trajData.worm_index_joined(redTrajInd))=[];
+                                    redTrajIdcsAfter = redTrajInd:(redTrajInd+trajFrameNumAfter);
+                                    sameRedWormAfter = trajData.worm_index_joined(redTrajIdcsAfter);
+                                    redTrajIdcsAfter(sameRedWormAfter ~=trajData.worm_index_joined(redTrajInd))=[];
+                                    % only keep trajectory indices for the same worm
+                                    plot(trajData_r.coord_x(redTrajIdcsBefore),trajData_r.coord_y(redTrajIdcsBefore),...
+                                        'Color',[1 0 0.2],'LineWidth',1)
+                                    plot(trajData_r.coord_x(redTrajIdcsAfter),trajData_r.coord_y(redTrajIdcsAfter),...
+                                        'Color',[0.6 0 0.2],'LineWidth',1)
+                                end
+                            end
                             axis equal
                             % plot circle of radius neighbrCutOff around each worm
                             viscircles([worm_xcoord worm_ycoord],...
@@ -168,13 +275,19 @@ for numCtr = 1:length(wormnums)
                         end
                         %% export figure
                         figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
-                        set(smallClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
-                        epsFileName = ['figures/diagnostics/smallCluster/green2/pdf/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/diagnostics/smallCluster/green2/fig/sampleSmallClusterWorms_' strain '_' wormnum '_' figName '.fig'];
+                        set(smallClusterTrajFig,'Name',[strain ' ' wormnum ' ' figName])
+                        if plotTraj == true
+                            epsFileName = ['figures/smallClusterTraj/green2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                            figFileName = ['figures/smallClusterTraj/green2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                        elseif plotTraj == false
+                            epsFileName = ['figures/smallCluster/green2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
+                            figFileName = ['figures/smallCluster/green2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
+                        end
                         savefig(figFileName)
-                        exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
+                        exportfig(smallClusterTrajFig,epsFileName,'Color','rgb','Width',210,'Height',297)
                         system(['epstopdf ' epsFileName]);
                         system(['rm ' epsFileName]);
+                        close all
                     end
                 end
             end
