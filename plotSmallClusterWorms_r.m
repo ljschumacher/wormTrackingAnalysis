@@ -12,6 +12,12 @@ strains = {'npr1','N2'};
 wormnums = {'40','HD'};
 numFramesSampled = 10; % how many frames to randomly sample per file
 
+% set parameter for plotting trajectory
+plotPharynxDirection = true; % true or false
+plotTraj = false; % true or false
+trajFrameNumBefore = 100;
+trajFrameNumAfter = 100;
+
 % set parameters for filtering data
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize_r = 2.5e5;
@@ -22,10 +28,6 @@ loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
 intensityThresholds_g = [60, 40, NaN];
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-% set parameter for plotting trajectory
-plotTraj = true; % true or false
-trajFrameNumBefore = 100;
-trajFrameNumAfter = 100;
 
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
@@ -46,6 +48,7 @@ for numCtr = 1:length(wormnums)
                 neighbrDist = h5read(filename,'/neighbr_distances');
                 trajData_g = h5read(filename_g,'/trajectories_data');
                 blobFeats_g = h5read(filename_g,'/blob_features');
+                skelData_g = h5read(filename_g,'/skeleton');
                 %% filter data
                 % filter red by blob size and intensity
                 if contains(filename,'55')||contains(filename,'54')
@@ -84,6 +87,7 @@ for numCtr = 1:length(wormnums)
                         worm_ycoords = squeeze(skelData(2,:,frameIdcs_worm));
                         plot(worm_xcoords,worm_ycoords,'Color',[0.8 0 0.2],'LineWidth',3)
                         hold on
+                        plot(worm_xcoords(1),worm_ycoords(1),'ko','MarkerSize',5,'Color','black') % head node
                         % plot red worm trajectory
                         if plotTraj == true;
                             redTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
@@ -103,8 +107,17 @@ for numCtr = 1:length(wormnums)
                         end
                         % plot green worms
                         frameLogIdcs_pharynx = trajData_g.frame_number==frame&trajData_g.filtered;
-                        plot(trajData_g.coord_x(frameLogIdcs_pharynx),trajData_g.coord_y(frameLogIdcs_pharynx),...
-                            'ko','MarkerSize',4,'MarkerFaceColor','b','MarkerEdgeColor','k')
+                        if plotPharynxDirection == false
+                            plot(trajData_g.coord_x(frameLogIdcs_pharynx),trajData_g.coord_y(frameLogIdcs_pharynx),...
+                                'ko','MarkerSize',4,'MarkerFaceColor','b','MarkerEdgeColor','k')
+                        elseif plotPharynxDirection == true
+                            head_x = squeeze(skelData_g(1,1,frameLogIdcs_pharynx));
+                            head_y = squeeze(skelData_g(2,1,frameLogIdcs_pharynx));
+                            plot(head_x,head_y,'ko','MarkerSize',3,'MarkerFaceColor','b') %plot head
+                            pharynxSkel_x = squeeze(skelData_g(1,:,frameLogIdcs_pharynx));
+                            pharynxSkel_y = squeeze(skelData_g(2,:,frameLogIdcs_pharynx));
+                            plot(pharynxSkel_x,pharynxSkel_y,'LineWidth',2,'Color','b')%plot pharynx
+                        end
                         % plot green worm trajectories
                         if plotTraj == true;
                             greenTrajIdcsList = find(frameLogIdcs_pharynx);
@@ -149,10 +162,10 @@ for numCtr = 1:length(wormnums)
                         epsFileName = ['figures/smallCluster/red2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
                         figFileName = ['figures/smallCluster/red2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
                     end
-                    savefig(figFileName)
-                    exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
-                    system(['epstopdf ' epsFileName]);
-                    system(['rm ' epsFileName]);
+                    %savefig(figFileName)
+                    %exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)
+                    %system(['epstopdf ' epsFileName]);
+                    %system(['rm ' epsFileName]);
                 end
             end
         end
