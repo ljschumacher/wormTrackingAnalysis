@@ -8,7 +8,7 @@ close all
 clear
 
 % specify data sets
-dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
+dataset = 1; % specify which dataset to run the script for. Enter either 1 or 2
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
 numFramesSampled = 10; % how many frames to randomly sample per file
