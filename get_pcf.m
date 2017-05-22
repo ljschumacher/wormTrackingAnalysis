@@ -71,12 +71,18 @@ for movie = 1:length(filename)
 
         % Obtain the pairwise distances with pdist
         pair_dist = pdist(coords);
+        
+        % Make the distances informative
+        % There are 100 microns in a pixel
+        p2m = 0.1/19.5;
+        pair_dist = pair_dist.*p2m;
         mean_dist(end+1) = mean(pair_dist);
 
         % Create bins of a given width, to store the data in
-        bin_width = 100;
-        bins = 1:bin_width:max(peak2peak(x_data), peak2peak(y_data)); 
-
+        bin_width = 0.5;
+        bins = 1:bin_width:max(peak2peak(x_data)*p2m, peak2peak(y_data)*p2m); 
+        %bins = 1:bin_width:max(peak2peak(pair_dist), peak2peak(pair_dist)); 
+        
         % Get the histogram counts of the pair_dist data using the bins
         gr1 = histcounts(pair_dist,bins,'Normalization','pdf');
         gr1 = histcounts(pair_dist,bins);%,'Normalization','pdf');
@@ -178,10 +184,10 @@ for movie = 1:length(filename)
     end
 
     % Provide appropriate labels for axes
-    xlabel('r [pixels]')
+    xlabel('r [millimetres]')
     ylabel('g(r)')
 
-    xlim([0 R-bin_width])
+    xlim([0.5 R-bin_width])
 
     % Finally add labelled colorbar and hold off to publish the plot
     set(gca, 'CLim', [0, single(final_t)])
