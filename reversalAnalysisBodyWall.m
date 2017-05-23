@@ -19,10 +19,10 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 strains = {'N2','npr1'};
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
-maxBlobSize = 2.5e5;
+maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
-minSkelLength = 850;
-maxSkelLength = 1500;
+minSkelLength_r = 850;
+maxSkelLength_r = 1500;
 minNeighbrDist = 1500;
 midbodyIndcs = 19:33;
 plotColors = lines(length(wormnums));
@@ -57,8 +57,8 @@ for strainCtr = 1:length(strains)
             blobFeats_r = h5read(filename_r,'/blob_features');
             skelData_r = h5read(filename_r,'/skeleton');
             if ~strcmp(wormnum,'1W')
-                numCloseNeighbr = h5read(filename,'/num_close_neighbrs');
-                neighbrDist = h5read(filename,'/neighbr_distances');
+                numCloseNeighbr = h5read(filename_r,'/num_close_neighbrs');
+                neighbrDist = h5read(filename_r,'/neighbr_distances');
                 filename_g = filenames_g{fileCtr};
                 trajData_g = h5read(filename_g,'/trajectories_data');
                 % filter green data by blob size and intensity
@@ -66,24 +66,24 @@ for strainCtr = 1:length(strains)
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             end
-            % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-            frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+            % % featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
+            frameRate = double(h5readatt(filename_r,'/plate_worms','expected_fps'));
             % filter red data by blob size and intensity
-            if contains(filename,'55')||contains(filename,'54')
+            if contains(filename_r,'55')||contains(filename_r,'54')
                 intensityThreshold_r = 80;
             else
                 intensityThreshold_r = 40;
             end
-            trajData_r.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
-                intensityThreshold_r,maxBlobSize);
+            trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
+                intensityThreshold_r,maxBlobSize_r);
             % filter red data by skeleton length
             trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
-                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
+                filterSkelLength(skelData_r,pixelsize,minSkelLength_r,maxSkelLength_r);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
+                min_neighbr_dist_rr = h5read(filename_r,'/min_neighbr_dist_rr');
+                min_neighbr_dist_rg = h5read(filename_r,'/min_neighbr_dist_rg');
+                num_close_neighbrs_rg = h5read(filename_r,'/num_close_neighbrs_rg');
                 loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
                 inCluster = num_close_neighbrs_rg>=3;
                 smallCluster = trajData_r.filtered&...
@@ -240,7 +240,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
     figurename = ['figures/reversals/reversalfrequency_' strains{strainCtr}];
-    exportfig(revFreqFig,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
+    %exportfig(revFreqFig,[figurename '.eps'],exportOptions)
+    %system(['epstopdf ' figurename '.eps']);
+    %system(['rm ' figurename '.eps']);
 end

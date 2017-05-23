@@ -21,7 +21,6 @@ plotTraj = false; % true or false
 trajFrameNumBefore = 100;
 trajFrameNumAfter = 100;
 
-
 % set parameters for filtering data
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize = 1e4;
