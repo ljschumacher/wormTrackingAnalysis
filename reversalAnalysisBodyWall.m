@@ -74,11 +74,11 @@ for strainCtr = 1:length(strains)
             else
                 intensityThreshold_r = 40;
             end
-            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+            trajData_r.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThreshold_r,maxBlobSize);
             % filter red data by skeleton length
-            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
-                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+            trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
+                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
                 min_neighbr_dist_rr = h5read(filename,'/min_neighbr_dist_rr');
@@ -86,15 +86,15 @@ for strainCtr = 1:length(strains)
                 num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg');
                 loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
                 inCluster = num_close_neighbrs_rg>=3;
-                smallCluster = trajData.filtered&...
+                smallCluster = trajData_r.filtered&...
                     ((numCloseNeighbr== 2 & neighbrDist(:,3)>=(loneClusterRadius))...
                     |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
                     |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
                 % define lone, in cluster, and small cluster worms
             else
-                loneWorms = true(size(trajData.frame_number));
-                inCluster = false(size(trajData.frame_number));
-                smallCluster = false(size(trajData.frame_number));
+                loneWorms = true(size(trajData_r.frame_number));
+                inCluster = false(size(trajData_r.frame_number));
+                smallCluster = false(size(trajData_r.frame_number));
             end
             %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
             % centroids of midbody skeleton
