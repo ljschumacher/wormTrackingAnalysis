@@ -41,8 +41,8 @@ for strainCtr = 1:length(strains)
             blobFeats = h5read(filename,'/blob_features');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             %% filter worms
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                    intensityThresholds(wormnum{1}),maxBlobSize);
             if ~strcmp(wormnum{1},'1W') % filter for lone worms
                 min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
                 trajData.filtered = trajData.filtered&min_neighbr_dist>=minNeighbrDist;

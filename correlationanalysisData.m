@@ -44,7 +44,7 @@ for wormnum = wormnums
     lineHandles = NaN(nStrains,1);
     for strainCtr = 1:nStrains
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
+        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.txt']);
         numFiles = length(filenames);
         if wormnum{1} == '40'
             visitfreq = cell(numFiles,1);
@@ -58,6 +58,13 @@ for wormnum = wormnums
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
+            skelData = h5read(filename,'/skeleton');
+            assert(size(skelData,1)==2)
+            assert(size(skelData,2)==2)
+            assert(size(skelData,3)==length(trajData.frame_number));
+            if all(isnan(skelData(:)))
+                warning(['all skeleton are NaN for ' filename])
+            end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
             numFrames = round(maxNumFrames/frameRate/5);
@@ -68,11 +75,11 @@ for wormnum = wormnums
                     intensityThresholds(wormnum{1}),maxBlobSize,...
                     [wormnum{1} ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
             end
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}));
+            trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                    intensityThresholds(wormnum{1}),maxBlobSize)...
+                    &trajData.has_skeleton;
             %% calculate stats
-            % beware that this ordering is frames first, not worms first
-            % (as the saved files)
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
             pairdist{fileCtr} = cell(numFrames,1);
@@ -80,14 +87,17 @@ for wormnum = wormnums
             gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
             for frameCtr = 1:numFrames
                 frame = framesAnalyzed(frameCtr);
-                [x, y, u, v] = calculateWormSpeeds(trajData, frame, rue);
+                [x ,y] = getWormPositions(trajData, frame, true);
                 if numel(x)>1 % need at least two worms in frame
-                    speeds{fileCtr}{frameCtr} = sqrt(u.^2+v.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
-                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(u,v,true); % directional correlation
+                    frameLogInd = trajData.frame_number==frame&trajData.filtered;
+                    speeds{fileCtr}{frameCtr} = double(sqrt(blobFeats.velocity_x(frameLogInd).^2 + blobFeats.velocity_y(frameLogInd).^2)*pixelsize*frameRate); % speed of every worm in frame, in mu/s
+                    ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
+                    oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
+                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
-                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation
+                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation by N(N-1)
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
                     if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
