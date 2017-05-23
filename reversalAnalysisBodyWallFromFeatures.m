@@ -170,7 +170,7 @@ for strainCtr = 1:length(strains)
         else
             legend(revInterTimeFig.Children,'single worms')
         end
-        figurename = ['figures/reversalintertimeFromFeatures_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversalintertime_bodywall_FromFeatures_' strains{strainCtr} '_' wormnum];
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -206,7 +206,7 @@ for strainCtr = 1:length(strains)
         else
             legend(revDurFig.Children,'single worms')
         end
-        figurename = ['figures/reversaldurationsFromFeatures_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversaldurations_bodywall_FromFeatures_' strains{strainCtr} '_' wormnum];
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -219,7 +219,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    figurename = ['figures/reversalfrequencyFromFeatures_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequency_bodywall_FromFeatures_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);

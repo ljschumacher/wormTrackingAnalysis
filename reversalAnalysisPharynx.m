@@ -162,13 +162,13 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
 %         revInterTimeFig.Children.YLim(1) = 1e-2;
-%         revInterTimeFig.Children.XLim(2) = 120;
+        revInterTimeFig.Children.XLim(2) = 120;
         if ~strcmp(wormnum,'1W')
             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','in cluster','neither',})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
-        figurename = ['figures/reversalintertime_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversalintertime_pharynx_' strains{strainCtr} '_' wormnum];
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -198,13 +198,13 @@ for strainCtr = 1:length(strains)
         set(revDurFig,'PaperUnits','centimeters')
         xlabel(revDurFig.Children,'time (s)')
         ylabel(revDurFig.Children,'P')
-%         revDurFig.Children.XLim = [0 15];
+        revDurFig.Children.XLim = [0 10];
         if ~strcmp(wormnum,'1W')
             legend(revDurFig.Children,{'lone worms','neither','in cluster'})
         else
             legend(revDurFig.Children,'single worms')
         end
-        figurename = ['figures/reversaldurations_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversaldurations_pharynx_' strains{strainCtr} '_' wormnum];
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -217,7 +217,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    figurename = ['figures/reversalfrequency_' strains{strainCtr}];
+    figurename = ['figures/reversalfrequency_pharynx_' strains{strainCtr}];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
