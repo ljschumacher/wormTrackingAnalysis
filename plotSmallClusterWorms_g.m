@@ -10,7 +10,7 @@ close all
 clear
 
 % specify data sets
-dataset = 1; % specify which dataset to run the script for. Enter either 1 or 2
+dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
 numFramesSampled = 10; % how many frames to randomly sample per file
@@ -59,7 +59,7 @@ for numCtr = 1:length(wormnums)
                 filename_r = filenames_r{fileCtr};
                 if exist(filename,'file')&&exist(filename_r,'file')
                     trajData = h5read(filename,'/trajectories_data');
-                    skelData = h5read(filename,'/skeletons');
+                    skelData = h5read(filename,'/skeleton');
                     blobFeats = h5read(filename,'/blob_features');
                     numCloseNeighbr = h5read(filename,'/num_close_neighbrs');
                     neighbrDist = h5read(filename,'/neighbr_distances');
@@ -110,9 +110,13 @@ for numCtr = 1:length(wormnums)
                         plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',5,'MarkerFaceColor','b')
                         hold on
                     elseif plotPharynxDirection == true
+                        if isnan(skelData(1,1,frameIdcs_worm)) == true || isnan(skelData(2,1,frameIdcs_worm)) == true
+                            warning('worm not plotted!')
+                        else
                         plot(skelData(1,1,frameIdcs_worm),skelData(2,1,frameIdcs_worm),'ko','MarkerSize',3,'MarkerFaceColor','b') %plot head
                         hold on
                         plot(skelData(1,:,frameIdcs_worm),skelData(2,:,frameIdcs_worm),'LineWidth',2,'Color','b')%plot pharynx
+                        end
                     end
                     % plot central worm trajectory
                     if plotTraj == true

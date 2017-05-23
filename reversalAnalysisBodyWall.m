@@ -67,20 +67,13 @@ for strainCtr = 1:length(strains)
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             end
             % %             featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-<<<<<<< HEAD
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             % filter red data by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
-=======
-            frameRate = double(h5readatt(filename_r,'/plate_worms','expected_fps'));
-            % filter by blob size and intensity
-            if contains(filename_r,'55')||contains(filename_r,'54')
->>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
                 intensityThreshold_r = 80;
             else
                 intensityThreshold_r = 40;
             end
-<<<<<<< HEAD
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThreshold_r,maxBlobSize);
             % filter red data by skeleton length
@@ -102,24 +95,6 @@ for strainCtr = 1:length(strains)
                 loneWorms = true(size(trajData.frame_number));
                 inCluster = false(size(trajData.frame_number));
                 smallCluster = false(size(trajData.frame_number));
-=======
-            trajData_r.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
-                    intensityThreshold_r,maxBlobSize);
-            % filter by skeleton length
-            trajData_r.filtered = trajData_r.filtered&logical(trajData_r.is_good_skel)&...
-                filterSkelLength(skelData_r,pixelsize,minSkelLength,maxSkelLength);
-            %% calculate stats
-            if ~strcmp(wormnum,'1W')
-                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
-                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
-                loneWorms = min_neighbr_dist>=minNeighbrDist;
-                inCluster = num_close_neighbrs>=3;
-                neitherClusterNorLone = num_close_neighbrs==1|num_close_neighbrs==2;
-            else
-                loneWorms = true(size(trajData_r.frame_number));
-                inCluster = false(size(trajData_r.frame_number));
-                neitherClusterNorLone = false(size(trajData_r.frame_number));
->>>>>>> e2522e39ec4ceccba32f35981ed2e58bb30b404f
             end
             %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
             % centroids of midbody skeleton
