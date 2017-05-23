@@ -25,6 +25,9 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 
+cumSurvivalFig = figure;
+legendMatrix=cell(length(strains)*length(wormnums),1);
+
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
     for strainCtr = 1:length(strains)
@@ -33,8 +36,7 @@ for numCtr = 1:length(wormnums)
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames);
         filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
-        perduranceProbFig = figure;
-        perduranceCountFig = figure;
+        frameDist = [];
         for fileCtr=1:numFiles
             filename = filenames{fileCtr};
             filename_g = filenames_g{fileCtr};
@@ -73,42 +75,24 @@ for numCtr = 1:length(wormnums)
                     q = diff([0 diff([smallClusterFrames]) 0]==1);
                     consFrames = find(q == -1) - find(q == 1) + 1; % list lengths of consecutive frames
                     singleFrames = length(smallClusterFrames) - sum(consFrames(:)); % find number of single frames
-                    frameDist = [ones(1,singleFrames) consFrames]; % compile distribution of consecutive frames
-                    % plot data
-                    % percentage graph
-                    figure(perduranceProbFig);subplot(3,5,fileCtr)
-                    histogram(frameDist,'Normalization','Probability','DisplayStyle','bar','BinWidth',1)
-                    title (strrep(strrep(filename(end-32:end-17),'_',''),'/',''))
-                    xlabel('cluster perdurance (frames)')
-                    ylabel('probability')
-                    % count graph
-                    figure(perduranceCountFig);subplot(3,5,fileCtr)
-                    histogram(frameDist,'Normalization','count','DisplayStyle','bar','BinWidth',1)
-                    title (strrep(strrep(filename(end-32:end-17),'_',''),'/',''))
-                    xlabel('cluster perdurance (frames)')
-                    ylabel('count')
-                    ymax = length(find(frameDist == mode(frameDist)));
-                    yticks(0:1:ymax)
+                    frameDist = [frameDist ones(1,singleFrames) consFrames]; % compile distribution of consecutive frames by adding each movie
                 end
             end
         end
-        %% format graphs and export
-        figure(perduranceProbFig)
-        set(perduranceProbFig,'Name',[strain ' ' wormnum ' '])
-        epsFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceProb_' strain '_' wormnum '.eps'];
-        figFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceProb_' strain '_' wormnum '.fig'];
-        savefig(figFileName)
-        exportfig(perduranceProbFig,epsFileName,exportOptions)
-        system(['epstopdf ' epsFileName]);
-        system(['rm ' epsFileName]);
-        %
-        figure(perduranceCountFig);
-        set(perduranceCountFig,'Name',[strain ' ' wormnum ' '])
-        epsFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceCount_' strain '_' wormnum '.eps'];
-        figFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceCount_' strain '_' wormnum '.fig'];
-        savefig(figFileName)
-        exportfig(perduranceCountFig,epsFileName,exportOptions)
-        system(['epstopdf ' epsFileName]);
-        system(['rm ' epsFileName]);
+        % plot cumulative survival
+        [ecdfy,ecdfx] = ecdf(frameDist);
+        plot(ecdfx,1-ecdfy)
+        hold on
+        legendMatrix{(numCtr-1)*2+(strainCtr)}= strcat(strain, '\_', wormnum);
     end
 end
+%% format graphs and export
+        xlabel('frames elapsed (at 9fps)')
+        ylabel('remaining proportion')
+        legend(legendMatrix)
+        epsFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
+        figFileName = ['figures/smallClusterPerdurance/red2/fig/smallClusterPerduranceSurvivalPooled.fig'];
+        savefig(figFileName)
+        exportfig(cumSurvivalFig,epsFileName,exportOptions)
+        system(['epstopdf ' epsFileName]);
+        system(['rm ' epsFileName]);

@@ -22,19 +22,21 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 
+cumSurvivalFig = figure;
+legendMatrix=cell(length(strains)*length(wormnums),1);
+
 for numCtr = 1:length(wormnums)
     wormnum = wormnums{numCtr};
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};
         %% load data
-        perduranceProbFig = figure;
-        perduranceCountFig = figure;
         if dataset ==1
             filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         elseif dataset ==2
             filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         end
         numFiles = length(filenames);
+        frameDist = [];
         for fileCtr=1:numFiles
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -56,49 +58,29 @@ for numCtr = 1:length(wormnums)
                 q = diff([0 diff([smallClusterFrames]) 0]==1);
                 consFrames = find(q == -1) - find(q == 1) + 1; % list lengths of consecutive frames
                 singleFrames = length(smallClusterFrames) - sum(consFrames(:)); % find number of single frames
-                frameDist = [ones(1,singleFrames) consFrames]; % compile distribution of consecutive frames
-                % plot data
-                % percentage graph
-                figure(perduranceProbFig);subplot(3,5,fileCtr)
-                histogram(frameDist,'Normalization','Probability','DisplayStyle','bar','BinWidth',1)
-                title (strrep(strrep(filename(end-32:end-17),'_',''),'/',''))
-                xlabel('cluster perdurance (frames)')
-                ylabel('probability')
-                % count graph
-                figure(perduranceCountFig);subplot(3,5,fileCtr)
-                histogram(frameDist,'Normalization','count','DisplayStyle','bar','BinWidth',1)
-                title (strrep(strrep(filename(end-32:end-17),'_',''),'/',''))
-                xlabel('cluster perdurance (frames)')
-                ylabel('count')
+                frameDist = [frameDist ones(1,singleFrames) consFrames]; % compile distribution of consecutive frames by adding each movie
             end
         end
-        %% format graphs and export
-        figure(perduranceProbFig)
-        set(perduranceProbFig,'Name',[strain ' ' wormnum ' '])
-        if dataset ==1
-            epsFileName = ['figures/smallClusterPerdurance/green1/pdf/smallClusterPerduranceProb_' strain '_' wormnum '.eps'];
-            figFileName = ['figures/smallClusterPerdurance/green1/fig/smallClusterPerduranceProb_' strain '_' wormnum '.fig'];
-        elseif dataset==2
-            epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceProb_' strain '_' wormnum '.eps'];
-            figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceProb_' strain '_' wormnum '.fig'];
-        end
-        savefig(figFileName)
-        exportfig(perduranceProbFig,epsFileName,exportOptions)
-        system(['epstopdf ' epsFileName]);
-        system(['rm ' epsFileName]);
-        %
-        figure(perduranceCountFig);
-        set(perduranceCountFig,'Name',[strain ' ' wormnum ' '])
-        if dataset ==1
-            epsFileName = ['figures/smallClusterPerdurance/green1/pdf/smallClusterPerduranceCount_' strain '_' wormnum '.eps'];
-            figFileName = ['figures/smallClusterPerdurance/green1/fig/smallClusterPerduranceCount_' strain '_' wormnum '.fig'];
-        elseif dataset ==2
-            epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceCount_' strain '_' wormnum '.eps'];
-            figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceCount_' strain '_' wormnum '.fig'];
-        end
-        savefig(figFileName)
-        exportfig(perduranceCountFig,epsFileName,exportOptions)
-        system(['epstopdf ' epsFileName]);
-        system(['rm ' epsFileName]);
+        % plot cumulative survival
+        [ecdfy,ecdfx] = ecdf(frameDist);
+        plot(ecdfx,1-ecdfy)
+        %ecdf(frameDist,'function','survivor','alpha',0.01,'bounds','on')
+        hold on
+        legendMatrix{(numCtr-1)*2+(strainCtr)}= strcat(strain, '\_', wormnum);
     end
 end
+        %% format graphs and export
+        xlabel('frames elapsed (at 9fps)')
+        ylabel('remaining proportion')
+        legend(legendMatrix)
+        if dataset ==1
+            epsFileName = ['figures/smallClusterPerdurance/green1/pdf/smallClusterPerduranceSurvivalPooled.eps'];
+            figFileName = ['figures/smallClusterPerdurance/green1/fig/smallClusterPerduranceSurvivalPooled.fig'];
+        elseif dataset ==2
+            epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
+            figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceSurvivalPooled.fig'];
+        end
+        savefig(figFileName)
+        exportfig(cumSurvivalFig,epsFileName,exportOptions)
+        system(['epstopdf ' epsFileName]);
+        system(['rm ' epsFileName]);
