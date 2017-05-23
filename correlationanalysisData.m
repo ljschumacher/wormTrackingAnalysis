@@ -76,9 +76,9 @@ for wormnum = wormnums
                     [wormnum{1} ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
             end
             trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(wormnum{1}))...
-                &trajData.has_skeleton;
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                    intensityThresholds(wormnum{1}),maxBlobSize)...
+                    &trajData.has_skeleton;
             %% calculate stats
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
@@ -90,7 +90,7 @@ for wormnum = wormnums
                 [x ,y] = getWormPositions(trajData, frame, true);
                 if numel(x)>1 % need at least two worms in frame
                     frameLogInd = trajData.frame_number==frame&trajData.filtered;
-                    speeds{fileCtr}{frameCtr} = sqrt(blobFeats.velocity_x(frameLogInd).^2 + blobFeats.velocity_y(frameLogInd).^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
+                    speeds{fileCtr}{frameCtr} = double(sqrt(blobFeats.velocity_x(frameLogInd).^2 + blobFeats.velocity_y(frameLogInd).^2)*pixelsize*frameRate); % speed of every worm in frame, in mu/s
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation

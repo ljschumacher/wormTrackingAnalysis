@@ -47,8 +47,8 @@ for wormnum = wormnums
                 trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                     &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
                 % filter green channel by blob size and intensity
-                trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
-                    (blobFeats_g.intensity_mean>=intensityThresholds_g(wormnum{1}));
+                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
+                    intensityThresholds_g(wormnum{1}),maxBlobSize_g);
                 % filter for in-cluster
                 num_close_neighbrs_rg = h5read(filename,'/num_close_neighbrs_rg')';
                 trajData.filtered = trajData.filtered&num_close_neighbrs_rg>=minNumNeighbrs;
