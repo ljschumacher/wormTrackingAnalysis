@@ -106,21 +106,26 @@ for numCtr = 1:length(wormnums)
                                 'o','MarkerSize',8,'MarkerFaceColor',[0.8 0 0.2])
                         end
                         % plot green worms
-                        frameLogIdcs_pharynx = trajData_g.frame_number==frame&trajData_g.filtered;
+                        frameIdcs_pharynx = trajData_g.frame_number==frame&trajData_g.filtered;
                         if plotPharynxDirection == false
-                            plot(trajData_g.coord_x(frameLogIdcs_pharynx),trajData_g.coord_y(frameLogIdcs_pharynx),...
+                            plot(trajData_g.coord_x(frameIdcs_pharynx),trajData_g.coord_y(frameIdcs_pharynx),...
                                 'ko','MarkerSize',4,'MarkerFaceColor','b','MarkerEdgeColor','k')
                         elseif plotPharynxDirection == true
-                            head_x = squeeze(skelData_g(1,1,frameLogIdcs_pharynx));
-                            head_y = squeeze(skelData_g(2,1,frameLogIdcs_pharynx));
+                            head_x = squeeze(skelData_g(1,1,frameIdcs_pharynx));
+                            head_y = squeeze(skelData_g(2,1,frameIdcs_pharynx));
                             plot(head_x,head_y,'ko','MarkerSize',3,'MarkerFaceColor','b') %plot head
-                            pharynxSkel_x = squeeze(skelData_g(1,:,frameLogIdcs_pharynx));
-                            pharynxSkel_y = squeeze(skelData_g(2,:,frameLogIdcs_pharynx));
+                            pharynxSkel_x = squeeze(skelData_g(1,:,frameIdcs_pharynx));
+                            pharynxSkel_y = squeeze(skelData_g(2,:,frameIdcs_pharynx));
                             plot(pharynxSkel_x,pharynxSkel_y,'LineWidth',2,'Color','b')%plot pharynx
+                             % plot worms in the vincinity without skeleton data
+                            frameIdcs_pharynx_noSkel = frameIdcs_pharynx &...
+                            (isnan(squeeze(skelData_g(1,1,:)))==true | isnan(squeeze(skelData_g(2,1,:)))==true);
+                            plot(trajData_g.coord_x(frameIdcs_pharynx_noSkel),trajData_g.coord_y(frameIdcs_pharynx_noSkel),...
+                            'ko','MarkerSize',3,'MarkerFaceColor','b')
                         end
                         % plot green worm trajectories
                         if plotTraj == true;
-                            greenTrajIdcsList = find(frameLogIdcs_pharynx);
+                            greenTrajIdcsList = find(frameIdcs_pharynx);
                             numGreenTrajIdcs = length(greenTrajIdcsList);
                             for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
                                 greenTrajInd = greenTrajIdcsList(greenTrajCtr);

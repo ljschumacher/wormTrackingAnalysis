@@ -56,16 +56,6 @@ for strainCtr = 1:length(strains)
             trajData_r = h5read(filename_r,'/trajectories_data');
             blobFeats_r = h5read(filename_r,'/blob_features');
             skelData_r = h5read(filename_r,'/skeleton');
-            if ~strcmp(wormnum,'1W')
-                numCloseNeighbr = h5read(filename_r,'/num_close_neighbrs');
-                neighbrDist = h5read(filename_r,'/neighbr_distances');
-                filename_g = filenames_g{fileCtr};
-                trajData_g = h5read(filename_g,'/trajectories_data');
-                % filter green data by blob size and intensity
-                blobFeats_g = h5read(filename_g,'/blob_features');
-                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
-                    intensityThresholds_g(wormnum),maxBlobSize_g);
-            end
             % % featData = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
             frameRate = double(h5readatt(filename_r,'/plate_worms','expected_fps'));
             % filter red data by blob size and intensity
@@ -83,13 +73,14 @@ for strainCtr = 1:length(strains)
             if ~strcmp(wormnum,'1W')
                 min_neighbr_dist_rr = h5read(filename_r,'/min_neighbr_dist_rr');
                 min_neighbr_dist_rg = h5read(filename_r,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename_r,'/num_close_neighbrs_rg');
+                num_close_neighbrs_rg = h5read(filename_r,'/num_close_neighbrs_rg')';
+                neighbr_dist = h5read(filename_r,'/neighbr_distances');
                 loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
                 inCluster = num_close_neighbrs_rg>=3;
                 smallCluster = trajData_r.filtered&...
-                    ((numCloseNeighbr== 2 & neighbrDist(:,3)>=(loneClusterRadius))...
-                    |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
-                    |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
+                    ((num_close_neighbrs_rg == 2 & neighbr_dist(:,3)>=(loneClusterRadius))...
+                    |(num_close_neighbrs_rg == 3 & neighbr_dist(:,4)>=(loneClusterRadius))...
+                    |(num_close_neighbrs_rg == 4 & neighbr_dist(:,5)>=(loneClusterRadius)));
                 % define lone, in cluster, and small cluster worms
             else
                 loneWorms = true(size(trajData_r.frame_number));
