@@ -52,18 +52,38 @@ for numCtr = 1:length(wormnums)
                 ((numCloseNeighbr== 2 & neighbrDist(:,3)>=loneClusterRadius)...
                 |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
                 |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
-            % generate distribution of small cluster frames
+            %% generate distribution of small cluster frames
             smallClusterFrames = trajData.frame_number(trajData.filtered)';
             if isempty(smallClusterFrames) == false
-                q = diff([0 diff([smallClusterFrames]) 0]==1);
-                consFrames = find(q == -1) - find(q == 1) + 1; % list lengths of consecutive frames
-                singleFrames = length(smallClusterFrames) - sum(consFrames(:)); % find number of single frames
-                frameDist = [frameDist ones(1,singleFrames) consFrames]; % compile distribution of consecutive frames by adding each movie
+                magicInd = diff([0 diff([smallClusterFrames]) 0]==1);
+                continuousFrames = find(magicInd == -1) - find(magicInd == 1) + 1; % list lengths of consecutive frames
+                singleFrames = length(smallClusterFrames) - sum(continuousFrames(:)); % find number of single frames
+                frameDist = [frameDist ones(1,singleFrames) continuousFrames]; % compile distribution of consecutive frames by adding each movie
             end
+            % calculate how many clusters disappear due to broken trajectory
+                % generate logical index for single frames and last frames
+                % of a continuous frame run
+            smallClusterFramesLogInd = [diff(smallClusterFrames)~=1, true];
+                %list the next frame number after the end of a continuous run of (or a single) frames
+            nextFrameList = smallClusterFrames(smallClusterFramesLogInd)+1;
+                %list the worm index for those corresponding frames
+            smallClusterWorms = trajData.worm_index_joined(trajData.filtered)';
+            nextFrameWormList = smallClusterWorms(smallClusterFramesLogInd);
+                %check that the worm index still exists in the next frame
+                smallClusterContinuesCount=0;
+            for nextFrameCtr = 1:length(nextFrameList)
+                nextFrame = nextFrameList(nextFrameCtr);
+                nextFrameWorm = nextFrameWormList(nextFrameCtr);
+                if ismember(nextFrameWorm,trajData.worm_index_joined(find(trajData.frame_number==nextFrame)));
+                    smallClusterContinuesCount = smallClusterContinuesCount+1;
+                end
+            end
+            proportionToContinue = smallClusterContinuesCount/nnz(frameDist)*100
+            strcat(strain, '\_', wormnum, filename)
         end
         % plot cumulative survival
         [ecdfy,ecdfx] = ecdf(frameDist);
-        plot(ecdfx,1-ecdfy)
+        plot(ecdfx,1-ecdfy) % gives a smoother curve than the survival function
         %ecdf(frameDist,'function','survivor','alpha',0.01,'bounds','on')
         hold on
         legendMatrix{(numCtr-1)*2+(strainCtr)}= strcat(strain, '\_', wormnum);
