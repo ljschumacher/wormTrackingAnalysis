@@ -89,7 +89,7 @@ for numCtr = 1:length(wormnums)
                         hold on
                         plot(worm_xcoords(1),worm_ycoords(1),'ko','MarkerSize',5,'Color','black') % head node
                         % plot red worm trajectory
-                        if plotTraj == true;
+                        if plotTraj
                             redTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
                             redTrajIdcsBefore = redTrajIdcsBefore(redTrajIdcsBefore>0); %remove negative values
                             redTrajIdcsAfter = frameIdcs_worm:(frameIdcs_worm+trajFrameNumAfter);
@@ -110,7 +110,7 @@ for numCtr = 1:length(wormnums)
                         if plotPharynxDirection == false
                             plot(trajData_g.coord_x(frameLogIdcs_pharynx),trajData_g.coord_y(frameLogIdcs_pharynx),...
                                 'ko','MarkerSize',4,'MarkerFaceColor','b','MarkerEdgeColor','k')
-                        elseif plotPharynxDirection == true
+                        elseif plotPharynxDirection
                             head_x = squeeze(skelData_g(1,1,frameLogIdcs_pharynx));
                             head_y = squeeze(skelData_g(2,1,frameLogIdcs_pharynx));
                             plot(head_x,head_y,'ko','MarkerSize',3,'MarkerFaceColor','b') %plot head
@@ -119,7 +119,7 @@ for numCtr = 1:length(wormnums)
                             plot(pharynxSkel_x,pharynxSkel_y,'LineWidth',2,'Color','b')%plot pharynx
                         end
                         % plot green worm trajectories
-                        if plotTraj == true;
+                        if plotTraj
                             greenTrajIdcsList = find(frameLogIdcs_pharynx);
                             numGreenTrajIdcs = length(greenTrajIdcsList);
                             for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
@@ -155,7 +155,7 @@ for numCtr = 1:length(wormnums)
                     %% export figure
                     figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
                     set(smallClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
-                    if plotTraj == true
+                    if plotTraj
                         epsFileName = ['figures/smallClusterTraj/red2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
                         figFileName = ['figures/smallClusterTraj/red2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
                     elseif plotTraj == false

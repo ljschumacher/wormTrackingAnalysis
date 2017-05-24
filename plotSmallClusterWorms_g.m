@@ -111,8 +111,8 @@ for numCtr = 1:length(wormnums)
                     if plotPharynxDirection == false
                         plot(worm_xcoord,worm_ycoord,'ko','MarkerSize',5,'MarkerFaceColor','b')
                         hold on
-                    elseif plotPharynxDirection == true
-                        if isnan(squeeze(skelData(1,1,frameIdcs_worm)))==false & isnan(squeeze(skelData(2,1,frameIdcs_worm)))==false
+                    elseif plotPharynxDirection
+                        if isnan(squeeze(skelData(1,1,frameIdcs_worm)))==false && isnan(squeeze(skelData(2,1,frameIdcs_worm)))==false
                             %quiver(skelData(1,1,frameIdcs_worm),skelData(2,1,frameIdcs_worm),...
                             %skelData(1,2,frameIdcs_worm)-skelData(1,1,frameIdcs_worm),...
                             %skelData(2,2,frameIdcs_worm)-skelData(2,1,frameIdcs_worm),...
@@ -125,7 +125,7 @@ for numCtr = 1:length(wormnums)
                         end
                     end
                     % plot central worm trajectory
-                    if plotTraj == true
+                    if plotTraj
                         centTrajIdcsBefore = (frameIdcs_worm-trajFrameNumBefore):frameIdcs_worm;
                         centTrajIdcsBefore = centTrajIdcsBefore(centTrajIdcsBefore>0);
                         centTrajIdcsAfter = frameIdcs_worm:(frameIdcs_worm+trajFrameNumAfter);
@@ -145,7 +145,7 @@ for numCtr = 1:length(wormnums)
                     if plotPharynxDirection == false
                         plot(trajData.coord_x(frameIdcs_pharynx),trajData.coord_y(frameIdcs_pharynx),...
                             'ro','MarkerSize',5,'MarkerFaceColor',[0 0.7 0.3])
-                    elseif plotPharynxDirection == true
+                    elseif plotPharynxDirection
                         head_x = squeeze(skelData(1,1,frameIdcs_pharynx));
                         head_y = squeeze(skelData(2,1,frameIdcs_pharynx));
                         plot(head_x,head_y,'ko','MarkerSize',3,'MarkerFaceColor',[0 0.7 0.3]) %plot head
@@ -154,7 +154,7 @@ for numCtr = 1:length(wormnums)
                         plot(pharynxSkel_x,pharynxSkel_y,'LineWidth',2,'Color',[0 0.7 0.3])%plot pharynx
                     end
                     % plot other green worm trajectories
-                    if plotTraj == true
+                    if plotTraj
                         greenTrajIdcsList = find(frameIdcs_pharynx);
                         numGreenTrajIdcs = length(greenTrajIdcsList);
                         for greenTrajCtr = 1:numGreenTrajIdcs % loop through each green worm
@@ -179,7 +179,7 @@ for numCtr = 1:length(wormnums)
                         plot(trajData_r.coord_x(frameLogIdcs_red),trajData_r.coord_y(frameLogIdcs_red),...
                             'ko','MarkerSize',4,'MarkerFaceColor','m')
                         % plot red worm trajectories
-                        if plotTraj == true
+                        if plotTraj
                             redTrajIdcsList = find(frameLogIdcs_red);
                             numRedTrajIdcs = length(redTrajIdcsList);
                             for redTrajCtr = 1:numRedTrajIdcs % loop through each red worm
@@ -216,7 +216,7 @@ for numCtr = 1:length(wormnums)
                 %% export figure
                 figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
                 set(smallClusterTrajFig,'Name',[strain ' ' wormnum ' ' figName])
-                if plotTraj == true
+                if plotTraj
                     if dataset ==1
                         epsFileName = ['figures/smallClusterTraj/green1/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
                         figFileName = ['figures/smallClusterTraj/green1/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];

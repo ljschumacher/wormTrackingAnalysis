@@ -81,11 +81,10 @@ for strainCtr = 1:length(strains)
                 filterSkelLength(skelData_r,pixelsize,minSkelLength_r,maxSkelLength_r);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                min_neighbr_dist_rr = h5read(filename_r,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename_r,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename_r,'/num_close_neighbrs_rg');
-                loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
-                inCluster = num_close_neighbrs_rg>=3;
+                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
+                loneWorms = min_neighbr_dist>=minNeighbrDist;
+                inCluster = num_close_neighbrs>=3;
                 smallCluster = trajData_r.filtered&...
                     ((numCloseNeighbr== 2 & neighbrDist(:,3)>=(loneClusterRadius))...
                     |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
@@ -174,7 +173,7 @@ for strainCtr = 1:length(strains)
         ecdf(interrevT_lone,'Bounds','on','function','survivor')
         hold on
         if ~strcmp(wormnum,'1W')
-            if length(interrevT_smallCluster)~=1
+            if length(interrevT_smallCluster)>1
                 ecdf(interrevT_smallCluster,'Bounds','on','function','survivor')
             end
             ecdf(interrevT_inCluster,'Bounds','on','function','survivor')
@@ -187,7 +186,7 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.YLim(1) = 1e-2;
         revInterTimeFig.Children.XLim(2) = 120;
         if ~strcmp(wormnum,'1W')
-            if length(interrevT_smallCluster)~=1
+            if length(interrevT_smallCluster)>1
                 legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster',})
             else
                 legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
