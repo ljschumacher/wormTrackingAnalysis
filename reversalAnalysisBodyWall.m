@@ -20,7 +20,6 @@ strains = {'N2','npr1'};
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
-maxBlobSize_g = 1e4;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
 minNeighbrDist = 1500;
@@ -36,11 +35,6 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         %% load data
         filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
-        if ~strcmp(wormnum,'1W')
-            filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
-        else
-            filenames_g = {};
-        end
         numFiles = length(filenames);
         reversalfreq_lone = NaN(numFiles,1);
         reversaldurations_lone = cell(numFiles,1);
@@ -71,17 +65,15 @@ for strainCtr = 1:length(strains)
                 filterSkelLength(skelData_r,pixelsize,minSkelLength_r,maxSkelLength_r);
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                min_neighbr_dist_rr = h5read(filename_r,'/min_neighbr_dist_rr');
-                min_neighbr_dist_rg = h5read(filename_r,'/min_neighbr_dist_rg');
-                num_close_neighbrs_rg = h5read(filename_r,'/num_close_neighbrs_rg')';
+                min_neighbr_dist = h5read(filename_r,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_r,'/num_close_neighbrs');
                 neighbr_dist = h5read(filename_r,'/neighbr_distances');
-                loneWorms = min_neighbr_dist_rr>=1100&min_neighbr_dist_rg>=1600;
-                inCluster = num_close_neighbrs_rg>=3;
+                loneWorms = min_neighbr_dist>=minNeighbrDist;
+                inCluster = num_close_neighbrs>=3;
                 smallCluster = trajData_r.filtered&...
-                    ((num_close_neighbrs_rg == 2 & neighbr_dist(:,3)>=(loneClusterRadius))...
-                    |(num_close_neighbrs_rg == 3 & neighbr_dist(:,4)>=(loneClusterRadius))...
-                    |(num_close_neighbrs_rg == 4 & neighbr_dist(:,5)>=(loneClusterRadius)));
-                % define lone, in cluster, and small cluster worms
+                    ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(loneClusterRadius))...
+                    |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(loneClusterRadius))...
+                    |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(loneClusterRadius)));
             else
                 loneWorms = true(size(trajData_r.frame_number));
                 inCluster = false(size(trajData_r.frame_number));
@@ -187,6 +179,7 @@ for strainCtr = 1:length(strains)
             legend(revInterTimeFig.Children,'single worms')
         end
         figurename = ['figures/reversals/reversalintertime_bodywall_' strains{strainCtr} '_' wormnum];
+        savefig([figurename '.fig'])
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -219,6 +212,7 @@ for strainCtr = 1:length(strains)
             legend(revDurFig.Children,'single worms')
         end
         figurename = ['figures/reversals/reversaldurations_bodywall_' strains{strainCtr} '_' wormnum];
+        savefig([figurename '.fig'])
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -232,6 +226,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
     figurename = ['figures/reversals/reversalfrequency_bodywall_' strains{strainCtr}];
+    savefig([figurename '.fig'])
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
