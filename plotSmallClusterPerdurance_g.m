@@ -11,7 +11,7 @@ wormnums = {'40','HD'};
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize = 1e4;
 loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
-intensityThresholds = [60, 40];
+intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 exportOptions = struct('Format','eps2',...
@@ -45,8 +45,8 @@ for numCtr = 1:length(wormnums)
             neighbrDist = h5read(filename,'/neighbr_distances');
             %% filter data
             % filter green by blob size and intensity
-            trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(numCtr));
+            trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                intensityThresholds(wormnum),maxBlobSize);
             % filter green by small cluster status
             trajData.filtered = trajData.filtered&...
                 ((numCloseNeighbr== 2 & neighbrDist(:,3)>=loneClusterRadius)...
@@ -81,7 +81,7 @@ elseif dataset ==2
     epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
     figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceSurvivalPooled.fig'];
 end
-savefig(figFileName)
-exportfig(cumSurvivalFig,epsFileName,exportOptions)
-system(['epstopdf ' epsFileName]);
-system(['rm ' epsFileName]);
+%savefig(figFileName)
+%exportfig(cumSurvivalFig,epsFileName,exportOptions)
+%system(['epstopdf ' epsFileName]);
+%system(['rm ' epsFileName]);

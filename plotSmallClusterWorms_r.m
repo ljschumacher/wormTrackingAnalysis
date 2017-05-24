@@ -25,7 +25,7 @@ maxBlobSize_g = 1e4;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
 loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
-intensityThresholds_g = [60, 40, NaN];
+intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 
@@ -67,8 +67,8 @@ for numCtr = 1:length(wormnums)
                     |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
                     |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
                 % filter green channel by blob size and intensity
-                trajData_g.filtered = (blobFeats_g.area*pixelsize^2<=maxBlobSize_g)&...
-                    (blobFeats_g.intensity_mean>=intensityThresholds_g(numCtr));
+                trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
+                    intensityThresholds_g(wormnum),maxBlobSize_g);
                 % plot sample data
                 if length(unique(trajData.frame_number(trajData.filtered)))<numFramesSampled
                     warning(['Not enough frames to plot for ' filename ])
@@ -117,11 +117,11 @@ for numCtr = 1:length(wormnums)
                             pharynxSkel_x = squeeze(skelData_g(1,:,frameIdcs_pharynx));
                             pharynxSkel_y = squeeze(skelData_g(2,:,frameIdcs_pharynx));
                             plot(pharynxSkel_x,pharynxSkel_y,'LineWidth',2,'Color','b')%plot pharynx
-                             % plot worms in the vincinity without skeleton data
+                            % plot worms in the vincinity without skeleton data
                             frameIdcs_pharynx_noSkel = frameIdcs_pharynx &...
-                            (isnan(squeeze(skelData_g(1,1,:)))==true | isnan(squeeze(skelData_g(2,1,:)))==true);
+                                (isnan(squeeze(skelData_g(1,1,:)))==true | isnan(squeeze(skelData_g(2,1,:)))==true);
                             plot(trajData_g.coord_x(frameIdcs_pharynx_noSkel),trajData_g.coord_y(frameIdcs_pharynx_noSkel),...
-                            'ko','MarkerSize',3,'MarkerFaceColor','b')
+                                'ko','MarkerSize',3,'MarkerFaceColor','b')
                         end
                         % plot green worm trajectories
                         if plotTraj == true;

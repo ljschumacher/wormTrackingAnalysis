@@ -25,7 +25,7 @@ trajFrameNumAfter = 100;
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize = 1e4;
 loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
-intensityThresholds = [60, 40];
+intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -69,8 +69,8 @@ for numCtr = 1:length(wormnums)
             end
             %% filter data
             % filter green by blob size and intensity
-           trajData.filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                (blobFeats.intensity_mean>=intensityThresholds(numCtr));
+           trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
+                intensityThresholds(wormnum),maxBlobSize);
             % filter green by small cluster status
             trajData.clusterfiltered = trajData.filtered&...
                 ((numCloseNeighbr== 2 & neighbrDist(:,3)>=loneClusterRadius)...
