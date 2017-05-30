@@ -4,7 +4,11 @@ clear
 
 % specify data sets
 dataset = 1; % specify which dataset to run the script for. Enter either 1 or 2
-strains = {'npr1','N2'};
+if dataset == 1
+    strains = {'npr1','HA','N2'};
+elseif dataset ==2
+    strains = {'npr1','N2'};
+end
 wormnums = {'40','HD'};
 
 % set parameters for filtering data
@@ -16,7 +20,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...
-    'Width',50,...
+    'Width',10,...
     'Resolution',300,...
     'FontMode','fixed',...
     'FontSize',12,...
@@ -63,30 +67,30 @@ for numCtr = 1:length(wormnums)
             % calculate how many clusters disappear due to broken trajectory
                 % generate logical index for single frames and last frames
                 % of a continuous frame run
-            smallClusterFramesLogInd = [diff(smallClusterFrames)~=1, true];
+            %smallClusterFramesLogInd = [diff(smallClusterFrames)~=1, true];
                 %list the next frame number after the end of a continuous run of (or a single) frames
-            nextFrameList = smallClusterFrames(smallClusterFramesLogInd)+1;
+            %nextFrameList = smallClusterFrames(smallClusterFramesLogInd)+1;
                 %list the worm index for those corresponding frames
-            smallClusterWorms = trajData.worm_index_joined(trajData.filtered)';
-            nextFrameWormList = smallClusterWorms(smallClusterFramesLogInd);
+            %smallClusterWorms = trajData.worm_index_joined(trajData.filtered)';
+            %nextFrameWormList = smallClusterWorms(smallClusterFramesLogInd);
                 %check that the worm index still exists in the next frame
-                smallClusterContinuesCount=0;
-            for nextFrameCtr = 1:length(nextFrameList)
-                nextFrame = nextFrameList(nextFrameCtr);
-                nextFrameWorm = nextFrameWormList(nextFrameCtr);
-                if ismember(nextFrameWorm,trajData.worm_index_joined(find(trajData.frame_number==nextFrame)));
-                    smallClusterContinuesCount = smallClusterContinuesCount+1;
-                end
-            end
-            proportionToContinue = smallClusterContinuesCount/nnz(frameDist)*100
-            strcat(strain, '\_', wormnum, filename)
+            %    smallClusterContinuesCount=0;
+            %for nextFrameCtr = 1:length(nextFrameList)
+            %    nextFrame = nextFrameList(nextFrameCtr);
+            %    nextFrameWorm = nextFrameWormList(nextFrameCtr);
+            %    if ismember(nextFrameWorm,trajData.worm_index_joined(find(trajData.frame_number==nextFrame)));
+            %        smallClusterContinuesCount = smallClusterContinuesCount+1;
+            %    end
+            %end
+            %proportionToContinue = smallClusterContinuesCount/nnz(frameDist)*100
+            %strcat(strain, '\_', wormnum, filename)
         end
         % plot cumulative survival
         [ecdfy,ecdfx] = ecdf(frameDist);
         plot(ecdfx,1-ecdfy) % gives a smoother curve than the survival function
         %ecdf(frameDist,'function','survivor','alpha',0.01,'bounds','on')
         hold on
-        legendMatrix{(numCtr-1)*2+(strainCtr)}= strcat(strain, '\_', wormnum);
+        legendMatrix{(numCtr-1)*length(strains)+(strainCtr)}= strcat(strain, '\_', wormnum);
     end
 end
 %% format graphs and export
@@ -101,7 +105,7 @@ elseif dataset ==2
     epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
     figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceSurvivalPooled.fig'];
 end
-%savefig(figFileName)
-%exportfig(cumSurvivalFig,epsFileName,exportOptions)
-%system(['epstopdf ' epsFileName]);
-%system(['rm ' epsFileName]);
+savefig(figFileName)
+exportfig(cumSurvivalFig,epsFileName,exportOptions)
+system(['epstopdf ' epsFileName]);
+system(['rm ' epsFileName]);

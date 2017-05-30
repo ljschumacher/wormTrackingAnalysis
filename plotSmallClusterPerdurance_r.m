@@ -12,12 +12,12 @@ neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
-loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
+loneClusterRadius = 1500; % distance in microns to consider a cluster by itself
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...
-    'Width',50,...
+    'Width',10,...
     'Resolution',300,...
     'FontMode','fixed',...
     'FontSize',12,...
@@ -81,7 +81,7 @@ ylabel('remaining proportion')
 legend(legendMatrix)
 epsFileName = ['figures/smallClusterPerdurance/red2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
 figFileName = ['figures/smallClusterPerdurance/red2/fig/smallClusterPerduranceSurvivalPooled.fig'];
-%savefig(figFileName)
-%exportfig(cumSurvivalFig,epsFileName,exportOptions)
-%system(['epstopdf ' epsFileName]);
-%system(['rm ' epsFileName]);
+savefig(figFileName)
+exportfig(cumSurvivalFig,epsFileName,exportOptions)
+system(['epstopdf ' epsFileName]);
+system(['rm ' epsFileName]);

@@ -16,7 +16,7 @@ exportOptions = struct('Format','eps2',...
 
 % set parameters for analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-dataset = 1; % 1 or 2
+dataset = 2; % 1 or 2
 
 wormnums = {'1W','40','HD'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
@@ -24,10 +24,9 @@ maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
-minNeighbrDist = 1500;
 midbodyIndcs = 19:33;
+minNeighbrDist = 2000; 
 plotColors = lines(length(wormnums));
-loneClusterRadius = 2000; % for defining small clusters
 if dataset ==1
     strains = {'N2','HA','npr1'};
 elseif dataset ==2
@@ -75,9 +74,9 @@ for strainCtr = 1:length(strains)
                 loneWorms = min_neighbr_dist>=minNeighbrDist;
                 inCluster = num_close_neighbrs>=3;
                 smallCluster = trajData_g.filtered& trajData_g.has_skeleton & ...
-                    ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(loneClusterRadius))...
-                    |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(loneClusterRadius))...
-                    |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(loneClusterRadius)));
+                    ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(minNeighbrDist))...
+                    |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(minNeighbrDist))...
+                    |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(minNeighbrDist)));
             else
                 loneWorms = true(size(trajData_g.frame_number));
                 inCluster = false(size(trajData_g.frame_number));

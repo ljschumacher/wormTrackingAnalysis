@@ -22,10 +22,9 @@ intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
-minNeighbrDist = 1500;
 midbodyIndcs = 19:33;
+minNeighbrDist = 1500;
 plotColors = lines(length(wormnums));
-loneClusterRadius = 2000; % for defining small clusters
 
 for strainCtr = 1:length(strains)
     revFreqFig = figure; hold on
@@ -71,9 +70,9 @@ for strainCtr = 1:length(strains)
                 loneWorms = min_neighbr_dist>=minNeighbrDist;
                 inCluster = num_close_neighbrs>=3;
                 smallCluster = trajData_r.filtered&...
-                    ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(loneClusterRadius))...
-                    |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(loneClusterRadius))...
-                    |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(loneClusterRadius)));
+                    ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(minNeighbrDist))...
+                    |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(minNeighbrDist))...
+                    |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(minNeighbrDist)));
             else
                 loneWorms = true(size(trajData_r.frame_number));
                 inCluster = false(size(trajData_r.frame_number));
