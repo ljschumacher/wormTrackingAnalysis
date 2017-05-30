@@ -14,7 +14,7 @@ wormnums = {'40','HD'};
 % set parameters for filtering data
 neighbrCutOff = 500; % distance in microns to consider a neighbr close
 maxBlobSize = 1e4;
-loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
+minNeighbrDist = 2000; % distance in microns to consider a cluster by itself
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
@@ -53,9 +53,9 @@ for numCtr = 1:length(wormnums)
                 intensityThresholds(wormnum),maxBlobSize);
             % filter green by small cluster status
             trajData.filtered = trajData.filtered&...
-                ((numCloseNeighbr== 2 & neighbrDist(:,3)>=loneClusterRadius)...
-                |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
-                |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
+                ((numCloseNeighbr== 2 & neighbrDist(:,3)>=minNeighbrDist)...
+                |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(minNeighbrDist))...
+                |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(minNeighbrDist)));
             %% generate distribution of small cluster frames
             smallClusterFrames = trajData.frame_number(trajData.filtered)';
             if isempty(smallClusterFrames) == false
@@ -67,23 +67,23 @@ for numCtr = 1:length(wormnums)
             % calculate how many clusters disappear due to broken trajectory
                 % generate logical index for single frames and last frames
                 % of a continuous frame run
-            %smallClusterFramesLogInd = [diff(smallClusterFrames)~=1, true];
+            smallClusterFramesLogInd = [diff(smallClusterFrames)~=1, true];
                 %list the next frame number after the end of a continuous run of (or a single) frames
-            %nextFrameList = smallClusterFrames(smallClusterFramesLogInd)+1;
+            nextFrameList = smallClusterFrames(smallClusterFramesLogInd)+1;
                 %list the worm index for those corresponding frames
-            %smallClusterWorms = trajData.worm_index_joined(trajData.filtered)';
-            %nextFrameWormList = smallClusterWorms(smallClusterFramesLogInd);
+            smallClusterWorms = trajData.worm_index_joined(trajData.filtered)';
+            nextFrameWormList = smallClusterWorms(smallClusterFramesLogInd);
                 %check that the worm index still exists in the next frame
-            %    smallClusterContinuesCount=0;
-            %for nextFrameCtr = 1:length(nextFrameList)
-            %    nextFrame = nextFrameList(nextFrameCtr);
-            %    nextFrameWorm = nextFrameWormList(nextFrameCtr);
-            %    if ismember(nextFrameWorm,trajData.worm_index_joined(find(trajData.frame_number==nextFrame)));
-            %        smallClusterContinuesCount = smallClusterContinuesCount+1;
-            %    end
-            %end
-            %proportionToContinue = smallClusterContinuesCount/nnz(frameDist)*100
-            %strcat(strain, '\_', wormnum, filename)
+                smallClusterContinuesCount=0;
+            for nextFrameCtr = 1:length(nextFrameList)
+                nextFrame = nextFrameList(nextFrameCtr);
+                nextFrameWorm = nextFrameWormList(nextFrameCtr);
+                if ismember(nextFrameWorm,trajData.worm_index_joined(find(trajData.frame_number==nextFrame)));
+                    smallClusterContinuesCount = smallClusterContinuesCount+1;
+                end
+            end
+            proportionToContinue = smallClusterContinuesCount/nnz(frameDist)*100
+            strcat(strain, '\_', wormnum, filename)
         end
         % plot cumulative survival
         [ecdfy,ecdfx] = ecdf(frameDist);
@@ -105,7 +105,7 @@ elseif dataset ==2
     epsFileName = ['figures/smallClusterPerdurance/green2/pdf/smallClusterPerduranceSurvivalPooled.eps'];
     figFileName = ['figures/smallClusterPerdurance/green2/fig/smallClusterPerduranceSurvivalPooled.fig'];
 end
-savefig(figFileName)
-exportfig(cumSurvivalFig,epsFileName,exportOptions)
-system(['epstopdf ' epsFileName]);
-system(['rm ' epsFileName]);
+%savefig(figFileName)
+%exportfig(cumSurvivalFig,epsFileName,exportOptions)
+%system(['epstopdf ' epsFileName]);
+%system(['rm ' epsFileName]);

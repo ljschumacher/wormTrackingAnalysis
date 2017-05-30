@@ -24,7 +24,7 @@ maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
 minSkelLength_r = 850;
 maxSkelLength_r = 1500;
-loneClusterRadius = 2000; % distance in microns to consider a cluster by itself
+minNeighbrDist = 2000; % distance in microns to consider a cluster by itself. 1500 for red and 2000 for green??
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
@@ -63,9 +63,9 @@ for numCtr = 1:length(wormnums)
                     &filterSkelLength(skelData,pixelsize,minSkelLength_r,maxSkelLength_r);
                 % filter red by small cluster status
                 trajData.filtered = trajData.filtered&...
-                    ((numCloseNeighbr== 2 & neighbrDist(:,3)>=(loneClusterRadius))...
-                    |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(loneClusterRadius))...
-                    |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(loneClusterRadius)));
+                    ((numCloseNeighbr== 2 & neighbrDist(:,3)>=(minNeighbrDist))...
+                    |(numCloseNeighbr== 3 & neighbrDist(:,4)>=(minNeighbrDist))...
+                    |(numCloseNeighbr== 4 & neighbrDist(:,5)>=(minNeighbrDist)));
                 % filter green channel by blob size and intensity
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
@@ -149,7 +149,7 @@ for numCtr = 1:length(wormnums)
                             neighbrCutOff/pixelsize,'LineStyle','--','Color',0.5*[1 1 1],'EnhanceVisibility',false);
                         % plot circle of radius loneClusterRadius around each worm
                         viscircles([trajData.coord_x(frameIdcs_worm) trajData.coord_y(frameIdcs_worm)],...
-                            loneClusterRadius/pixelsize,'LineStyle','--','Color',0.5*[1 1 1],'EnhanceVisibility',false);
+                            minNeighbrDist/pixelsize,'LineStyle','--','Color',0.5*[1 1 1],'EnhanceVisibility',false);
                         % %%% plot format
                         ax = gca;
                         xlim([-2000 2000]/pixelsize + trajData.coord_x(frameIdcs_worm))
