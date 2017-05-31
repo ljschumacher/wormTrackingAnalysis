@@ -59,25 +59,29 @@ for numCtr = 1:length(wormnums)
                 ((num_close_neighbrs == 2 & neighbr_dist(:,3)>=(minNeighbrDist))...
                 |(num_close_neighbrs == 3 & neighbr_dist(:,4)>=(minNeighbrDist))...
                 |(num_close_neighbrs == 4 & neighbr_dist(:,5)>=(minNeighbrDist)));
+            loneWorms = min_neighbr_dist>=minNeighbrDist;
             % generate speed distribution for each cluster class
             allSpeeds = blobFeats.signed_speed(all);
             inClusterSpeeds = blobFeats.signed_speed(inCluster);
             smallClusterSpeeds = blobFeats.signed_speed(smallCluster);
+            loneWormSpeeds = blobFeats.signed_speed(loneWorms);
             % trim speed distribution down to between -15 and 15
             allSpeeds = allSpeeds(allSpeeds<=15&allSpeeds>=-15);
-            inClusterSpeeds = inClusterSpeeds(inClusterSpeeds<=10&inClusterSpeeds>=-10);
-            smallClusterSpeeds = smallClusterSpeeds(smallClusterSpeeds<=10&smallClusterSpeeds>=-10);
+            inClusterSpeeds = inClusterSpeeds(inClusterSpeeds<=15&inClusterSpeeds>=-15);
+            smallClusterSpeeds = smallClusterSpeeds(smallClusterSpeeds<=15&smallClusterSpeeds>=-15);
+            loneWormSpeeds = loneWormSpeeds(loneWormSpeeds<=15&loneWormSpeeds>=-15);
             % plot speed distribution
             individualplot = subplot(3,4,fileCtr); hold on
             histogram(allSpeeds,'Normalization','probability','DisplayStyle','stairs','BinWidth',0.5)
             histogram(inClusterSpeeds,'Normalization','probability','DisplayStyle','stairs','BinWidth',0.5)
             histogram(smallClusterSpeeds,'Normalization','probability','DisplayStyle','stairs','BinWidth',0.5)
+            histogram(loneWormSpeeds,'Normalization','probability','DisplayStyle','stairs','BinWidth',0.5)
             xlabel('speed')
             ylabel('probability')
             individualplot.XLim = [-15 15];
             individualplot.YLim = [0 0.25];
             title(individualplot,strrep(strrep(filename(end-32:end-17),'_',''),'/',''))
-            legend('all','in cluster','small cluster','Location','Northwest')
+            legend('all','in cluster','small cluster','lone worms','Location','Northwest')
         end
         % save figure
         if dataset ==1
