@@ -48,6 +48,9 @@ for strainCtr = 1:length(strains)
             blobFeats_g = h5read(filename_g,'/blob_features');
             skelData_g = h5read(filename_g,'/skeleton');
             frameRate = double(h5readatt(filename_g,'/plate_worms','expected_fps'));
+            if frameRate == 0
+                warning(['frame rate is zero for ' filename_g])
+            end
             % filter by blob size and intensity
             trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
                 intensityThresholds_g(wormnum),maxBlobSize_g);
@@ -69,7 +72,7 @@ for strainCtr = 1:length(strains)
             end
             %% load signed speed from blobFeats
             % sign speed based on relative orientation of velocity to midbody
-            speedSigned = blobFeats_g.signed_speed;
+            speedSigned = blobFeats_g.signed_speed*pixelsize*frameRate;
             % ignore first and last frames of each worm's track
             wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
             speedSigned(wormChangeIndcs)=NaN;
@@ -139,9 +142,9 @@ for strainCtr = 1:length(strains)
         set(revInterTimeFig,'PaperUnits','centimeters')
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
-%         revInterTimeFig.Children.YLim(1) = 1e-2;
-        revInterTimeFig.Children.XLim(2) = 120;
+        revInterTimeFig.Children.XLim(2) = 60;
         if ~strcmp(wormnum,'1W')
+            revInterTimeFig.Children.YLim(1) = 1e-4;
             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
         else
             legend(revInterTimeFig.Children,'single worms')
@@ -156,6 +159,7 @@ for strainCtr = 1:length(strains)
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
 
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
+        revFreqFig.Children.YLim = [0 0.55];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
         reversaldurations_incluster = vertcat(reversaldurations_incluster{:});

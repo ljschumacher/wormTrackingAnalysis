@@ -36,7 +36,7 @@ wormnums = {'40','HD'};
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
-visitfreqFig = figure; hold on
+if plotDiagnostics, visitfreqFig = figure; hold on, end
 for wormnum = wormnums
     speedFig = figure; hold on
     dircorrFig = figure; hold on
@@ -176,7 +176,7 @@ for wormnum = wormnums
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
-        poscorrFig.Children.YLim = [0 10];
+%         poscorrFig.Children.YLim = [0 10];
         poscorrFig.Children.XLim = [0 2000];
         poscorrFig.Children.Box = 'on';
         ylabel(poscorrFig.Children,'positional correlation g(r)')
