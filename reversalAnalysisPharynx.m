@@ -223,7 +223,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XTickLabel = strrep(wormnums,'HD','200');
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
-    revFreqFig.Children.YLim(1) = 0;
+    revFreqFig.Children.YLim = [0, 0.6];
     if dataset == 1
         figurename = ['figures/reversals/reversalfrequency_pharynx1_' strains{strainCtr}];
     elseif dataset ==2
