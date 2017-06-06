@@ -40,6 +40,7 @@ if plotDiagnostics, visitfreqFig = figure; hold on, end
 for wormnum = wormnums
     speedFig = figure; hold on
     dircorrFig = figure; hold on
+    velcorrFig = figure; hold on
     poscorrFig = figure; hold on
     lineHandles = NaN(nStrains,1);
     for strainCtr = 1:nStrains
@@ -51,6 +52,7 @@ for wormnum = wormnums
         end
         speeds = cell(numFiles,1);
         dxcorr = cell(numFiles,1); % for calculating directional cross-correlation
+        vxcorr = cell(numFiles,1); % for calculating velocity cross-correlation
         pairdist = cell(numFiles,1);
         mindist= cell(numFiles,1);
         gr =cell(numFiles,1);
@@ -82,6 +84,7 @@ for wormnum = wormnums
             %% calculate stats
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
+            vxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
             pairdist{fileCtr} = cell(numFrames,1);
             mindist{fileCtr}= cell(numFrames,1);
             gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
@@ -90,10 +93,13 @@ for wormnum = wormnums
                 [x ,y] = getWormPositions(trajData, frame, true);
                 if numel(x)>1 % need at least two worms in frame
                     frameLogInd = trajData.frame_number==frame&trajData.filtered;
-                    speeds{fileCtr}{frameCtr} = double(sqrt(blobFeats.velocity_x(frameLogInd).^2 + blobFeats.velocity_y(frameLogInd).^2)*pixelsize*frameRate); % speed of every worm in frame, in mu/s
+                    vx = double(blobFeats.velocity_x(frameLogInd));
+                    vy = double(blobFeats.velocity_y(frameLogInd));
+                    speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation
+                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
@@ -108,6 +114,7 @@ for wormnum = wormnums
             % pool data from frames
             speeds{fileCtr} = vertcat(speeds{fileCtr}{:});
             dxcorr{fileCtr} = horzcat(dxcorr{fileCtr}{:});
+            vxcorr{fileCtr} = horzcat(vxcorr{fileCtr}{:});
             pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
             mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
@@ -131,15 +138,19 @@ for wormnum = wormnums
         end
         [s_med,s_mad] = grpstats(vertcat(speeds{:}),quant(horzcat(mindist{:}),distBinwidth),...
             {@median,mad1});
-        [c_med,c_mad] = grpstats(horzcat(dxcorr{:}),quant(horzcat(pairdist{:}),distBinwidth),...
+        [corr_o_med,corr_o_mad] = grpstats(horzcat(dxcorr{:}),quant(horzcat(pairdist{:}),distBinwidth),...
+            {@median,mad1});
+        [corr_v_med,corr_v_mad] = grpstats(horzcat(vxcorr{:}),quant(horzcat(pairdist{:}),distBinwidth),...
             {@median,mad1});
         %% plot data
         bins = (0:numel(s_med)-1).*distBinwidth;
         [lineHandles(strainCtr), ~] = boundedline(bins,smooth(s_med),[smooth(s_mad), smooth(s_mad)],...
             'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
-        bins = (0:numel(c_med)-1).*distBinwidth;
-        boundedline(bins,smooth(c_med),[smooth(c_mad), smooth(c_mad)],...
+        bins = (0:numel(corr_o_med)-1).*distBinwidth;
+        boundedline(bins,smooth(corr_o_med),[smooth(corr_o_mad), smooth(corr_o_mad)],...
             'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
+        boundedline(bins,smooth(corr_v_med),[smooth(corr_v_mad), smooth(corr_v_mad)],...
+            'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
         gr = cat(2,gr{:});
         boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),...
             [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
@@ -149,7 +160,7 @@ for wormnum = wormnums
         end
     end
     %% format and export figures
-        for figHandle = [speedFig, dircorrFig, poscorrFig] % common formating for both figures
+        for figHandle = [speedFig, dircorrFig, velcorrFig poscorrFig] % common formating for both figures
             set(figHandle,'PaperUnits','centimeters')
         end
         %
@@ -173,6 +184,17 @@ for wormnum = wormnums
         legend(dircorrFig.Children,lineHandles,strains)
         figurename = ['figures/dircrosscorr_' wormnum{1}];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
+        system(['epstopdf ' figurename '.eps']);
+        system(['rm ' figurename '.eps']);
+        %
+%         velcorrFig.Children.YLim = [-1 1];
+        velcorrFig.Children.XLim = [0 250];
+        set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+        ylabel(velcorrFig.Children,'velocity correlation')
+        xlabel(velcorrFig.Children,'distance between pair (\mum)')
+        legend(velcorrFig.Children,lineHandles,strains)
+        figurename = ['figures/velcrosscorr_' wormnum{1}];
+        exportfig(velcorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
