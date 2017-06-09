@@ -168,8 +168,8 @@ for wormnum = wormnums
         speedFig.Children.XLim = [0 2000];
         speedFig.Children.Box = 'on';
         speedFig.Children.XDir = 'reverse';
-        ylabel(speedFig.Children,'speed (\mum/s)')
-        xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
+        ylabel(speedFig.Children,'speed (μm/s)')
+        xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
         legend(speedFig.Children,lineHandles,strains)
         figurename = ['figures/speedvsneighbrdistance_' wormnum{1}];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
@@ -180,7 +180,7 @@ for wormnum = wormnums
         dircorrFig.Children.XLim = [0 250];
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(dircorrFig.Children,'orientational correlation')
-        xlabel(dircorrFig.Children,'distance between pair (\mum)')
+        xlabel(dircorrFig.Children,'distance between pair (μm)')
         legend(dircorrFig.Children,lineHandles,strains)
         figurename = ['figures/dircrosscorr_' wormnum{1}];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
@@ -191,7 +191,7 @@ for wormnum = wormnums
         velcorrFig.Children.XLim = [0 250];
         set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(velcorrFig.Children,'velocity correlation')
-        xlabel(velcorrFig.Children,'distance between pair (\mum)')
+        xlabel(velcorrFig.Children,'distance between pair (μm)')
         legend(velcorrFig.Children,lineHandles,strains)
         figurename = ['figures/velcrosscorr_' wormnum{1}];
         exportfig(velcorrFig,[figurename '.eps'],exportOptions)
@@ -202,7 +202,7 @@ for wormnum = wormnums
         poscorrFig.Children.XLim = [0 2000];
         poscorrFig.Children.Box = 'on';
         ylabel(poscorrFig.Children,'positional correlation g(r)')
-        xlabel(poscorrFig.Children,'distance r (\mum)')
+        xlabel(poscorrFig.Children,'distance r (μm)')
         legend(poscorrFig.Children,lineHandles,strains)
         figurename = ['figures/radialdistributionfunction_' wormnum{1}];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
