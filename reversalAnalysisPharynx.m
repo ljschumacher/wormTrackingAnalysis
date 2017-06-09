@@ -134,7 +134,7 @@ for strainCtr = 1:length(strains)
         ecdf(interrevT_lone,'Bounds','on','function','survivor')
         hold on
         if ~strcmp(wormnum,'1W')
-            ecdf(interrevT_smallCluster,'Bounds','on','function','survivor')
+            %             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor')
             ecdf(interrevT_incluster,'Bounds','on','function','survivor')
         end
         set(revInterTimeFig.Children,'YScale','log')
@@ -145,7 +145,8 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.XLim(2) = 60;
         if ~strcmp(wormnum,'1W')
             revInterTimeFig.Children.YLim(1) = 1e-4;
-            legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
+            %             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
+            legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
@@ -157,19 +158,25 @@ for strainCtr = 1:length(strains)
         set(0,'CurrentFigure',revFreqFig)
         notBoxPlot([reversalfreq_lone,reversalfreq_smallcluster,reversalfreq_incluster],...
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
-
+        
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         revFreqFig.Children.YLim = [0 0.55];
         %
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
         reversaldurations_incluster = vertcat(reversaldurations_incluster{:});
         reversaldurations_smallcluster = vertcat(reversaldurations_smallcluster{:});
-        histogram(revDurFig.Children,reversaldurations_lone,0:1/frameRate:15,...
-            'Normalization','pdf','DisplayStyle','stairs');
-        histogram(revDurFig.Children,reversaldurations_smallcluster,0:1/frameRate:15,...
-            'Normalization','pdf','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
-        histogram(revDurFig.Children,reversaldurations_incluster,0:1/frameRate:15,...
-            'Normalization','pdf','DisplayStyle','stairs','EdgeColor','r');
+        if strcmp(wormnum,'1W')
+            histogram(revDurFig.Children,reversaldurations_lone,0:1/frameRate:15,...
+                'Normalization','probability','DisplayStyle','stairs');
+        else
+            histogram(revDurFig.Children,reversaldurations_lone,0:3/frameRate:15,...
+                'Normalization','probability','DisplayStyle','stairs');
+            %         histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRate:15,...
+            %             'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
+            histogram(revDurFig.Children,reversaldurations_incluster,0:3/frameRate:15,...
+                'Normalization','probability','DisplayStyle','stairs','EdgeColor','r');
+        end
+        revDurFig.Children.YTick = 0:0.1:0.5;
         %
         title(revDurFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
         set(revDurFig,'PaperUnits','centimeters')
@@ -177,7 +184,8 @@ for strainCtr = 1:length(strains)
         ylabel(revDurFig.Children,'P')
         revDurFig.Children.XLim = [0 10];
         if ~strcmp(wormnum,'1W')
-            legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
+            %             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
+            legend(revDurFig.Children,{'lone worms','in cluster'})
         else
             legend(revDurFig.Children,'single worms')
         end
