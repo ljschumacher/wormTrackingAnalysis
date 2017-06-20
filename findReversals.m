@@ -1,4 +1,5 @@
-function [revStartInd, revDuration, untrackedEnds] = findReversals(midbody_speed, worm_index)
+function [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] =...
+    findReversals(midbody_speed, worm_index)
 % finds reversals based on worm tracking data features file
 
 % define reversal starting events as when sign of speed changes from + to -
@@ -8,7 +9,7 @@ revStartInd = find(midbody_speed(1:end-1)>0&midbody_speed(2:end)<0);
 revEndInd = 1+find(midbody_speed(1:end-1)<0&midbody_speed(2:end)>0);
 % match up reversal end times with starts
 revEndIndMatched = NaN(size(revStartInd));
-untrackedEnds = false(size(revStartInd));
+untrackedRevEnds = false(size(revStartInd));
 nRevs = length(revStartInd);
 for revCtr = 1:nRevs
     if revStartInd(revCtr)<max(revEndInd)
@@ -19,27 +20,38 @@ for revCtr = 1:nRevs
             % same identity)
             [revStartInd(revCtr), revEndIndMatched(revCtr)] = findLastTracked(revStartInd(revCtr),...
                 revEndIndMatched(revCtr),worm_index,midbody_speed);
-            untrackedEnds(revCtr) = true;
+            untrackedRevEnds(revCtr) = true;
         end
         % it can happen that the end of the reversal is not tracked, and
         % that another reversal has started before the matched end
         if revCtr<nRevs&&revEndIndMatched(revCtr)>revStartInd(revCtr+1)&&~isnan(revStartInd(revCtr))
             [revStartInd(revCtr), revEndIndMatched(revCtr)] = findLastTracked(revStartInd(revCtr),...
                 revEndIndMatched(revCtr),worm_index,midbody_speed);
-            untrackedEnds(revCtr) = true;
+            untrackedRevEnds(revCtr) = true;
         end
     else % reversal still ongoing when tracking ends
         [revStartInd(revCtr), revEndIndMatched(revCtr)] = findLastTracked(revStartInd(revCtr),...
             numel(midbody_speed),worm_index,midbody_speed);
-        untrackedEnds(revCtr) = true;
+        untrackedRevEnds(revCtr) = true;
     end
 end
 % cut-out any reversals that had been misidentified as such
 keepLogInd = ~isnan(revStartInd);
 revEndIndMatched = revEndIndMatched(keepLogInd);
 revStartInd = revStartInd(keepLogInd);
-untrackedEnds = untrackedEnds(keepLogInd);
+untrackedRevEnds = untrackedRevEnds(keepLogInd);
+% calculate duration and interrevtime
 revDuration = revEndIndMatched - revStartInd;
+interRevTime = [diff(revStartInd); ...
+    find(worm_index==worm_index(revStartInd(end)),1,'last') - revStartInd(end)]; % the last reversal has a censored interrev time until the end of tracking
+incompleteInterRev = false(size(interRevTime));
+incompleteInterRev(end) = true;
+% censor those inter-reversal times where the worm_index changes
+wormChangeInd = find(worm_index(revStartInd)~=worm_index(revStartInd+interRevTime));
+for wcCtr = wormChangeInd'
+    interRevTime(wcCtr) = find(worm_index==worm_index(revStartInd(wcCtr)),1,'last') - revStartInd(wcCtr);
+end
+incompleteInterRev(wormChangeInd) = true;
 end
 
 function [firstTracked, lastTracked] = findLastTracked(currentStartInd,wrongEndInd,worm_index,midbody_speed)
