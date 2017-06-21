@@ -85,7 +85,7 @@ for strainCtr = 1:length(strains)
             wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
             speedSigned(wormChangeIndcs)=NaN;
             % ignore frames with bad skeletonization
-            speedSigned(trajData_g.has_skeleton~=1)=NaN;
+            speedSigned(~trajData_g.has_skeleton)=NaN;
             % ignore skeletons otherwise filtered out
             speedSigned(~trajData_g.filtered) = NaN;
             % smooth speed to denoise
@@ -152,8 +152,8 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
         revInterTimeFig.Children.XLim(2) = 30;
+        revInterTimeFig.Children.YLim(1) = 0.1;
         if ~strcmp(wormnum,'1W')
-%             revInterTimeFig.Children.YLim(1) = 3e-3;
             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
             %             legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
         else
