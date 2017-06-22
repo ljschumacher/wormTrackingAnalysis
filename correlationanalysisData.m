@@ -21,7 +21,7 @@ exportOptions = struct('Format','eps2',...
 mad1 = @(x) mad(x,1); % median absolute deviation
 % alternatively could use boxplot-style confidence intervals on the mean,
 % which are 1.57*iqr/sqrt(n)
-distBinwidth = 5; % in units of micrometers
+distBinwidth = 25; % in units of micrometers
 maxDist = 2000;
 distBins = 0:distBinwidth:maxDist;
 speedxticks = 0:250:2000;
@@ -69,7 +69,7 @@ for wormnum = wormnums
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate/5);
+            numFrames = round(maxNumFrames/frameRate/3);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
@@ -166,6 +166,7 @@ for wormnum = wormnums
         %
         speedFig.Children.YLim = [0 400];
         speedFig.Children.XLim = [0 2000];
+        speedFig.Children.XTick = 0:500:2000;
         speedFig.Children.Box = 'on';
         speedFig.Children.XDir = 'reverse';
         ylabel(speedFig.Children,'speed (µm/s)')
@@ -198,8 +199,10 @@ for wormnum = wormnums
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
-%         poscorrFig.Children.YLim = [0 10];
+        poscorrFig.Children.YLim(1) = 0;
         poscorrFig.Children.XLim = [0 2000];
+        poscorrFig.Children.XTick = 0:500:2000;
+        poscorrFig.Children.YTick = 0:round(poscorrFig.Children.YLim(2));
         poscorrFig.Children.Box = 'on';
         ylabel(poscorrFig.Children,'positional correlation g(r)')
         xlabel(poscorrFig.Children,'distance r (µm)')
