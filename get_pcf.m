@@ -26,7 +26,7 @@ function [data_store] = get_pcf(filename, num_slices, slice_size)
 % Outputs
 % Produce three successive figures, presenting and comparing g(r). Also
 % outputs a n by m matrix of pair correlation function values for all n
-% frames of the video and for the m distance bins.
+% frames of the video and for the m distance bins [data_store].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 close all; clc;
@@ -79,7 +79,7 @@ for movie = 1:length(filename)
         mean_dist(end+1) = mean(pair_dist);
 
         % Create bins of a given width, to store the data in
-        bin_width = 0.5;
+        bin_width = 0.25;
         bins = 1:bin_width:max(peak2peak(x_data)*p2m, peak2peak(y_data)*p2m); 
         %bins = 1:bin_width:max(peak2peak(pair_dist), peak2peak(pair_dist)); 
         
@@ -172,7 +172,7 @@ for movie = 1:length(filename)
 
         % Colour the line appropriately
         col_index = round(((col_size(1)-1)*mean(chunks(i,:)))/final_t);
-
+        
         % Plot the line and standard deviation
         shadedErrorBar(x,y,{@mean,@std}, {'Color', pallete(col_index+1,:)}, 1);
 
@@ -187,7 +187,7 @@ for movie = 1:length(filename)
     xlabel('r [millimetres]')
     ylabel('g(r)')
 
-    xlim([0.5 R-bin_width])
+    xlim([bin_width R-bin_width]);
 
     % Finally add labelled colorbar and hold off to publish the plot
     set(gca, 'CLim', [0, single(final_t)])
@@ -215,8 +215,8 @@ end
 r_pos = (r_pos.*bin_width) - 0.5*bin_width;
 
 % Store these values in the initialised cell arrays for plotting
-max_gr_store{end+1} = max_gr(:)
-r_pos_store{end+1} = r_pos(:)
+max_gr_store{end+1} = max_gr(:);
+r_pos_store{end+1} = r_pos(:);
 
 end
 

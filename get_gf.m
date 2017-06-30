@@ -1,11 +1,12 @@
-
+%% Script to visualise giant fluctuations for individual movies specified
+% Takes a list of .hdf5 files and creates plots to show giant fluctuations
 close all; clear; clc;
 
 filename = {'recording34.2g_X1_skeletons.hdf5', 'recording34.5g_X1_skeletons.hdf5', 'recording34.8g_X1_skeletons.hdf5'}
-num_movies = length(filename)
+num_movies = length(filename);
 
-all_pairs_x = []
-all_pairs_y = []
+all_pairs_x = [];
+all_pairs_y = [];
 
 for movie = 1:num_movies
     % Read in the data first
@@ -16,8 +17,9 @@ for movie = 1:num_movies
     y_data = track_data.coord_y;
     frames = track_data.frame_number;
 
-    % Set up intermediate box scale factors to iterate through
-    scale = [0.2:0.2:1]
+    % Set up intermediate box scale factors to iterate through. These
+    % represent fractions of the larger field of view
+    scale = [0.1:0.1:0.5];
 
     % Matrix to store the data
     num_reps = 20;
@@ -33,18 +35,17 @@ for movie = 1:num_movies
         
 
     % For each box scale to be trialled
-    for s =1:length(scale)
+    for s = 1:length(scale)
 
         % Want to be able to draw a box
-        box_w = 1000
-        box_h = 1000
+        box_w = 1000;
+        box_h = 1000;
         % Specify box position as a vector of 4 elements [x y w h]
         box_pos = [500 500 box_w box_h];
         % Scale box size to investigate effect of changing this on the gf
         box_pos = box_pos.*scale(s);
 
         for n = 1:num_reps
-            n
             % Spawn a new box in the observed space
             box_pos(1) = round(rand(1)*(peak2peak(x_data)-box_pos(3)))+min(x_data);
             box_pos(2) = round(rand(1)*(peak2peak(y_data)-box_pos(4)))+min(y_data);
@@ -103,121 +104,40 @@ for movie = 1:num_movies
 
     end
     
-    % First figure plotting ln(N) against ln(var) for each video
-    figure(1)
-    
-    subplot(length(filename),1, movie)
-    hold on
-    for s = 1:length(scale)
-        
-        x = log(data_store(1,:,s));
-        y = log(data_store(2,:,s));
-        x = x(isfinite(x));
-        y = y(isfinite(y));
-        
-        scatter(x, y);
-    end
-    
-    % Also obtain a linear regression through the cloud of log-log points
-    x = log(all_pairs_x);
-    y = log(all_pairs_y);
-    x = x(isfinite(x));
-    y = y(isfinite(y));
-    
-    % Use the mldivide operator to solve for m
-    b1 = x'\y';
-    y_calc = b1.*x;
-    
-    % Plot this line in addition to the refline y = x
-    refline(1,0)
-   	plot(x,y_calc, 'k')  
-    hold off
-
-    xlabel('ln(N)')
-    ylabel('ln(var)')
-
-    title(filename{movie}, 'Interpreter', 'none')
 end
 
 % Also plot points from videos together in separate fig & color accordingly
 figure;
 hold on
-slice = length(all_pairs_x)/num_movies
+slice = length(all_pairs_x)/num_movies;
 for movie = 0:num_movies-1
-    scatter(log(all_pairs_x((1+slice*movie):(slice*(movie+1)))),log(all_pairs_y((1+slice*movie):(slice*(movie+1)))))
+    scatter(all_pairs_x((1+slice*movie):(slice*(movie+1))),all_pairs_y((1+slice*movie):(slice*(movie+1))))
 end
 hold off
 
 % Add plot details and a reference line y = x
-xlabel('ln(N)')
-ylabel('ln(var)')
+xlabel('N')
+ylabel('var')
 refline(1,0)
 legend(filename, 'Interpreter', 'none')
 
 
-%% Attempting to fit linear relationships
- 
- x = all_pairs_x;
- y = all_pairs_y;
- 
- % Use the mldivide operator to solve for m
- format long
- 
- b1 = x'\y'
- y_calc = b1.*x;
- 
- figure
- subplot(2,1,1)
- scatter(x,y)
- hold on
- plot(x,y_calc)
- refline(1,0)
- 
- xlabel('N')
- ylabel('var')
- legend({'data', 'a = 1', ['a = ' num2str(b1)]})
- hold off
- 
- % Now try for the log normalised data
- x = log(all_pairs_x);
- y = log(all_pairs_y);
+% Fitting linear relationships through the data
 
- 
- x = x(isfinite(x));
- y = y(isfinite(y));
- 
- format long
- 
- b1 = x'\y'
- y_calc = b1.*x;
- 
- subplot(2,1,2)
- scatter(x,y)
- hold on
- plot(x,y_calc)
- refline(1,0)
- 
- xlabel('ln(N)')
- ylabel('ln(var)')
- legend({'data', 'a = 1', ['a = ' num2str(b1)]})
- hold off
- 
-% Breaking down the plots
 figure;
-slice = length(all_pairs_x)/num_movies
+slice = length(all_pairs_x)/num_movies;
 
 for movie = 0:num_movies-1
-    x = log(all_pairs_x);
-    y = log(all_pairs_y);
+    x = all_pairs_x;
+    y = all_pairs_y;
     
-    x = x((1+slice*movie):(slice*(movie+1)))
-    y = y((1+slice*movie):(slice*(movie+1)))
+    x = x((1+slice*movie):(slice*(movie+1)));
+    y = y((1+slice*movie):(slice*(movie+1)));
     
     x = x(isfinite(x));
     y = y(isfinite(y));
 
-    %format long
-    b1 = x'\y'
+    b1 = x'\y';
     y_calc = b1.*x;
     
     subplot(3,1,movie+1)
@@ -226,8 +146,8 @@ for movie = 0:num_movies-1
     plot(x,y_calc)
     refline(1,0)
 
-    xlabel('ln(N)')
-    ylabel('ln(var)')
+    xlabel('N')
+    ylabel('var')
     legend({'data', ['a = ' num2str(b1)], 'a = 1',})
     title(filename{movie+1}, 'Interpreter', 'none')
     hold off
