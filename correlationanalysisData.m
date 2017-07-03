@@ -27,16 +27,16 @@ bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UsePara
 
 distBinwidth = 25; % in units of micrometers
 maxDist = 2000;
+minDist = 50;
 distBins = 0:distBinwidth:maxDist;
-speedxticks = 0:250:2000;
-dircorrxticks = 0:50:250;
+dircorrxticks = 0:500:2000;
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'npr1','N2'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
-wormnums = {'40','HD'};
+wormnums = {'HD'};%{'40','HD'};
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
@@ -146,12 +146,14 @@ for wormnum = wormnums
         pairdistVals = quant(horzcat(pairdist{:}),distBinwidth);
         dxcorr = horzcat(dxcorr{:});
         vxcorr = horzcat(vxcorr{:});
-        % ignore long distance data
+        % ignore long distance data (and short distance which can give
+        % error in the calculation for too few samples
         speeds = speeds(mindistVals<=maxDist);
         mindistVals = mindistVals(mindistVals<=maxDist);
-        dxcorr = dxcorr(pairdistVals<=maxDist);
-        vxcorr = vxcorr(pairdistVals<=maxDist);
-        pairdistVals = pairdistVals(pairdistVals<=maxDist);
+        pDistKeepIdcs = pairdistVals<=maxDist&pairdistVals>=minDist;
+        dxcorr = dxcorr(pDistKeepIdcs);
+        vxcorr = vxcorr(pDistKeepIdcs);
+        pairdistVals = pairdistVals(pDistKeepIdcs);
         % bootstrapping will yield an error if any bin has n=1
         [s_med,s_ci] = grpstats(speeds,mindistVals,{@median,bootserr});
         [corr_o_med,corr_o_ci] = grpstats(dxcorr,pairdistVals,{@median,bootserr});
@@ -192,9 +194,8 @@ for wormnum = wormnums
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
-        dircorrFig.Children.YLim = [-1 1];
+%         dircorrFig.Children.YLim = [-1 1];
         dircorrFig.Children.XLim = [0 2000];
-        dircorrFig.Children.XTick = 0:500:2000;
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(dircorrFig.Children,'orientational correlation')
         xlabel(dircorrFig.Children,'distance between pair (μm)')
@@ -206,7 +207,6 @@ for wormnum = wormnums
         %
 %         velcorrFig.Children.YLim = [-1 1];
         velcorrFig.Children.XLim = [0 2000];
-        velcorrFig.Children.XTick = 0:500:2000;
         set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(velcorrFig.Children,'velocity correlation')
         xlabel(velcorrFig.Children,'distance between pair (μm)')
