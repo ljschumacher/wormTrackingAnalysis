@@ -154,8 +154,10 @@ for strainCtr = 1:length(strains)
         set(revInterTimeFig,'PaperUnits','centimeters')
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
-        revInterTimeFig.Children.XLim(2) = 30;
+%         revInterTimeFig.Children.XLim(2) = 30;
 %         revInterTimeFig.Children.YLim(1) = 0.1;
+        revInterTimeFig.Children.XLim(2) = 60;
+        revInterTimeFig.Children.YLim(1) = 1e-3;
         if ~strcmp(wormnum,'1W')
 %             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
                         legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
@@ -193,7 +195,7 @@ for strainCtr = 1:length(strains)
         set(revDurFig,'PaperUnits','centimeters')
         xlabel(revDurFig.Children,'time (s)')
         ylabel(revDurFig.Children,'P')
-        revDurFig.Children.XLim = [0 10];
+        revDurFig.Children.XLim = [0 8];
         if ~strcmp(wormnum,'1W')
 %             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
                         legend(revDurFig.Children,{'lone worms','in cluster'})
