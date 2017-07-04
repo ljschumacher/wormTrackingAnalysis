@@ -2,6 +2,8 @@
 % on plate
 
 % issues / todo:
+% - censoring reversals when a cluster status changes drastically reduces
+% the length of observed interrev times
 
 clear
 close all
@@ -46,7 +48,7 @@ for strainCtr = 1:length(strains)
         interrevT_incluster_censored = cell(numFiles,1);
         interrevT_smallCluster_censored = cell(numFiles,1);
         frameRateAll = double(h5readatt(filenames_g{1},'/plate_worms','expected_fps')); % load one frameRate for use outside parfor loop
-        parfor fileCtr = 1:numFiles % can be parfor
+        for fileCtr = 1:numFiles % can be parfor
             filename_g = filenames_g{fileCtr};
             trajData_g = h5read(filename_g,'/trajectories_data');
             blobFeats_g = h5read(filename_g,'/blob_features');
@@ -139,11 +141,12 @@ for strainCtr = 1:length(strains)
         interrevT_incluster_censored = vertcat(interrevT_incluster_censored{:});
         interrevT_smallCluster_censored = vertcat(interrevT_smallCluster_censored{:});
         %% plot data
+        % inter-reversal time
         set(0,'CurrentFigure',revInterTimeFig)
         ecdf(interrevT_lone,'Bounds','on','function','survivor','censoring',interrevT_lone_censored)
         hold on
         if ~strcmp(wormnum,'1W')
-            ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
+%             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
             ecdf(interrevT_incluster,'Bounds','on','function','survivor','censoring',interrevT_incluster_censored)
         end
         set(revInterTimeFig.Children,'YScale','log')
@@ -152,10 +155,10 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
         revInterTimeFig.Children.XLim(2) = 30;
-        revInterTimeFig.Children.YLim(1) = 0.1;
+%         revInterTimeFig.Children.YLim(1) = 0.1;
         if ~strcmp(wormnum,'1W')
-            legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
-            %             legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
+%             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
+                        legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
@@ -163,14 +166,14 @@ for strainCtr = 1:length(strains)
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
-        %
+        % reversal frequency from counts
         set(0,'CurrentFigure',revFreqFig)
         notBoxPlot([reversalfreq_lone,reversalfreq_smallcluster,reversalfreq_incluster],...
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
         
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         revFreqFig.Children.YLim = [0 0.55];
-        %
+        % reversal durations
         reversaldurations_lone = vertcat(reversaldurations_lone{:});
         reversaldurations_incluster = vertcat(reversaldurations_incluster{:});
         reversaldurations_smallcluster = vertcat(reversaldurations_smallcluster{:});
@@ -180,21 +183,20 @@ for strainCtr = 1:length(strains)
         else
             histogram(revDurFig.Children,reversaldurations_lone,0:3/frameRateAll:15,...
                 'Normalization','probability','DisplayStyle','stairs');
-            histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRateAll:15,...
-                'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
+%             histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRateAll:15,...
+%                 'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
             histogram(revDurFig.Children,reversaldurations_incluster,0:3/frameRateAll:15,...
                 'Normalization','probability','DisplayStyle','stairs','EdgeColor','r');
         end
         revDurFig.Children.YTick = 0:0.1:0.5;
-        %
         title(revDurFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
         set(revDurFig,'PaperUnits','centimeters')
         xlabel(revDurFig.Children,'time (s)')
         ylabel(revDurFig.Children,'P')
         revDurFig.Children.XLim = [0 10];
         if ~strcmp(wormnum,'1W')
-            legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
-            %             legend(revDurFig.Children,{'lone worms','in cluster'})
+%             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
+                        legend(revDurFig.Children,{'lone worms','in cluster'})
         else
             legend(revDurFig.Children,'single worms')
         end
