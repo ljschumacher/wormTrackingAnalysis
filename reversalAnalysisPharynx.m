@@ -143,11 +143,11 @@ for strainCtr = 1:length(strains)
         %% plot data
         % inter-reversal time
         set(0,'CurrentFigure',revInterTimeFig)
-        ecdf(interrevT_lone,'Bounds','on','function','survivor','censoring',interrevT_lone_censored)
+        ecdf(interrevT_lone,'Bounds','on','function','survivor')%,'censoring',interrevT_lone_censored)
         hold on
         if ~strcmp(wormnum,'1W')
 %             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
-            ecdf(interrevT_incluster,'Bounds','on','function','survivor','censoring',interrevT_incluster_censored)
+            ecdf(interrevT_incluster,'Bounds','on','function','survivor')%,'censoring',interrevT_incluster_censored)
         end
         set(revInterTimeFig.Children,'YScale','log')
         title(revInterTimeFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
