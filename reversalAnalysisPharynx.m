@@ -19,7 +19,7 @@ exportOptions = struct('Format','eps2',...
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'N2','npr1'};
-wormnums = {'1W','40','HD'};
+wormnums = {'40'}%{'1W','40','HD'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
@@ -48,7 +48,7 @@ for strainCtr = 1:length(strains)
         interrevT_incluster_censored = cell(numFiles,1);
         interrevT_smallCluster_censored = cell(numFiles,1);
         frameRateAll = double(h5readatt(filenames_g{1},'/plate_worms','expected_fps')); % load one frameRate for use outside parfor loop
-        for fileCtr = 1:numFiles % can be parfor
+        parfor fileCtr = 1:numFiles % can be parfor
             filename_g = filenames_g{fileCtr};
             trajData_g = h5read(filename_g,'/trajectories_data');
             blobFeats_g = h5read(filename_g,'/blob_features');
