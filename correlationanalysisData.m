@@ -20,12 +20,16 @@ exportOptions = struct('Format','eps2',...
 % define functions for grpstats
 mad1 = @(x) mad(x,1); % median absolute deviation
 % alternatively could use boxplot-style confidence intervals on the mean,
-% which are 1.57*iqr/sqrt(n)
-distBinwidth = 5; % in units of micrometers
+% which are 1.57*iqr/sqrt(n) - unclear how justified this is
+iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
+% or one could use a bootstrapped confidence interval
+bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
+
+distBinwidth = 25; % in units of micrometers
 maxDist = 2000;
+minDist = 50;
 distBins = 0:distBinwidth:maxDist;
-speedxticks = 0:250:2000;
-dircorrxticks = 0:50:250;
+dircorrxticks = 0:500:2000;
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
@@ -36,10 +40,11 @@ wormnums = {'40','HD'};
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
-visitfreqFig = figure; hold on
+if plotDiagnostics, visitfreqFig = figure; hold on, end
 for wormnum = wormnums
     speedFig = figure; hold on
     dircorrFig = figure; hold on
+    velcorrFig = figure; hold on
     poscorrFig = figure; hold on
     lineHandles = NaN(nStrains,1);
     for strainCtr = 1:nStrains
@@ -51,6 +56,7 @@ for wormnum = wormnums
         end
         speeds = cell(numFiles,1);
         dxcorr = cell(numFiles,1); % for calculating directional cross-correlation
+        vxcorr = cell(numFiles,1); % for calculating velocity cross-correlation
         pairdist = cell(numFiles,1);
         mindist= cell(numFiles,1);
         gr =cell(numFiles,1);
@@ -67,7 +73,7 @@ for wormnum = wormnums
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate/5);
+            numFrames = round(maxNumFrames/frameRate/3);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
@@ -82,18 +88,22 @@ for wormnum = wormnums
             %% calculate stats
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
+            vxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
             pairdist{fileCtr} = cell(numFrames,1);
             mindist{fileCtr}= cell(numFrames,1);
             gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
-            for frameCtr = 1:numFrames
+            for frameCtr = 1:numFrames % one may be able to vectorise this
                 frame = framesAnalyzed(frameCtr);
                 [x ,y] = getWormPositions(trajData, frame, true);
                 if numel(x)>1 % need at least two worms in frame
                     frameLogInd = trajData.frame_number==frame&trajData.filtered;
-                    speeds{fileCtr}{frameCtr} = double(sqrt(blobFeats.velocity_x(frameLogInd).^2 + blobFeats.velocity_y(frameLogInd).^2)*pixelsize*frameRate); % speed of every worm in frame, in mu/s
+                    vx = double(blobFeats.velocity_x(frameLogInd));
+                    vy = double(blobFeats.velocity_y(frameLogInd));
+                    speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation
+                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
@@ -108,6 +118,7 @@ for wormnum = wormnums
             % pool data from frames
             speeds{fileCtr} = vertcat(speeds{fileCtr}{:});
             dxcorr{fileCtr} = horzcat(dxcorr{fileCtr}{:});
+            vxcorr{fileCtr} = horzcat(vxcorr{fileCtr}{:});
             pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
             mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
@@ -129,58 +140,89 @@ for wormnum = wormnums
                 system(['rm ' figurename '.eps']);
             end
         end
-        [s_med,s_mad] = grpstats(vertcat(speeds{:}),quant(horzcat(mindist{:}),distBinwidth),...
-            {@median,mad1});
-        [c_med,c_mad] = grpstats(horzcat(dxcorr{:}),quant(horzcat(pairdist{:}),distBinwidth),...
-            {@median,mad1});
+        %% combine data from multiple files
+        mindistVals = quant(horzcat(mindist{:}),distBinwidth);
+        speeds = vertcat(speeds{:});
+        pairdistVals = quant(horzcat(pairdist{:}),distBinwidth);
+        dxcorr = horzcat(dxcorr{:});
+        vxcorr = horzcat(vxcorr{:});
+        % ignore long distance data (and short distance which can give
+        % error in the calculation for too few samples
+        speeds = speeds(mindistVals<=maxDist);
+        mindistVals = mindistVals(mindistVals<=maxDist);
+        pDistKeepIdcs = pairdistVals<=maxDist&pairdistVals>=minDist;
+        dxcorr = dxcorr(pDistKeepIdcs);
+        vxcorr = vxcorr(pDistKeepIdcs);
+        pairdistVals = pairdistVals(pDistKeepIdcs);
+        % bootstrapping will yield an error if any bin has n=1
+        [s_med,s_ci] = grpstats(speeds,mindistVals,{@median,bootserr});
+        [corr_o_med,corr_o_ci] = grpstats(dxcorr,pairdistVals,{@median,bootserr});
+        [corr_v_med,corr_v_ci] = grpstats(vxcorr,pairdistVals,{@median,bootserr});
         %% plot data
-        bins = (0:numel(s_med)-1).*distBinwidth;
-        [lineHandles(strainCtr), ~] = boundedline(bins,smooth(s_med),[smooth(s_mad), smooth(s_mad)],...
+        mindistBins = double(unique(mindistVals));
+        [lineHandles(strainCtr), ~] = boundedline(mindistBins,smooth(s_med),...
+            [smooth(s_med - s_ci(:,1)), smooth(s_ci(:,2) - s_med)],...
             'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
-        bins = (0:numel(c_med)-1).*distBinwidth;
-        boundedline(bins,smooth(c_med),[smooth(c_mad), smooth(c_mad)],...
+        pairdistBins = double(unique(pairdistVals));
+        boundedline(pairdistBins,smooth(corr_o_med),[smooth(corr_o_med - corr_o_ci(:,1)), smooth(corr_o_ci(:,2) - corr_o_med)],...
             'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
+        boundedline(pairdistBins,smooth(corr_v_med),[smooth(corr_v_med - corr_v_ci(:,1)), smooth(corr_v_ci(:,2) - corr_v_med)],...
+            'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
         gr = cat(2,gr{:});
         boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),...
-            [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(all(~isnan(gr),2))),...
+            [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(sum(~isnan(gr),2))),...
             'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
         if  strcmp(wormnum{1},'40')&& plotDiagnostics
             histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','pdf')
         end
     end
     %% format and export figures
-        for figHandle = [speedFig, dircorrFig, poscorrFig] % common formating for both figures
+        for figHandle = [speedFig, dircorrFig, velcorrFig poscorrFig] % common formating for both figures
             set(figHandle,'PaperUnits','centimeters')
         end
         %
         speedFig.Children.YLim = [0 400];
         speedFig.Children.XLim = [0 2000];
+        speedFig.Children.XTick = 0:500:2000;
         speedFig.Children.Box = 'on';
         speedFig.Children.XDir = 'reverse';
-        ylabel(speedFig.Children,'speed (\mum/s)')
-        xlabel(speedFig.Children,'distance to nearest neighbour (\mum)')
+        ylabel(speedFig.Children,'speed (μm/s)')
+        xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
         legend(speedFig.Children,lineHandles,strains)
         figurename = ['figures/speedvsneighbrdistance_' wormnum{1}];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
-        dircorrFig.Children.YLim = [-1 1];
-        dircorrFig.Children.XLim = [0 250];
+%         dircorrFig.Children.YLim = [-1 1];
+        dircorrFig.Children.XLim = [0 2000];
         set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
         ylabel(dircorrFig.Children,'orientational correlation')
-        xlabel(dircorrFig.Children,'distance between pair (\mum)')
+        xlabel(dircorrFig.Children,'distance between pair (μm)')
         legend(dircorrFig.Children,lineHandles,strains)
         figurename = ['figures/dircrosscorr_' wormnum{1}];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         %
-        poscorrFig.Children.YLim = [0 10];
+%         velcorrFig.Children.YLim = [-1 1];
+        velcorrFig.Children.XLim = [0 2000];
+        set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+        ylabel(velcorrFig.Children,'velocity correlation')
+        xlabel(velcorrFig.Children,'distance between pair (μm)')
+        legend(velcorrFig.Children,lineHandles,strains)
+        figurename = ['figures/velcrosscorr_' wormnum{1}];
+        exportfig(velcorrFig,[figurename '.eps'],exportOptions)
+        system(['epstopdf ' figurename '.eps']);
+        system(['rm ' figurename '.eps']);
+        %
+        poscorrFig.Children.YLim(1) = 0;
         poscorrFig.Children.XLim = [0 2000];
+        poscorrFig.Children.XTick = 0:500:2000;
+        poscorrFig.Children.YTick = 0:round(poscorrFig.Children.YLim(2));
         poscorrFig.Children.Box = 'on';
         ylabel(poscorrFig.Children,'positional correlation g(r)')
-        xlabel(poscorrFig.Children,'distance r (\mum)')
+        xlabel(poscorrFig.Children,'distance r (μm)')
         legend(poscorrFig.Children,lineHandles,strains)
         figurename = ['figures/radialdistributionfunction_' wormnum{1}];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
