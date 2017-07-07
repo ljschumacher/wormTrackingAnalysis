@@ -13,11 +13,13 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
+dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
+phase = 'stationary'; % 'fullMovie' or 'stationary'
+binSeconds = 30; % create bins measured in seconds - only applied to full movie analysis
 if dataset ==1
-    strains = {'npr1'};
+    strains = {'npr1'}; %{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'npr1'};
+    strains = {'npr1'}; %{'npr1','N2'}
 end
 wormnums = {'40'};%{'40','HD'};
 if dataset == 1
@@ -29,9 +31,7 @@ maxBlobSize = 1e4;
 minNeighbrDist = 2000;
 inClusterNeighbourNum = 3;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-startFrame = 1;
-endFrame = 0; % specify 1 for the end of the whole movie, or 0 for the end of the initial stationary phase
-binSeconds = 30; % create bins measured in seconds - only applied to full movie analysis
+
 
 %% go through strains, densities, movies
 for strainCtr = 1:length(strains)
@@ -40,9 +40,9 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load data
         if dataset == 1
-            [phaseEndFrame,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:B15','basic');
+            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:B15','basic');
         elseif dataset == 2
-            [phaseEndFrame,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:B15','basic');
+            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:B15','basic');
         end
         numFiles = length(filenames);
         inClusterProportionFig = figure; hold on
@@ -52,10 +52,10 @@ for strainCtr = 1:length(strains)
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
-            if endFrame ==1
+            if strcmp(phase, 'fullMovie')
                 lastFrame = double(max(trajData.frame_number));
-            elseif endFrame ==0
-                lastFrame = phaseEndFrame(fileCtr);
+            elseif strcmp(phase,'stationary')
+                lastFrame = lastFrames(fileCtr);
             end
             % filter by blob size and intensity
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
@@ -73,10 +73,11 @@ for strainCtr = 1:length(strains)
             inClusterInFrame = trajData.frame_number(inClusterLogInd);
             loneWormInFrame = trajData.frame_number(loneWormLogInd);
             binEdges = linspace(1,lastFrame,lastFrame/frameRate/binSeconds);
-            if endFrame ==0  % restrict movies to stationary phase
-                totalObjInFrame = totalObjInFrame(totalObjInFrame<lastFrame);
-                inClusterInFrame = inClusterInFrame(inClusterInFrame<lastFrame);
-                loneWormInFrame = loneWormInFrame(loneWormInFrame<lastFrame);
+            if strcmp(phase,'stationary')  % restrict movies to stationary phase
+                frameLogInd = trajData.frame_number < lastFrame;
+                totalObjInFrame(~frameLogInd) = false;
+                inClusterInFrame(~frameLogInd) = false;
+                loneWormInFrame(~frameLogInd) = false;
                 binEdges = linspace(1,lastFrame,120); % create 120 bins over the stationary phase
             end
             [totalObjPerSecond,~]=histcounts(totalObjInFrame,binEdges);
@@ -96,17 +97,13 @@ for strainCtr = 1:length(strains)
         set(0,'CurrentFigure',inClusterProportionFig)
         title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
         xlabel('time')
-        if endFrame == 1
+        if strcmp(phase,'fullMovie')
             xlim([0 (3600/binSeconds)]) % set x axis for 1 hour
         end
         ylabel('percentage')
         ylim([0 100])
         set(inClusterProportionFig,'PaperUnits','centimeters')
-        if endFrame ==1
-            figurename = ['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_fullMovie_data' num2str(dataset)];
-        elseif endFrame ==0
-            figurename = ['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_stationary_data' num2str(dataset)];
-        end
+        figurename = ['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset)];
         exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -114,17 +111,13 @@ for strainCtr = 1:length(strains)
         set(0,'CurrentFigure',loneWormProportionFig)
         title([strains{strainCtr} '\_' wormnums{numCtr} '\_loneWorms'],'FontWeight','normal')
         xlabel('time')
-        if endFrame == 1
+        if strcmp(phase, 'fullMovie')
             xlim([0 (3600/binSeconds)]) % set x axis for 1 hour
         end
         ylabel('percentage')
         ylim([0 50])
         set(loneWormProportionFig,'PaperUnits','centimeters')
-        if endFrame ==1
-            figurename = ['figures/inClusterProportion/loneWormsProportion_' strains{strainCtr} '_' wormnums{numCtr} '_fullMovie_data' num2str(dataset)];
-        elseif endFrame ==0
-            figurename = ['figures/inClusterProportion/loneWormsProportion_' strains{strainCtr} '_' wormnums{numCtr} '_stationary_data' num2str(dataset)];
-        end
+        figurename = ['figures/inClusterProportion/loneWormsProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset)];
         exportfig(loneWormProportionFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);

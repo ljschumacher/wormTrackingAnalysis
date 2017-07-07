@@ -16,16 +16,27 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 
-pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
-strains = {'N2','npr1'};
-wormnums = {'40'}%{'1W','40','HD'};
-intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
-maxBlobSize_r = 2.5e5;
+%% set parameters
+dataset = 1; % enter 1 or 2 to specify which dataset to run the script for
+phase = 'fullMovie'; % 'fullMovie' or 'stationary'
+if dataset ==1
+    strains = {'npr1'}; %{'npr1','HA','N2'}
+elseif dataset ==2
+    strains = {'npr1'}; %{'npr1','N2'}
+end
+wormnums = {'40'}; %{'1W','40','HD'};
+if dataset == 1
+    intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
+elseif dataset ==2
+    intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
+end
 maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;
+inClusterNeighbourNum = 3;
+pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 plotColors = lines(length(wormnums));
 
+%% go through strains, densities, movies
 for strainCtr = 1:length(strains)
     revFreqFig = figure; hold on
     for numCtr = 1:length(wormnums)
@@ -33,7 +44,11 @@ for strainCtr = 1:length(strains)
         revInterTimeFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
-        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+        if dataset ==1
+            [lastFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:B15','basic');
+        elseif dataset ==2
+            [lastFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:B15','basic');
+        end
         numFiles = length(filenames_g);
         reversalfreq_lone = NaN(numFiles,1);
         reversaldurations_lone = cell(numFiles,1);
@@ -48,7 +63,7 @@ for strainCtr = 1:length(strains)
         interrevT_incluster_censored = cell(numFiles,1);
         interrevT_smallCluster_censored = cell(numFiles,1);
         frameRateAll = double(h5readatt(filenames_g{1},'/plate_worms','expected_fps')); % load one frameRate for use outside parfor loop
-        parfor fileCtr = 1:numFiles % can be parfor
+        for fileCtr = 1:numFiles % can be parfor
             filename_g = filenames_g{fileCtr};
             trajData_g = h5read(filename_g,'/trajectories_data');
             blobFeats_g = h5read(filename_g,'/blob_features');
@@ -57,6 +72,11 @@ for strainCtr = 1:length(strains)
             frameRate = double(h5readatt(filename_g,'/plate_worms','expected_fps'));
             if frameRate == 0
                 warning(['frame rate is zero for ' filename_g])
+            end
+            if strcmp(phase,'fullMovie')
+                lastFrame = double(max(trajData_g.frame_number));
+            elseif strcmp(phase,'stationary')
+                lastFrame = lastFrames(fileCtr);
             end
             % filter by blob size and intensity
             trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
@@ -70,11 +90,17 @@ for strainCtr = 1:length(strains)
                 num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
                 neighbr_dist = h5read(filename_g,'/neighbr_distances');
                 loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-                inClusterLogInd = num_close_neighbrs>=3;
+                inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
                 smallClusterLogInd = (num_close_neighbrs==1 & neighbr_dist(:,2)>=minNeighbrDist)...
                     |(num_close_neighbrs==2 & neighbr_dist(:,3)>=minNeighbrDist)...
                     |(num_close_neighbrs==3 & neighbr_dist(:,4)>=minNeighbrDist)...
                     |(num_close_neighbrs==4 & neighbr_dist(:,5)>=minNeighbrDist);
+                if strcmp(phase,'stationary')
+                    frameLogInd = trajData_g.frame_number < lastFrame;
+                    loneWormLogInd(~frameLogInd) = false;
+                    inClusterLogInd(~frameLogInd) = false;
+                    smallClusterLogInd(~frameLogInd) = false;
+                end
             else
                 loneWormLogInd = true(size(trajData_g.frame_number));
                 inClusterLogInd = false(size(trajData_g.frame_number));
@@ -90,6 +116,10 @@ for strainCtr = 1:length(strains)
             speedSigned(~trajData_g.has_skeleton)=NaN;
             % ignore skeletons otherwise filtered out
             speedSigned(~trajData_g.filtered) = NaN;
+            % ignore frames outside of specified phase
+            if strcmp(phase,'stationary')
+                speedSigned(~frameLogInd) =NaN;
+            end
             % smooth speed to denoise
             speedSigned = smooth(speedSigned,3,'moving');
             % find reversals in midbody speed
@@ -146,7 +176,7 @@ for strainCtr = 1:length(strains)
         ecdf(interrevT_lone,'Bounds','on','function','survivor')%,'censoring',interrevT_lone_censored)
         hold on
         if ~strcmp(wormnum,'1W')
-%             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
+            %             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
             ecdf(interrevT_incluster,'Bounds','on','function','survivor')%,'censoring',interrevT_incluster_censored)
         end
         set(revInterTimeFig.Children,'YScale','log')
@@ -154,17 +184,18 @@ for strainCtr = 1:length(strains)
         set(revInterTimeFig,'PaperUnits','centimeters')
         revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
-%         revInterTimeFig.Children.XLim(2) = 30;
-%         revInterTimeFig.Children.YLim(1) = 0.1;
+        %         revInterTimeFig.Children.XLim(2) = 30;
+        %         revInterTimeFig.Children.YLim(1) = 0.1;
         revInterTimeFig.Children.XLim(2) = 60;
         revInterTimeFig.Children.YLim(1) = 1e-3;
         if ~strcmp(wormnum,'1W')
-%             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
-                        legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
+            %             legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','small cluster','in cluster'})
+            legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','in cluster'})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
-        figurename = ['figures/reversals/reversalintertime_pharynx_' strains{strainCtr} '_' wormnum];
+        
+        figurename = ['figures/reversals/new/reversalintertime_pharynx_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)];
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -185,8 +216,8 @@ for strainCtr = 1:length(strains)
         else
             histogram(revDurFig.Children,reversaldurations_lone,0:3/frameRateAll:15,...
                 'Normalization','probability','DisplayStyle','stairs');
-%             histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRateAll:15,...
-%                 'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
+            %             histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRateAll:15,...
+            %                 'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
             histogram(revDurFig.Children,reversaldurations_incluster,0:3/frameRateAll:15,...
                 'Normalization','probability','DisplayStyle','stairs','EdgeColor','r');
         end
@@ -197,12 +228,12 @@ for strainCtr = 1:length(strains)
         ylabel(revDurFig.Children,'P')
         revDurFig.Children.XLim = [0 8];
         if ~strcmp(wormnum,'1W')
-%             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
-                        legend(revDurFig.Children,{'lone worms','in cluster'})
+            %             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
+            legend(revDurFig.Children,{'lone worms','in cluster'})
         else
             legend(revDurFig.Children,'single worms')
         end
-        figurename = ['figures/reversals/reversaldurations_pharynx_' strains{strainCtr} '_' wormnum];
+        figurename = ['figures/reversals/new/reversaldurations_pharynx_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)];
         exportfig(revDurFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -215,7 +246,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    figurename = ['figures/reversals/reversalfrequency_pharynx_' strains{strainCtr}];
+    figurename = ['figures/reversals/new/reversalfrequency_pharynx_' strains{strainCtr} '_' phase '_data' num2str(dataset)];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
