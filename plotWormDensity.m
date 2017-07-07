@@ -12,6 +12,7 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 
+%% set parameters
 dataset = 1; % specify which dataset to run the script for. Enter either 1 or 2
 if dataset ==1
     strains = {'N2','HA','npr1'};
@@ -27,7 +28,7 @@ end
 maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-
+%% go through strains, densities, movies
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     for numCtr = 1:length(wormnums)
@@ -48,11 +49,11 @@ for strainCtr = 1:length(strains)
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThresholds(wormnum),maxBlobSize);
             % calculate objects per frame
-            frames = trajData.frame_number(trajData.filtered);
-            %     % plot histogram
+            objInFrame = trajData.frame_number(trajData.filtered);
+            % plot histogram
             set(0,'CurrentFigure',wormDensityFig)
             plotColor = colorcube(numFiles);
-            histogram(frames,'BinWidth',45,'DisplayStyle','stairs','EdgeColor',plotColor(fileCtr,:),'Normalization','countdensity')
+            histogram(objInFrame,'BinWidth',45,'DisplayStyle','stairs','EdgeColor',plotColor(fileCtr,:),'Normalization','countdensity')
         end
         % format figure and export
         xlabel('frame number','FontSize',20)
