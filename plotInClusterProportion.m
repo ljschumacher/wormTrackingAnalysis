@@ -13,7 +13,7 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-dataset = 1; % specify which dataset to run the script for. Enter either 1 or 2
+dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
 if dataset ==1
     strains = {'npr1'};
 elseif dataset ==2
