@@ -23,7 +23,7 @@ mad1 = @(x) mad(x,1); % median absolute deviation
 % which are 1.57*iqr/sqrt(n) - unclear how justified this is
 iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
-bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
+bootserr = @(x) bootci(1e1,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
 %% set parameters
 dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
@@ -54,7 +54,7 @@ distBins = 0:distBinwidth:maxDist;
 dircorrxticks = 0:500:2000;
 
 %% go through strains, densities, movies
-for wormnum = wormnums 
+for wormnum = wormnums
     speedFig = figure; hold on
     dircorrFig = figure; hold on
     velcorrFig = figure; hold on
@@ -91,11 +91,14 @@ for wormnum = wormnums
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             if strcmp(phase,'fullMovie')
                 lastFrame = numel(unique(trajData.frame_number));
+                numFrames = round(lastFrame/frameRate/3);
+                framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             elseif strcmp(phase,'stationary')
                 lastFrame = lastFrames(fileCtr);
+                firstFrame = round(max(trajData.frame_number)/10); % cut out the first 10 percent of the movie for stationary phase restriction
+                numFrames = round((lastFrame-firstFrame)/frameRate/3);
+                framesAnalyzed = randperm((lastFrame-firstFrame),numFrames)+firstFrame; % randomly sample frames without replacement
             end
-            numFrames = round(lastFrame/frameRate/3);
-            framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
@@ -104,11 +107,11 @@ for wormnum = wormnums
             end
             trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
-                    intensityThresholds(wormnum{1}),maxBlobSize)...
-                    &trajData.has_skeleton;
+                intensityThresholds(wormnum{1}),maxBlobSize)...
+                &trajData.has_skeleton;
             if strcmp(phase,'stationary')
-                    phaseFrameLogInd = trajData.frame_number < lastFrame;
-                    trajData.filtered(~phaseFrameLogInd)=false;
+                phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
+                trajData.filtered(~phaseFrameLogInd)=false;
             end
             %% calculate stats
             speeds{fileCtr} = cell(numFrames,1);
@@ -202,62 +205,62 @@ for wormnum = wormnums
         end
     end
     %% format and export figures
-        for figHandle = [speedFig, dircorrFig, velcorrFig poscorrFig] % common formating for both figures
-            set(figHandle,'PaperUnits','centimeters')
-        end
-        %
-        speedFig.Children.YLim = [0 400];
-        speedFig.Children.XLim = [0 2000];
-        speedFig.Children.XTick = 0:500:2000;
-        speedFig.Children.Box = 'on';
-        speedFig.Children.XDir = 'reverse';
-        ylabel(speedFig.Children,'speed (μm/s)')
-        xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
-        legend(speedFig.Children,lineHandles,strains)
-        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistance_' wormnum{1} '_' phase '_data' num2str(dataset)];
-        exportfig(speedFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-%         dircorrFig.Children.YLim = [-1 1];
-        dircorrFig.Children.XLim = [0 2000];
-        set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-        ylabel(dircorrFig.Children,'orientational correlation')
-        xlabel(dircorrFig.Children,'distance between pair (μm)')
-        legend(dircorrFig.Children,lineHandles,strains)
-        figurename = ['figures/correlation/phaseSpecific/dircrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
-        exportfig(dircorrFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-%         velcorrFig.Children.YLim = [-1 1];
-        velcorrFig.Children.XLim = [0 2000];
-        set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-        ylabel(velcorrFig.Children,'velocity correlation')
-        xlabel(velcorrFig.Children,'distance between pair (μm)')
-        legend(velcorrFig.Children,lineHandles,strains)
-        figurename = ['figures/correlation/phaseSpecific/velcrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
-        exportfig(velcorrFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-        poscorrFig.Children.YLim(1) = 0;
-        poscorrFig.Children.XLim = [0 2000];
-        poscorrFig.Children.XTick = 0:500:2000;
-        poscorrFig.Children.YTick = 0:round(poscorrFig.Children.YLim(2));
-        poscorrFig.Children.Box = 'on';
-        ylabel(poscorrFig.Children,'positional correlation g(r)')
-        xlabel(poscorrFig.Children,'distance r (μm)')
-        legend(poscorrFig.Children,lineHandles,strains)
-        figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum{1} '_' phase '_data' num2str(dataset)];
-        exportfig(poscorrFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        
+    for figHandle = [speedFig, dircorrFig, velcorrFig poscorrFig] % common formating for both figures
+        set(figHandle,'PaperUnits','centimeters')
+    end
+    %
+    speedFig.Children.YLim = [0 400];
+    speedFig.Children.XLim = [0 2000];
+    speedFig.Children.XTick = 0:500:2000;
+    speedFig.Children.Box = 'on';
+    speedFig.Children.XDir = 'reverse';
+    ylabel(speedFig.Children,'speed (μm/s)')
+    xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
+    legend(speedFig.Children,lineHandles,strains)
+    figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistance_' wormnum{1} '_' phase '_data' num2str(dataset)];
+    exportfig(speedFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    %
+    %         dircorrFig.Children.YLim = [-1 1];
+    dircorrFig.Children.XLim = [0 2000];
+    set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(dircorrFig.Children,'orientational correlation')
+    xlabel(dircorrFig.Children,'distance between pair (μm)')
+    legend(dircorrFig.Children,lineHandles,strains)
+    figurename = ['figures/correlation/phaseSpecific/dircrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
+    exportfig(dircorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    %
+    %         velcorrFig.Children.YLim = [-1 1];
+    velcorrFig.Children.XLim = [0 2000];
+    set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(velcorrFig.Children,'velocity correlation')
+    xlabel(velcorrFig.Children,'distance between pair (μm)')
+    legend(velcorrFig.Children,lineHandles,strains)
+    figurename = ['figures/correlation/phaseSpecific/velcrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
+    exportfig(velcorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    %
+    poscorrFig.Children.YLim(1) = 0;
+    poscorrFig.Children.XLim = [0 2000];
+    poscorrFig.Children.XTick = 0:500:2000;
+    poscorrFig.Children.YTick = 0:round(poscorrFig.Children.YLim(2));
+    poscorrFig.Children.Box = 'on';
+    ylabel(poscorrFig.Children,'positional correlation g(r)')
+    xlabel(poscorrFig.Children,'distance r (μm)')
+    legend(poscorrFig.Children,lineHandles,strains)
+    figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum{1} '_' phase '_data' num2str(dataset)];
+    exportfig(poscorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    
     if  strcmp(wormnum{1},'40')&& plotDiagnostics
         visitfreqFig.Children.XScale = 'log';
         visitfreqFig.Children.YScale = 'log';
-%         visitfreqFig.Children.XLim = [4e-5 1e-1];
+        %         visitfreqFig.Children.XLim = [4e-5 1e-1];
         xlabel(visitfreqFig.Children,'site visit frequency, f')
         ylabel(visitfreqFig.Children,'pdf p(f)')
         legend(visitfreqFig.Children,strains)
