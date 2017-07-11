@@ -25,23 +25,36 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
+%% set parameters
+dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
+phase = 'stationary'; % 'fullMovie' or 'stationary'
+
+if dataset ==1
+    strains = {'npr1'}; %{'npr1','HA','N2'}
+elseif dataset ==2
+    strains = {'npr1'}; %{'npr1','N2'}
+end
+wormnums = {'40'};%{'40','HD'};
+nStrains = length(strains);
+plotColors = lines(nStrains);
+if dataset == 1
+    intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
+elseif dataset ==2
+    intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
+end
+maxBlobSize = 1e4;
+pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+plotDiagnostics = false;
+if plotDiagnostics, visitfreqFig = figure; hold on, end
+
 distBinwidth = 25; % in units of micrometers
 maxDist = 2000;
 minDist = 50;
 distBins = 0:distBinwidth:maxDist;
 dircorrxticks = 0:500:2000;
 
-pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
-strains = {'npr1','N2'};
-nStrains = length(strains);
-plotColors = lines(nStrains);
-wormnums = {'40','HD'};
-intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
-maxBlobSize = 1e4;
-plotDiagnostics = false;
-if plotDiagnostics, visitfreqFig = figure; hold on, end
-for wormnum = wormnums
+%% go through strains, densities, movies
+for wormnum = wormnums 
     speedFig = figure; hold on
     dircorrFig = figure; hold on
     velcorrFig = figure; hold on
@@ -49,7 +62,11 @@ for wormnum = wormnums
     lineHandles = NaN(nStrains,1);
     for strainCtr = 1:nStrains
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.txt']);
+        if dataset == 1
+            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.xlsx'],1,'A1:B15','basic');
+        elseif dataset == 2
+            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.xlsx'],1,'A1:B15','basic');
+        end
         numFiles = length(filenames);
         if wormnum{1} == '40'
             visitfreq = cell(numFiles,1);
@@ -72,9 +89,13 @@ for wormnum = wormnums
                 warning(['all skeleton are NaN for ' filename])
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
-            maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate/3);
-            framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
+            if strcmp(phase,'fullMovie')
+                lastFrame = numel(unique(trajData.frame_number));
+            elseif strcmp(phase,'stationary')
+                lastFrame = lastFrames(fileCtr);
+            end
+            numFrames = round(lastFrame/frameRate/3);
+            framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
@@ -85,6 +106,10 @@ for wormnum = wormnums
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                     intensityThresholds(wormnum{1}),maxBlobSize)...
                     &trajData.has_skeleton;
+            if strcmp(phase,'stationary')
+                    phaseFrameLogInd = trajData.frame_number < lastFrame;
+                    trajData.filtered(~phaseFrameLogInd)=false;
+            end
             %% calculate stats
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
@@ -134,7 +159,7 @@ for wormnum = wormnums
                 title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
                 set(siteVisitFig,'PaperUnits','centimeters')
                 figurename = ['figures/individualRecordings/' strains{strainCtr}...
-                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited'];
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited' '_' phase '_data' num2str(dataset)];
                 exportfig(siteVisitFig,[figurename '.eps'],exportOptions)
                 system(['epstopdf ' figurename '.eps']);
                 system(['rm ' figurename '.eps']);
@@ -189,7 +214,7 @@ for wormnum = wormnums
         ylabel(speedFig.Children,'speed (μm/s)')
         xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
         legend(speedFig.Children,lineHandles,strains)
-        figurename = ['figures/speedvsneighbrdistance_' wormnum{1}];
+        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistance_' wormnum{1} '_' phase '_data' num2str(dataset)];
         exportfig(speedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -200,7 +225,7 @@ for wormnum = wormnums
         ylabel(dircorrFig.Children,'orientational correlation')
         xlabel(dircorrFig.Children,'distance between pair (μm)')
         legend(dircorrFig.Children,lineHandles,strains)
-        figurename = ['figures/dircrosscorr_' wormnum{1}];
+        figurename = ['figures/correlation/phaseSpecific/dircrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
         exportfig(dircorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -211,7 +236,7 @@ for wormnum = wormnums
         ylabel(velcorrFig.Children,'velocity correlation')
         xlabel(velcorrFig.Children,'distance between pair (μm)')
         legend(velcorrFig.Children,lineHandles,strains)
-        figurename = ['figures/velcrosscorr_' wormnum{1}];
+        figurename = ['figures/correlation/phaseSpecific/velcrosscorr_' wormnum{1} '_' phase '_data' num2str(dataset)];
         exportfig(velcorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -224,7 +249,7 @@ for wormnum = wormnums
         ylabel(poscorrFig.Children,'positional correlation g(r)')
         xlabel(poscorrFig.Children,'distance r (μm)')
         legend(poscorrFig.Children,lineHandles,strains)
-        figurename = ['figures/radialdistributionfunction_' wormnum{1}];
+        figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum{1} '_' phase '_data' num2str(dataset)];
         exportfig(poscorrFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
