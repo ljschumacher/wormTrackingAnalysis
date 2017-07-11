@@ -28,6 +28,7 @@ bootserr = @(x) bootci(1e1,{@nanmedian,x},'alpha',0.05,'Options',struct('UsePara
 %% set parameters
 dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
 phase = 'stationary'; % 'fullMovie' or 'stationary'
+plotDiagnostics = false; % true or false
 
 if dataset ==1
     strains = {'npr1'}; %{'npr1','HA','N2'}
@@ -44,7 +45,6 @@ elseif dataset ==2
 end
 maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-plotDiagnostics = false;
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 
 distBinwidth = 25; % in units of micrometers
@@ -95,9 +95,9 @@ for wormnum = wormnums
                 framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             elseif strcmp(phase,'stationary')
                 lastFrame = lastFrames(fileCtr);
-                firstFrame = round(max(trajData.frame_number)/10); % cut out the first 10 percent of the movie for stationary phase restriction
+                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
-                framesAnalyzed = randperm((lastFrame-firstFrame),numFrames)+firstFrame; % randomly sample frames without replacement
+                framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
             %% filter worms
             if plotDiagnostics
