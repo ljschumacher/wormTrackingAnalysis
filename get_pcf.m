@@ -84,8 +84,7 @@ for movie = 1:length(filename)
         %bins = 1:bin_width:max(peak2peak(pair_dist), peak2peak(pair_dist)); 
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr1 = histcounts(pair_dist,bins,'Normalization','pdf');
-        gr1 = histcounts(pair_dist,bins);%,'Normalization','pdf');
+        gr1 = histcounts(pair_dist,bins,'Normalization','count');
 
         % Radial distribution function
         % Normalization step

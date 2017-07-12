@@ -27,7 +27,7 @@ bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UsePara
 
 distBinwidth = 25; % in units of micrometers
 maxDist = 2000;
-minDist = 50;
+minDist = distBinwidth;
 distBins = 0:distBinwidth:maxDist;
 dircorrxticks = 0:500:2000;
 
@@ -60,7 +60,7 @@ for wormnum = wormnums
         pairdist = cell(numFiles,1);
         mindist= cell(numFiles,1);
         gr =cell(numFiles,1);
-        for fileCtr = 1:numFiles
+        for fileCtr = 1:numFiles % can be parfor (?)
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
@@ -73,7 +73,7 @@ for wormnum = wormnums
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             maxNumFrames = numel(unique(trajData.frame_number));
-            numFrames = round(maxNumFrames/frameRate/3);
+            numFrames = round(maxNumFrames/frameRate);
             framesAnalyzed = randperm(maxNumFrames,numFrames); % randomly sample frames without replacement
             %% filter worms
             if plotDiagnostics
@@ -86,6 +86,8 @@ for wormnum = wormnums
                     intensityThresholds(wormnum{1}),maxBlobSize)...
                     &trajData.has_skeleton;
             %% calculate stats
+            OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
+                peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
             vxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
@@ -95,7 +97,8 @@ for wormnum = wormnums
             for frameCtr = 1:numFrames % one may be able to vectorise this
                 frame = framesAnalyzed(frameCtr);
                 [x ,y] = getWormPositions(trajData, frame, true);
-                if numel(x)>1 % need at least two worms in frame
+                N = length(x);
+                if N>1 % need at least two worms in frame
                     frameLogInd = trajData.frame_number==frame&trajData.filtered;
                     vx = double(blobFeats.velocity_x(frameLogInd));
                     vy = double(blobFeats.velocity_y(frameLogInd));
@@ -106,8 +109,8 @@ for wormnum = wormnums
                     vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
-                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
-                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation by N(N-1)
+                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
+                    ./(2*distBins(2:end)*distBinwidth*N*(N-1)); % normalisation by N(N-1)
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
                     if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
