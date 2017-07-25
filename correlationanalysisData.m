@@ -25,7 +25,7 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
-distBinwidth = 25; % in units of micrometers
+distBinwidth = 50; % in units of micrometers
 maxDist = 2000;
 minDist = distBinwidth;
 distBins = 0:distBinwidth:maxDist;
@@ -60,7 +60,7 @@ for wormnum = wormnums
         pairdist = cell(numFiles,1);
         mindist= cell(numFiles,1);
         gr =cell(numFiles,1);
-        for fileCtr = 1:numFiles % can be parfor (?)
+        parfor fileCtr = 1:numFiles % can be parfor (?)
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
@@ -110,7 +110,7 @@ for wormnum = wormnums
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
-                    ./(2*distBins(2:end)*distBinwidth*N*(N-1)); % normalisation by N(N-1)
+                    ./(2*pi*distBins(2:end)*distBinwidth*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                     mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
                     if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))

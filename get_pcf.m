@@ -89,7 +89,7 @@ for movie = 1:length(filename)
         % Radial distribution function
         % Normalization step
         R = max(bins);
-        gr2 = gr1.*R^2./(2*bins(2:end)*bin_width*((num_worms^2)-num_worms));
+        gr2 = gr1.*R^2./(2*bins(2:end)*bin_width*(num_worms^2-num_worms)/2);
 
         % Store all data in a cell array for picking apart later
         if t == 0
