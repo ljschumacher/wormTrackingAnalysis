@@ -23,9 +23,9 @@ mad1 = @(x) mad(x,1); % median absolute deviation
 % which are 1.57*iqr/sqrt(n) - unclear how justified this is
 iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
-bootserr = @(x) bootci(1e2,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
+bootserr = @(x) bootci(1e1,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
-distBinWidth = 50; % in units of micrometers
+distBinWidth = 35; % in units of micrometers
 maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:2000;
@@ -59,7 +59,7 @@ for wormnum = wormnums
         pairdist = cell(numFiles,1);
         nNbrDist= cell(numFiles,1);
         gr =cell(numFiles,1);
-        parfor fileCtr = 1:numFiles % can be parfor (?)
+        parfor fileCtr = 1:numFiles % can be parfor
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
@@ -85,8 +85,12 @@ for wormnum = wormnums
                 intensityThresholds(wormnum{1}),maxBlobSize)...
                 &trajData.has_skeleton;
             %% calculate stats
-            OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
-                peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2
+            if wormnum{1} == '40'
+                OverallArea = pi*(8300/2)^2;
+            else
+                OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
+                    peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2
+            end
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
             vxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
@@ -104,8 +108,8 @@ for wormnum = wormnums
                     speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
-                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation
-                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true); % velocity correlation
+                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true,true); % directional correlation
+                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,true); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
@@ -154,13 +158,15 @@ for wormnum = wormnums
         [pairDistcounts,pairDistBins,pairDistbinIdx]  = histcounts(pairdist,...
             'BinWidth',distBinWidth,'BinLimits',[min(pairdist) maxDist]);
         % convert bin edges to centres (for plotting)
-        nNbrDistBins = nNbrDistBins(1:end-1) + diff(nNbrDistBins)/2;
-        pairDistBins = pairDistBins(1:end-1) + diff(pairDistBins)/2;
+        nNbrDistBins = double(nNbrDistBins(1:end-1) + diff(nNbrDistBins)/2);
+        pairDistBins = double(pairDistBins(1:end-1) + diff(pairDistBins)/2);
         % ignore larger distance values and bins with only one element, as this will cause bootsci to fault
         nNdistkeepIdcs = nNbrDistbinIdx>0&ismember(nNbrDistbinIdx,find(nNbrDistcounts>1));
+        nNbrDistBins = nNbrDistBins(nNbrDistcounts>1);
         speeds = speeds(nNdistkeepIdcs);
         nNbrDistbinIdx = nNbrDistbinIdx(nNdistkeepIdcs);
         pdistkeepIdcs = pairDistbinIdx>0&ismember(pairDistbinIdx,find(pairDistcounts>1));
+        pairDistBins = pairDistBins(pairDistcounts>1);
         dxcorr = dxcorr(pdistkeepIdcs);
         vxcorr = vxcorr(pdistkeepIdcs);
         pairDistbinIdx = pairDistbinIdx(pdistkeepIdcs);
