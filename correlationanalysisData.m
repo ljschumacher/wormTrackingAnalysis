@@ -43,6 +43,10 @@ end
 maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
+distBinWidth = 35; % in units of micrometers
+maxDist = 2000;
+distBins = 0:distBinWidth:maxDist;
+dircorrxticks = 0:500:2000;
 %% go through strains, densities, movies
 for wormnum = wormnums
     speedFig = figure; hold on

@@ -181,37 +181,6 @@ for strainCtr = 1:length(strains)
         
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         revFreqFig.Children.YLim = [0 0.55];
-        % reversal durations
-        reversaldurations_lone = vertcat(reversaldurations_lone{:});
-        reversaldurations_incluster = vertcat(reversaldurations_incluster{:});
-        reversaldurations_smallcluster = vertcat(reversaldurations_smallcluster{:});
-        if strcmp(wormnum,'1W')
-            histogram(revDurFig.Children,reversaldurations_lone,0:1/frameRateAll:15,...
-                'Normalization','probability','DisplayStyle','stairs');
-        else
-            histogram(revDurFig.Children,reversaldurations_lone,0:3/frameRateAll:15,...
-                'Normalization','probability','DisplayStyle','stairs');
-            %             histogram(revDurFig.Children,reversaldurations_smallcluster,0:3/frameRateAll:15,...
-            %                 'Normalization','probability','DisplayStyle','stairs','EdgeColor',0.5*ones(1,3));
-            histogram(revDurFig.Children,reversaldurations_incluster,0:3/frameRateAll:15,...
-                'Normalization','probability','DisplayStyle','stairs','EdgeColor','r');
-        end
-        revDurFig.Children.YTick = 0:0.1:0.5;
-        title(revDurFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
-        set(revDurFig,'PaperUnits','centimeters')
-        xlabel(revDurFig.Children,'time (s)')
-        ylabel(revDurFig.Children,'P')
-        revDurFig.Children.XLim = [0 8];
-        if ~strcmp(wormnum,'1W')
-            %             legend(revDurFig.Children,{'lone worms','small cluster','in cluster'})
-            legend(revDurFig.Children,{'lone worms','in cluster'})
-        else
-            legend(revDurFig.Children,'single worms')
-        end
-        figurename = ['figures/reversals/phaseSpecific/reversaldurations_pharynx_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_censored'];
-        exportfig(revDurFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
     end
     %% format and export figures
     title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
