@@ -47,10 +47,9 @@ maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 
-distBinwidth = 25; % in units of micrometers
+distBinWidth = 35; % in units of micrometers
 maxDist = 2000;
-minDist = 50;
-distBins = 0:distBinwidth:maxDist;
+distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:2000;
 
 %% go through strains, densities, movies
@@ -75,9 +74,9 @@ for wormnum = wormnums
         dxcorr = cell(numFiles,1); % for calculating directional cross-correlation
         vxcorr = cell(numFiles,1); % for calculating velocity cross-correlation
         pairdist = cell(numFiles,1);
-        mindist= cell(numFiles,1);
+        nNbrDist= cell(numFiles,1);
         gr =cell(numFiles,1);
-        for fileCtr = 1:numFiles
+        parfor fileCtr = 1:numFiles % can be parfor
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
@@ -89,6 +88,7 @@ for wormnum = wormnums
                 warning(['all skeleton are NaN for ' filename])
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+
             if strcmp(phase,'fullMovie')
                 lastFrame = numel(unique(trajData.frame_number));
                 numFrames = round(lastFrame/frameRate/3);
@@ -99,6 +99,7 @@ for wormnum = wormnums
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
                 framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
+
             %% filter worms
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
@@ -109,36 +110,45 @@ for wormnum = wormnums
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThresholds(wormnum{1}),maxBlobSize)...
                 &trajData.has_skeleton;
+
             if strcmp(phase,'stationary')
                 phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
                 trajData.filtered(~phaseFrameLogInd)=false;
             end
+
             %% calculate stats
+            if wormnum{1} == '40'
+                OverallArea = pi*(8300/2)^2;
+            else
+                OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
+                    peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2
+            end
             speeds{fileCtr} = cell(numFrames,1);
             dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
             vxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
             pairdist{fileCtr} = cell(numFrames,1);
-            mindist{fileCtr}= cell(numFrames,1);
+            nNbrDist{fileCtr}= cell(numFrames,1);
             gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
             for frameCtr = 1:numFrames % one may be able to vectorise this
                 frame = framesAnalyzed(frameCtr);
                 [x ,y] = getWormPositions(trajData, frame, true);
-                if numel(x)>1 % need at least two worms in frame
+                N = length(x);
+                if N>1 % need at least two worms in frame
                     frameLogInd = trajData.frame_number==frame&trajData.filtered;
                     vx = double(blobFeats.velocity_x(frameLogInd));
                     vy = double(blobFeats.velocity_y(frameLogInd));
                     speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
-                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true); % directional correlation
-                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true); % velocity correlation
+                    dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true,true); % directional correlation
+                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,true); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
-                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*maxDist^2./(2*distBins(2:end)*distBinwidth)...
-                        ./numel(pairdist{fileCtr}{frameCtr})*2; % normalisation by N(N-1)
+                    gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
+                        ./(2*pi*distBins(2:end)*distBinWidth*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
                     D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
-                    mindist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
-                    if (numel(speeds{fileCtr}{frameCtr})~=numel(mindist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
+                    nNbrDist{fileCtr}{frameCtr} = min(D + max(max(D))*eye(size(D)));
+                    if (numel(speeds{fileCtr}{frameCtr})~=numel(nNbrDist{fileCtr}{frameCtr}))||(numel(dxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
                         error(['Inconsistent number of variables in frame ' num2str(frame) ' of ' filename ])
                     end
                 end
@@ -148,7 +158,7 @@ for wormnum = wormnums
             dxcorr{fileCtr} = horzcat(dxcorr{fileCtr}{:});
             vxcorr{fileCtr} = horzcat(vxcorr{fileCtr}{:});
             pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
-            mindist{fileCtr} = horzcat(mindist{fileCtr}{:});
+            nNbrDist{fileCtr} = horzcat(nNbrDist{fileCtr}{:});
             % heat map of sites visited - this only makes sense for 40 worm
             % dataset where we don't move the camera
             if strcmp(wormnum{1},'40')&& plotDiagnostics
@@ -169,35 +179,43 @@ for wormnum = wormnums
             end
         end
         %% combine data from multiple files
-        mindistVals = quant(horzcat(mindist{:}),distBinwidth);
+        nNbrDist = horzcat(nNbrDist{:});
         speeds = vertcat(speeds{:});
-        pairdistVals = quant(horzcat(pairdist{:}),distBinwidth);
+        pairdist = horzcat(pairdist{:});
         dxcorr = horzcat(dxcorr{:});
         vxcorr = horzcat(vxcorr{:});
-        % ignore long distance data (and short distance which can give
-        % error in the calculation for too few samples
-        speeds = speeds(mindistVals<=maxDist);
-        mindistVals = mindistVals(mindistVals<=maxDist);
-        pDistKeepIdcs = pairdistVals<=maxDist&pairdistVals>=minDist;
-        dxcorr = dxcorr(pDistKeepIdcs);
-        vxcorr = vxcorr(pDistKeepIdcs);
-        pairdistVals = pairdistVals(pDistKeepIdcs);
-        % bootstrapping will yield an error if any bin has n=1
-        [s_med,s_ci] = grpstats(speeds,mindistVals,{@median,bootserr});
-        [corr_o_med,corr_o_ci] = grpstats(dxcorr,pairdistVals,{@median,bootserr});
-        [corr_v_med,corr_v_ci] = grpstats(vxcorr,pairdistVals,{@median,bootserr});
+        % bin distance data
+        [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
+            'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
+        [pairDistcounts,pairDistBins,pairDistbinIdx]  = histcounts(pairdist,...
+            'BinWidth',distBinWidth,'BinLimits',[min(pairdist) maxDist]);
+        % convert bin edges to centres (for plotting)
+        nNbrDistBins = double(nNbrDistBins(1:end-1) + diff(nNbrDistBins)/2);
+        pairDistBins = double(pairDistBins(1:end-1) + diff(pairDistBins)/2);
+        % ignore larger distance values and bins with only one element, as this will cause bootsci to fault
+        nNdistkeepIdcs = nNbrDistbinIdx>0&ismember(nNbrDistbinIdx,find(nNbrDistcounts>1));
+        nNbrDistBins = nNbrDistBins(nNbrDistcounts>1);
+        speeds = speeds(nNdistkeepIdcs);
+        nNbrDistbinIdx = nNbrDistbinIdx(nNdistkeepIdcs);
+        pdistkeepIdcs = pairDistbinIdx>0&ismember(pairDistbinIdx,find(pairDistcounts>1));
+        pairDistBins = pairDistBins(pairDistcounts>1);
+        dxcorr = dxcorr(pdistkeepIdcs);
+        vxcorr = vxcorr(pdistkeepIdcs);
+        pairDistbinIdx = pairDistbinIdx(pdistkeepIdcs);
+        
+        [s_med,s_ci] = grpstats(speeds,nNbrDistbinIdx,{@median,bootserr});
+        [corr_o_med,corr_o_ci] = grpstats(dxcorr,pairDistbinIdx,{@median,bootserr});
+        [corr_v_med,corr_v_ci] = grpstats(vxcorr,pairDistbinIdx,{@median,bootserr});
         %% plot data
-        mindistBins = double(unique(mindistVals));
-        [lineHandles(strainCtr), ~] = boundedline(mindistBins,smooth(s_med),...
+        [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smooth(s_med),...
             [smooth(s_med - s_ci(:,1)), smooth(s_ci(:,2) - s_med)],...
             'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
-        pairdistBins = double(unique(pairdistVals));
-        boundedline(pairdistBins,smooth(corr_o_med),[smooth(corr_o_med - corr_o_ci(:,1)), smooth(corr_o_ci(:,2) - corr_o_med)],...
+        boundedline(pairDistBins,smooth(corr_o_med),[smooth(corr_o_med - corr_o_ci(:,1)), smooth(corr_o_ci(:,2) - corr_o_med)],...
             'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
-        boundedline(pairdistBins,smooth(corr_v_med),[smooth(corr_v_med - corr_v_ci(:,1)), smooth(corr_v_ci(:,2) - corr_v_med)],...
+        boundedline(pairDistBins,smooth(corr_v_med),[smooth(corr_v_med - corr_v_ci(:,1)), smooth(corr_v_ci(:,2) - corr_v_med)],...
             'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
         gr = cat(2,gr{:});
-        boundedline(distBins(2:end)-distBinwidth/2,nanmean(gr,2),...
+        boundedline(distBins(2:end)-distBinWidth/2,nanmean(gr,2),...
             [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(sum(~isnan(gr),2))),...
             'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
         if  strcmp(wormnum{1},'40')&& plotDiagnostics
