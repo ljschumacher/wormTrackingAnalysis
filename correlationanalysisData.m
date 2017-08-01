@@ -14,7 +14,6 @@ exportOptions = struct('Format','eps2',...
     'FontMode','fixed',...
     'FontSize',12,...
     'LineWidth',1);
-
 % define functions for grpstats
 mad1 = @(x) mad(x,1); % median absolute deviation
 % alternatively could use boxplot-style confidence intervals on the mean,
@@ -23,10 +22,9 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e1,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
-
 %% set parameters
-dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
-phase = 'stationary'; % 'fullMovie' or 'stationary'
+dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
+phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 plotDiagnostics = false; % true or false
 
 if dataset ==1
@@ -37,7 +35,6 @@ end
 wormnums = {'40'};%{'40','HD'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
-
 if dataset == 1
     intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
 elseif dataset ==2
@@ -46,12 +43,10 @@ end
 maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
-
 distBinWidth = 35; % in units of micrometers
-maxDist = 4000;
+maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:2000;
-
 %% go through strains, densities, movies
 for wormnum = wormnums
     speedFig = figure; hold on
@@ -88,7 +83,6 @@ for wormnum = wormnums
                 warning(['all skeleton are NaN for ' filename])
             end
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
-
             if strcmp(phase,'fullMovie')
                 lastFrame = numel(unique(trajData.frame_number));
                 numFrames = round(lastFrame/frameRate/3);
@@ -99,7 +93,6 @@ for wormnum = wormnums
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
                 framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
-
             %% filter worms
             if plotDiagnostics
                 plotIntensitySizeFilter(blobFeats,pixelsize,...
@@ -110,12 +103,10 @@ for wormnum = wormnums
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThresholds(wormnum{1}),maxBlobSize)...
                 &trajData.has_skeleton;
-
             if strcmp(phase,'stationary')
                 phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
                 trajData.filtered(~phaseFrameLogInd)=false;
             end
-
             %% calculate stats
             if wormnum{1} == '40'
                 OverallArea = pi*(8300/2)^2;
@@ -241,7 +232,7 @@ for wormnum = wormnums
     system(['rm ' figurename '.eps']);
     %
     %         dircorrFig.Children.YLim = [-1 1];
-% %     dircorrFig.Children.XLim = [0 2000];
+    dircorrFig.Children.XLim = [0 2000];
     set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(dircorrFig.Children,'orientational correlation')
     xlabel(dircorrFig.Children,'distance between pair (μm)')
@@ -252,7 +243,7 @@ for wormnum = wormnums
     system(['rm ' figurename '.eps']);
     %
     %         velcorrFig.Children.YLim = [-1 1];
-% %     velcorrFig.Children.XLim = [0 2000];
+    velcorrFig.Children.XLim = [0 2000];
     set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(velcorrFig.Children,'velocity correlation')
     xlabel(velcorrFig.Children,'distance between pair (μm)')
