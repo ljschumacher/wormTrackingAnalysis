@@ -3,9 +3,7 @@
 
 % issues/to-do:
 % - seperate into individual functions for each statistic?
-% - calculate correlation functions separately for worms in/out of clusters
-% (the only non-obvious result may be a difference between clustered worms
-% in social vs asocial strains)
+
 clear
 close all
 
@@ -26,7 +24,7 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 bootserr = @(x) bootci(1e1,{@nanmedian,x},'alpha',0.05,'Options',struct('UseParallel',true));
 
 distBinWidth = 35; % in units of micrometers
-maxDist = 2000;
+maxDist = 4000;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:2000;
 
@@ -35,7 +33,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 strains = {'npr1','N2'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
-wormnums = {'40','HD'};
+wormnums = {'40'}%,'HD'};
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 1e4;
 plotDiagnostics = false;
@@ -109,7 +107,7 @@ for wormnum = wormnums
                     ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                     dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true,true); % directional correlation
-                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,true); % velocity correlation
+                    vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,false); % velocity correlation
                     pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                     gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                     gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
@@ -209,7 +207,7 @@ for wormnum = wormnums
     system(['rm ' figurename '.eps']);
     %
     %         dircorrFig.Children.YLim = [-1 1];
-    dircorrFig.Children.XLim = [0 2000];
+% %     dircorrFig.Children.XLim = [0 2000];
     set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(dircorrFig.Children,'orientational correlation')
     xlabel(dircorrFig.Children,'distance between pair (μm)')
@@ -220,7 +218,7 @@ for wormnum = wormnums
     system(['rm ' figurename '.eps']);
     %
     %         velcorrFig.Children.YLim = [-1 1];
-    velcorrFig.Children.XLim = [0 2000];
+% %     velcorrFig.Children.XLim = [0 2000];
     set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(velcorrFig.Children,'velocity correlation')
     xlabel(velcorrFig.Children,'distance between pair (μm)')
