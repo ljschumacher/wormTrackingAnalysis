@@ -13,13 +13,13 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-dataset = 2;  % enter 1 or 2 to specify which dataset to run the script for
-phase = 'stationary'; % 'fullMovie' or 'stationary'
+dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
+phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 binSeconds = 30; % create bins measured in seconds - only applied to full movie analysis
 if dataset ==1
-    strains = {'npr1'}; %{'npr1','HA','N2'}
+    strains = {'npr1','N2'}; %{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'npr1'}; %{'npr1','N2'}
+    strains = {'npr1','N2'}; %{'npr1','N2'}
 end
 wormnums = {'40'};%{'40','HD'};
 if dataset == 1
@@ -74,7 +74,8 @@ for strainCtr = 1:length(strains)
             loneWormInFrame = trajData.frame_number(loneWormLogInd);
             binEdges = linspace(1,lastFrame,lastFrame/frameRate/binSeconds);
             if strcmp(phase,'stationary')  % restrict movies to stationary phase
-                phaseFrameLogInd = trajData.frame_number < lastFrame;
+                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
+                phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
                 totalObjInFrame(~phaseFrameLogInd) = false;
                 inClusterInFrame(~phaseFrameLogInd) = false;
                 loneWormInFrame(~phaseFrameLogInd) = false;
