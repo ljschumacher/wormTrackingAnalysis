@@ -40,8 +40,7 @@ plotColors = lines(length(wormnums));
 for strainCtr = 1:length(strains)
     revFreqFig = figure; hold on
     for numCtr = 1:length(wormnums)
-        revDurFig = figure; hold on
-        revInterTimeFig = figure; hold on
+         revInterTimeFig = figure; hold on
         wormnum = wormnums{numCtr};
         %% load data
         if dataset ==1
@@ -51,17 +50,11 @@ for strainCtr = 1:length(strains)
         end
         numFiles = length(filenames_g);
         reversalfreq_lone = NaN(numFiles,1);
-        reversaldurations_lone = cell(numFiles,1);
         reversalfreq_incluster = NaN(numFiles,1);
-        reversaldurations_incluster = cell(numFiles,1);
-        reversalfreq_smallcluster = NaN(numFiles,1);
-        reversaldurations_smallcluster = cell(numFiles,1);
         interrevT_lone = cell(numFiles,1);
         interrevT_incluster = cell(numFiles,1);
-        interrevT_smallCluster = cell(numFiles,1);
         interrevT_lone_censored = cell(numFiles,1);
         interrevT_incluster_censored = cell(numFiles,1);
-        interrevT_smallCluster_censored = cell(numFiles,1);
         frameRateAll = double(h5readatt(filenames_g{1},'/plate_worms','expected_fps')); % load one frameRate for use outside parfor loop
         for fileCtr = 1:numFiles % can be parfor
             filename_g = filenames_g{fileCtr};
@@ -91,10 +84,6 @@ for strainCtr = 1:length(strains)
                 neighbr_dist = h5read(filename_g,'/neighbr_distances');
                 loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
                 inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-                smallClusterLogInd = (num_close_neighbrs==1 & neighbr_dist(:,2)>=minNeighbrDist)...
-                    |(num_close_neighbrs==2 & neighbr_dist(:,3)>=minNeighbrDist)...
-                    |(num_close_neighbrs==3 & neighbr_dist(:,4)>=minNeighbrDist)...
-                    |(num_close_neighbrs==4 & neighbr_dist(:,5)>=minNeighbrDist);
                 if strcmp(phase,'stationary')
                     phaseFrameLogInd = trajData_g.frame_number < lastFrame;
                     loneWormLogInd(~phaseFrameLogInd) = false;
@@ -104,7 +93,6 @@ for strainCtr = 1:length(strains)
             else
                 loneWormLogInd = true(size(trajData_g.frame_number));
                 inClusterLogInd = false(size(trajData_g.frame_number));
-                smallClusterLogInd = false(size(trajData_g.frame_number));
             end
             %% load signed speed from blobFeats
             % sign speed based on relative orientation of velocity to midbody
@@ -136,10 +124,6 @@ for strainCtr = 1:length(strains)
             [ inclusterReversalsLogInd, interRevTimesCluster, revDurationCluster, interrevT_incluster_censored{fileCtr} ] = ...
                 filterReversalsByClusterStatus(revStartInd, inClusterLogInd,...
                 interRevTime, revDuration, incompleteInterRev);
-            
-            [ smallClusterReversalsLogInd, interRevTimesSmallCluster, revDurationSmallCluster, interrevT_smallCluster_censored{fileCtr} ] = ...
-                filterReversalsByClusterStatus(revStartInd, smallClusterLogInd,...
-                interRevTime, revDuration, incompleteInterRev);
             % subtracting revDuration will more accurately reflect the
             % interreversal time
             interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
@@ -149,27 +133,18 @@ for strainCtr = 1:length(strains)
             if ~strcmp(wormnum,'1W')
                 interrevT_incluster{fileCtr} = (interRevTimesCluster - revDurationCluster)/frameRate;
                 interrevT_incluster{fileCtr}(interrevT_incluster{fileCtr}<0) = NaN;
-                interrevT_smallCluster{fileCtr} = (interRevTimesSmallCluster - revDurationSmallCluster)/frameRate;
-                interrevT_smallCluster{fileCtr}(interrevT_smallCluster{fileCtr}<0) = NaN;
             end
             % counting reversal events
             reversalfreq_lone(fileCtr) = countReversalFrequency(loneReversalsLogInd,...
                 frameRate, speedSigned, loneWormLogInd );
             reversalfreq_incluster(fileCtr) = countReversalFrequency(inclusterReversalsLogInd,...
                 frameRate, speedSigned, inClusterLogInd );
-            reversalfreq_smallcluster(fileCtr) =countReversalFrequency(smallClusterReversalsLogInd,...
-                frameRate, speedSigned, smallClusterLogInd );
-            reversaldurations_lone{fileCtr} = revDurationLone(~untrackedRevEnds(loneReversalsLogInd))/frameRate;
-            reversaldurations_incluster{fileCtr} = revDurationCluster(~untrackedRevEnds(inclusterReversalsLogInd))/frameRate;
-            reversaldurations_smallcluster{fileCtr} = revDurationSmallCluster(~untrackedRevEnds(smallClusterReversalsLogInd))/frameRate;
         end
         %pool data from all files
         interrevT_lone = vertcat(interrevT_lone{:});
         interrevT_incluster = vertcat(interrevT_incluster{:});
-        interrevT_smallCluster = vertcat(interrevT_smallCluster{:});
         interrevT_lone_censored = vertcat(interrevT_lone_censored{:});
         interrevT_incluster_censored = vertcat(interrevT_incluster_censored{:});
-        interrevT_smallCluster_censored = vertcat(interrevT_smallCluster_censored{:});
         %% plot data
         % inter-reversal time
         set(0,'CurrentFigure',revInterTimeFig)

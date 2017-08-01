@@ -84,13 +84,12 @@ for movie = 1:length(filename)
         %bins = 1:bin_width:max(peak2peak(pair_dist), peak2peak(pair_dist)); 
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr1 = histcounts(pair_dist,bins,'Normalization','pdf');
-        gr1 = histcounts(pair_dist,bins);%,'Normalization','pdf');
+        gr1 = histcounts(pair_dist,bins,'Normalization','count');
 
         % Radial distribution function
         % Normalization step
         R = max(bins);
-        gr2 = gr1.*R^2./(2*bins(2:end)*bin_width*((num_worms^2)-num_worms));
+        gr2 = gr1.*R^2./(2*bins(2:end)*bin_width*(num_worms^2-num_worms)/2);
 
         % Store all data in a cell array for picking apart later
         if t == 0
