@@ -74,10 +74,10 @@ for strainCtr = 1:length(strains)
             loneWormInFrame = trajData.frame_number(loneWormLogInd);
             binEdges = linspace(1,lastFrame,lastFrame/frameRate/binSeconds);
             if strcmp(phase,'stationary')  % restrict movies to stationary phase
-                frameLogInd = trajData.frame_number < lastFrame;
-                totalObjInFrame(~frameLogInd) = false;
-                inClusterInFrame(~frameLogInd) = false;
-                loneWormInFrame(~frameLogInd) = false;
+                phaseFrameLogInd = trajData.frame_number < lastFrame;
+                totalObjInFrame(~phaseFrameLogInd) = false;
+                inClusterInFrame(~phaseFrameLogInd) = false;
+                loneWormInFrame(~phaseFrameLogInd) = false;
                 binEdges = linspace(1,lastFrame,120); % create 120 bins over the stationary phase
             end
             [totalObjPerSecond,~]=histcounts(totalObjInFrame,binEdges);

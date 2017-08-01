@@ -18,7 +18,7 @@ exportOptions = struct('Format','eps2',...
 
 %% set parameters
 dataset = 1; % enter 1 or 2 to specify which dataset to run the script for
-phase = 'fullMovie'; % 'fullMovie' or 'stationary'
+phase = 'stationary'; % 'fullMovie' or 'stationary'
 if dataset ==1
     strains = {'npr1'}; %{'npr1','HA','N2'}
 elseif dataset ==2
@@ -85,9 +85,10 @@ for strainCtr = 1:length(strains)
                 loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
                 inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
                 if strcmp(phase,'stationary')
-                    frameLogInd = trajData_g.frame_number < lastFrame;
-                    loneWormLogInd(~frameLogInd) = false;
-                    inClusterLogInd(~frameLogInd) = false;
+                    phaseFrameLogInd = trajData_g.frame_number < lastFrame;
+                    loneWormLogInd(~phaseFrameLogInd) = false;
+                    inClusterLogInd(~phaseFrameLogInd) = false;
+                    smallClusterLogInd(~phaseFrameLogInd) = false;
                 end
             else
                 loneWormLogInd = true(size(trajData_g.frame_number));
@@ -105,7 +106,7 @@ for strainCtr = 1:length(strains)
             speedSigned(~trajData_g.filtered) = NaN;
             % ignore frames outside of specified phase
             if strcmp(phase,'stationary')
-                speedSigned(~frameLogInd) =NaN;
+                speedSigned(~phaseFrameLogInd) =NaN;
             end
             % smooth speed to denoise
             speedSigned = smooth(speedSigned,3,'moving');
@@ -147,11 +148,11 @@ for strainCtr = 1:length(strains)
         %% plot data
         % inter-reversal time
         set(0,'CurrentFigure',revInterTimeFig)
-        ecdf(interrevT_lone,'Bounds','on','function','survivor')%,'censoring',interrevT_lone_censored)
+        ecdf(interrevT_lone,'Bounds','on','function','survivor','censoring',interrevT_lone_censored)
         hold on
         if ~strcmp(wormnum,'1W')
             %             ecdf(interrevT_smallCluster,'Bounds','on','function','survivor','censoring',interrevT_smallCluster_censored)
-            ecdf(interrevT_incluster,'Bounds','on','function','survivor')%,'censoring',interrevT_incluster_censored)
+            ecdf(interrevT_incluster,'Bounds','on','function','survivor','censoring',interrevT_incluster_censored)
         end
         set(revInterTimeFig.Children,'YScale','log')
         title(revInterTimeFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
@@ -169,7 +170,7 @@ for strainCtr = 1:length(strains)
             legend(revInterTimeFig.Children,'single worms')
         end
         
-        figurename = ['figures/reversals/new/reversalintertime_pharynx_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)];
+        figurename = ['figures/reversals/phaseSpecific/reversalintertime_pharynx_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_censored'];
         exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
@@ -189,7 +190,7 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    figurename = ['figures/reversals/new/reversalfrequency_pharynx_' strains{strainCtr} '_' phase '_data' num2str(dataset)];
+    figurename = ['figures/reversals/phaseSpecific/reversalfrequency_pharynx_' strains{strainCtr} '_' phase '_data' num2str(dataset) '_censored'];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
