@@ -17,13 +17,8 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-<<<<<<< HEAD
-dataset = 2; % enter 1 or 2 to specify which dataset to run the script for
-phase = 'stationary'; % 'fullMovie' or 'stationary'
-=======
 dataset = 2; % '1' or '2'. To specify which dataset to run the script for.
 phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
->>>>>>> ca9758428676bf87b762a74b4acc53c29bcc5d72
 if dataset ==1
     strains = {'npr1','N2'}; %{'npr1','HA','N2'}
 elseif dataset ==2
@@ -88,17 +83,24 @@ for strainCtr = 1:length(strains)
                 num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
                 neighbr_dist = h5read(filename_g,'/neighbr_distances');
                 loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-                notClusterLogInd = num_close_neighbrs<inClusterNeighbourNum;
+                inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
+                % find frames when worms are leaving cluster
+                leaveClusterLogInd = [false; inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)];
+                % add 5 more second after each leaving event
+                leaveClusterExtendedInd = unique(find(leaveClusterLogInd) + [0:5*frameRate]);
+                leaveClusterExtendedInd = leaveClusterExtendedInd(leaveClusterExtendedInd<numel(leaveClusterLogInd)); % exclude frames beyond highest frame number
+                leaveClusterLogInd(leaveClusterExtendedInd) = true; 
+                leaveClusterLogInd(inClusterLogInd) = false; % exclude times when worm moved back
                 if strcmp(phase,'stationary')
                     % restrict movie to stationary phase
                     firstFrame = double(round(max(trajData_g.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
                     phaseFrameLogInd = trajData_g.frame_number < lastFrame & trajData_g.frame_number > firstFrame;
                     loneWormLogInd(~phaseFrameLogInd) = false;
-                    notClusterLogInd(~phaseFrameLogInd) = false;
+                    leaveClusterLogInd(~phaseFrameLogInd) = false;
                 end
             else
                 loneWormLogInd = true(size(trajData_g.frame_number));
-                notClusterLogInd = false(size(trajData_g.frame_number));
+                leaveClusterLogInd = false(size(trajData_g.frame_number));
             end
             %% load signed speed from blobFeats
             % sign speed based on relative orientation of velocity to midbody
@@ -127,8 +129,8 @@ for strainCtr = 1:length(strains)
                 filterReversalsByClusterStatus(revStartInd, loneWormLogInd,...
                 interRevTime, revDuration, incompleteInterRev);
             
-            [ notClusterReversalsLogInd, interRevTimesCluster, revDurationCluster, interrevT_notCluster_censored{fileCtr} ] = ...
-                filterReversalsByClusterStatus(revStartInd, notClusterLogInd,...
+            [ leaveClusterReversalsLogInd, interRevTimesCluster, revDurationCluster, interrevT_notCluster_censored{fileCtr} ] = ...
+                filterReversalsByClusterStatus(revStartInd, leaveClusterLogInd,...
                 interRevTime, revDuration, incompleteInterRev);
             % subtracting revDuration will more accurately reflect the
             % interreversal time
@@ -143,8 +145,8 @@ for strainCtr = 1:length(strains)
             % counting reversal events
             reversalfreq_lone(fileCtr) = countReversalFrequency(loneReversalsLogInd,...
                 frameRate, speedSigned, loneWormLogInd );
-            reversalfreq_notCluster(fileCtr) = countReversalFrequency(notClusterReversalsLogInd,...
-                frameRate, speedSigned, notClusterLogInd );
+            reversalfreq_notCluster(fileCtr) = countReversalFrequency(leaveClusterReversalsLogInd,...
+                frameRate, speedSigned, leaveClusterLogInd );
         end
         %pool data from all files
         interrevT_lone = vertcat(interrevT_lone{:});
