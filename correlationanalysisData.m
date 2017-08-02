@@ -24,7 +24,7 @@ bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParalle
 
 %% set parameters
 dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
-phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
+phase = 'fullMovie'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 plotDiagnostics = false; % true or false
 
 if dataset ==1
