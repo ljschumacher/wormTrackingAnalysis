@@ -90,7 +90,7 @@ for wormnum = wormnums
                 framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             elseif strcmp(phase,'stationary')
                 lastFrame = lastFrames(fileCtr);
-                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
+                firstFrame = double(round(max(trajData.frame_number)/10)); % define starting frame as 10% into the movie
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
                 framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
