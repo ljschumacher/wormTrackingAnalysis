@@ -22,6 +22,7 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e1,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
 
+
 %% set parameters
 dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
 phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
@@ -44,7 +45,7 @@ maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 distBinWidth = 35; % in units of micrometers
-maxDist = 4000;
+maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:2000;
 %% go through strains, densities, movies
@@ -89,7 +90,7 @@ for wormnum = wormnums
                 framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             elseif strcmp(phase,'stationary')
                 lastFrame = lastFrames(fileCtr);
-                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
+                firstFrame = double(round(max(trajData.frame_number)/10)); % define starting frame as 10% into the movie
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
                 framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
@@ -244,8 +245,8 @@ for wormnum = wormnums
     system(['rm ' figurename '.eps']);
     %
     %         velcorrFig.Children.YLim = [-1 1];
-    velcorrFig.Children.XLim = [0 maxDist];
 
+    velcorrFig.Children.XLim = [0 maxDist];
     set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(velcorrFig.Children,'velocity correlation')
     xlabel(velcorrFig.Children,'distance between pair (μm)')

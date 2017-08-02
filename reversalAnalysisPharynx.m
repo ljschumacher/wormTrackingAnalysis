@@ -93,7 +93,7 @@ for strainCtr = 1:length(strains)
                 leaveClusterLogInd(inClusterLogInd) = false; % exclude times when worm moved back
                 if strcmp(phase,'stationary')
                     % restrict movie to stationary phase
-                    firstFrame = double(round(max(trajData_g.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
+                    firstFrame = double(round(max(trajData_g.frame_number)/10)); % define starting frame as 10% into the movie
                     phaseFrameLogInd = trajData_g.frame_number < lastFrame & trajData_g.frame_number > firstFrame;
                     loneWormLogInd(~phaseFrameLogInd) = false;
                     leaveClusterLogInd(~phaseFrameLogInd) = false;
