@@ -22,6 +22,7 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
 
+
 %% set parameters
 dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
 phase = 'fullMovie'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
@@ -89,7 +90,7 @@ for wormnum = wormnums
                 framesAnalyzed = randperm(lastFrame,numFrames); % randomly sample frames without replacement
             elseif strcmp(phase,'stationary')
                 lastFrame = lastFrames(fileCtr);
-                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
+                firstFrame = double(round(max(trajData.frame_number)/10)); % define starting frame as 10% into the movie
                 numFrames = round((lastFrame-firstFrame)/frameRate/3);
                 framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
             end
