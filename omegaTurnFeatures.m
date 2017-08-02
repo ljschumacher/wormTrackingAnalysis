@@ -14,7 +14,7 @@ exportOptions = struct('Format','eps2',...
 
 %% set parameters
 phase = 'fullMovie'; % 'fullMovie' or 'stationary'
-strains = {'npr1','N2'}; %{'npr1','N2'}
+strains = {'npr1'}; %{'npr1','N2'}
 wormnums = {'40'};%{'40','HD'};
 
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
@@ -38,8 +38,6 @@ for strainCtr = 1:length(strains)
         end
         numFiles = length(filenames);
         midbodyAngularSpeedFig = figure; hold on
-        midbodyBendFig = figure; hold on
-        maxAmplitudeFig = figure; hold on
         pathCurvatureFig = figure; hold on
         for fileCtr = 1:numFiles
             filename = filenames{fileCtr};
@@ -70,63 +68,52 @@ for strainCtr = 1:length(strains)
                 trajData.filtered(~phaseFrameLogInd) = false;
             end
             features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered));
+            % restrict to worms that have just left a cluster
+            min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
+            num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
+            neighbr_dist = h5read(filename,'/neighbr_distances');
+            loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
+            inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
+            % find worm-frames where inCluster changes from true to false
+            leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
+            leaveClusterFrameStart = find(leaveClusterLogInd);
+            leaveClusterFrameEnd = leaveClusterFrameStart+5*frameRate; %retain data for 5 seconds after a worm exits cluster
+            for exitCtr = 1:numel(leaveClusterFrameStart)
+                leaveClusterLogInd(leaveClusterFrameStart(exitCtr):leaveClusterFrameEnd(exitCtr))=true;
+            end
+%             the following line should do the same as the loop above, if dimensions of
+%             terms added are compatible (eg row + column vector)
+%             leaveClusterLogInd(unique(leaveClusterFrameStart + 0:5*frameRate)) = true;
+            leaveClusterLogInd(inClusterLogInd)=false;
             % plot feature distributions
             set(0,'CurrentFigure',midbodyAngularSpeedFig)
-            histogram(abs(features.midbody_motion_direction(features.filtered)),'Normalization','pdf','DisplayStyle','stairs')
-            set(0,'CurrentFigure',midbodyBendFig)
-            histogram(abs(features.midbody_bend_mean(features.filtered)),'Normalization','pdf','DisplayStyle','stairs')
-            set(0,'CurrentFigure',maxAmplitudeFig)
-            histogram(abs(features.max_amplitude(features.filtered)),'Normalization','pdf','DisplayStyle','stairs')
+            histogram(abs(features.midbody_motion_direction(features.filtered&leaveClusterLogInd)),'Normalization','pdf','DisplayStyle','stairs')
             set(0,'CurrentFigure',pathCurvatureFig)
-            histogram(abs(features.path_curvature(features.filtered)),'Normalization','pdf','DisplayStyle','stairs')
+            histogram(abs(features.path_curvature(features.filtered&leaveClusterLogInd)),'Normalization','pdf','DisplayStyle','stairs')
         end
-        % format and export figures
-        set(0,'CurrentFigure',midbodyAngularSpeedFig)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_midbodyAngularSpeed'],'FontWeight','normal')
-        xlabel('midbody angular speed (degree/s)')
-        ylabel('probability')
-        xlim([0 8])
-        ylim([0 3])
-        set(midbodyAngularSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/omegaTurns/midbodyAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
-        exportfig(midbodyAngularSpeedFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-        set(0,'CurrentFigure',midbodyBendFig)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_midbodyBend'],'FontWeight','normal')
-        xlabel('midbody bend (degrees)')
-        ylabel('probability')
-        xlim([0 40])
-        ylim([0 0.08])
-        set(midbodyBendFig,'PaperUnits','centimeters')
-        figurename = ['figures/omegaTurns/midbodyBend_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
-        exportfig(midbodyBendFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-        set(0,'CurrentFigure',maxAmplitudeFig)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_maxAmplitude'],'FontWeight','normal')
-        xlabel('max amplitude (microns)')
-        ylabel('probability')
-        xlim([0 100])
-        ylim([0 0.07])
-        set(midbodyBendFig,'PaperUnits','centimeters')
-        figurename = ['figures/omegaTurns/maxAmplitude_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
-        exportfig(maxAmplitudeFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-        set(0,'CurrentFigure',pathCurvatureFig)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_pathCurvature'],'FontWeight','normal')
-        xlabel('path curvature (radians/microns)')
-        ylabel('probability')
-        xlim([0 0.5])
-        ylim([0 140])
-        set(midbodyBendFig,'PaperUnits','centimeters')
-        figurename = ['figures/omegaTurns/pathCurvature_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
-        exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
+%         % format and export figures
+%         set(0,'CurrentFigure',midbodyAngularSpeedFig)
+%         title([strains{strainCtr} '\_' wormnums{numCtr} '\_midbodyAngularSpeed'],'FontWeight','normal')
+%         xlabel('midbody angular speed (degree/s)')
+%         ylabel('probability')
+%         xlim([0 8])
+%         ylim([0 3])
+%         set(midbodyAngularSpeedFig,'PaperUnits','centimeters')
+%         figurename = ['figures/omegaTurns/midbodyAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
+%         exportfig(midbodyAngularSpeedFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
+%         %
+%         set(0,'CurrentFigure',pathCurvatureFig)
+%         title([strains{strainCtr} '\_' wormnums{numCtr} '\_pathCurvature'],'FontWeight','normal')
+%         xlabel('path curvature (radians/microns)')
+%         ylabel('probability')
+%         xlim([0 0.5])
+%         ylim([0 140])
+%         set(pathCurvatureFig,'PaperUnits','centimeters')
+%         figurename = ['figures/omegaTurns/pathCurvature_' strains{strainCtr} '_' wormnums{numCtr} '_' phase];
+%         exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
     end
 end
