@@ -91,6 +91,7 @@ for strainCtr = 1:length(strains)
                 leaveClusterExtendedInd = leaveClusterExtendedInd(leaveClusterExtendedInd<numel(leaveClusterLogInd)); % exclude frames beyond highest frame number
                 leaveClusterLogInd(leaveClusterExtendedInd) = true; 
                 leaveClusterLogInd(inClusterLogInd) = false; % exclude times when worm moved back
+                leaveClusterLogInd(loneWormLogInd)=false; % exclude worms that have become lone worm
                 if strcmp(phase,'stationary')
                     % restrict movie to stationary phase
                     firstFrame = double(round(max(trajData_g.frame_number)/10)); % define starting frame as 10% into the movie

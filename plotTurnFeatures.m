@@ -143,5 +143,9 @@ for strainCtr = 1:length(strains)
         exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
+        
+        % T-test for equal means without assuming equal variance
+        %[midbodyAngularSpeed_h, midbodyAngularSpeed_p] = ttest2(midbodyAngularSpeed_leaveCluster, midbodyAngularSpeed_loneWorms,'Vartype','unequal')
+        %[pathCurvature_h, pathCurvature_p] = ttest2(pathCurvature_leaveCluster, pathCurvature_loneWorms,'Vartype','unequal')
     end
 end
