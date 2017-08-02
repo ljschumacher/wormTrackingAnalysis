@@ -20,7 +20,7 @@ mad1 = @(x) mad(x,1); % median absolute deviation
 % which are 1.57*iqr/sqrt(n) - unclear how justified this is
 iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
-bootserr = @(x) bootci(1e1,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
+bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
 
 %% set parameters
 dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
@@ -32,7 +32,7 @@ if dataset ==1
 elseif dataset ==2
     strains = {'npr1','N2'}
 end
-wormnums = {'40'};%{'40','HD'};
+wormnums = {'40'}%,'HD'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
 if dataset == 1
@@ -44,9 +44,9 @@ maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 distBinWidth = 35; % in units of micrometers
-maxDist = 4000;
+maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
-dircorrxticks = 0:500:2000;
+dircorrxticks = 0:500:maxDist;
 %% go through strains, densities, movies
 for wormnum = wormnums
     speedFig = figure; hold on
@@ -221,6 +221,8 @@ for wormnum = wormnums
     speedFig.Children.YLim = [0 400];
     speedFig.Children.XLim = [0 maxDist];
     speedFig.Children.XTick = 0:500:maxDist;
+    speedFig.Children.XGrid = 'on';
+    speedFig.Children.YGrid = 'on';
     speedFig.Children.Box = 'on';
     speedFig.Children.XDir = 'reverse';
     ylabel(speedFig.Children,'speed (μm/s)')
@@ -233,7 +235,8 @@ for wormnum = wormnums
     %
     %         dircorrFig.Children.YLim = [-1 1];
     dircorrFig.Children.XLim = [0 maxDist];
-
+    dircorrFig.Children.XGrid = 'on';
+    dircorrFig.Children.YGrid = 'on';
     set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(dircorrFig.Children,'orientational correlation')
     xlabel(dircorrFig.Children,'distance between pair (μm)')
@@ -245,7 +248,8 @@ for wormnum = wormnums
     %
     %         velcorrFig.Children.YLim = [-1 1];
     velcorrFig.Children.XLim = [0 maxDist];
-
+    velcorrFig.Children.XGrid = 'on';
+    velcorrFig.Children.YGrid = 'on';
     set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
     ylabel(velcorrFig.Children,'velocity correlation')
     xlabel(velcorrFig.Children,'distance between pair (μm)')
@@ -258,8 +262,10 @@ for wormnum = wormnums
     poscorrFig.Children.YLim(1) = 0;
     poscorrFig.Children.XLim = [0 maxDist];
     poscorrFig.Children.XTick = 0:500:maxDist;
-    poscorrFig.Children.YTick = 0:round(poscorrFig.Children.YLim(2));
+    poscorrFig.Children.YTick = 0:2:round(poscorrFig.Children.YLim(2));
     poscorrFig.Children.Box = 'on';
+    poscorrFig.Children.XGrid = 'on';
+    poscorrFig.Children.YGrid = 'on';
     ylabel(poscorrFig.Children,'positional correlation g(r)')
     xlabel(poscorrFig.Children,'distance r (μm)')
     legend(poscorrFig.Children,lineHandles,strains)

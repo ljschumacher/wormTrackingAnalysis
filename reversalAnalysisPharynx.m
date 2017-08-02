@@ -32,6 +32,7 @@ elseif dataset ==2
 end
 maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;
+minPathLength = 50; % minimum path length of reversals to be included
 inClusterNeighbourNum = 3;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 plotColors = lines(length(wormnums));
@@ -87,10 +88,11 @@ for strainCtr = 1:length(strains)
                 % find frames when worms are leaving cluster
                 leaveClusterLogInd = [false; inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)];
                 % add 5 more second after each leaving event
-                leaveClusterExtendedInd = unique(find(leaveClusterLogInd) + [0:5*frameRate]);
+                leaveClusterExtendedInd = unique(find(leaveClusterLogInd) + [0:10*frameRate]);
                 leaveClusterExtendedInd = leaveClusterExtendedInd(leaveClusterExtendedInd<numel(leaveClusterLogInd)); % exclude frames beyond highest frame number
                 leaveClusterLogInd(leaveClusterExtendedInd) = true; 
                 leaveClusterLogInd(inClusterLogInd) = false; % exclude times when worm moved back
+                leaveClusterLogInd(loneWormLogInd) = false; % exclude times when worm has left completely
                 if strcmp(phase,'stationary')
                     % restrict movie to stationary phase
                     firstFrame = double(round(max(trajData_g.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
@@ -120,7 +122,7 @@ for strainCtr = 1:length(strains)
             speedSigned = smooth(speedSigned,3,'moving');
             % find reversals in midbody speed
             [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
-                findReversals(speedSigned,trajData_g.worm_index_joined);
+                findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
             % if we subtract rev duration from interrevtime (below), we
             % need to set all reversals with untracked ends as incomplete interrevs
             incompleteInterRev = incompleteInterRev|untrackedRevEnds;
@@ -168,10 +170,10 @@ for strainCtr = 1:length(strains)
         revInterTimeFig.Children.YLabel.String = 'cumulative probability';
         %         revInterTimeFig.Children.XLim(2) = 30;
         %         revInterTimeFig.Children.YLim(1) = 0.1;
-        revInterTimeFig.Children.XLim(2) = 60;
-        revInterTimeFig.Children.YLim(1) = 1e-3;
+        revInterTimeFig.Children.XLim(2) = 20;
+        revInterTimeFig.Children.YLim(1) = 1e-2;
         if ~strcmp(wormnum,'1W')
-            legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','not in cluster'})
+            legend(revInterTimeFig.Children.Children([6 3]),{'lone worms','leaving cluster'})
         else
             legend(revInterTimeFig.Children,'single worms')
         end
@@ -186,7 +188,7 @@ for strainCtr = 1:length(strains)
             numCtr+[-0.2 0.2],'markMedian',true,'jitter',0.2)%,'style','line')
         
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
-        revFreqFig.Children.YLim = [0 0.55];
+        revFreqFig.Children.YLim = [0 0.5];
     end
     %% format and export figures
     title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
