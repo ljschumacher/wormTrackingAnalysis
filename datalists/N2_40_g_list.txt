@@ -7,4 +7,3 @@
 /data2/shared/data/twoColour/Results/recording57/recording57.4g100-250/recording57.4g_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording58/recording58.3g100-250/recording58.3g_X1_skeletons.hdf5
 /data2/shared/data/twoColour/Results/recording61/recording61.2g100-250/recording61.2g_X1_skeletons.hdf5
-/data2/shared/data/twoColour/Results/recording62/recording62.2g100-250/recording62.2g_X1_skeletons.hdf5
