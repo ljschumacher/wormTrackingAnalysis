@@ -33,11 +33,11 @@ for strainCtr = 1:length(strains)
         [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:B15','basic');
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
-        midbodyAngularSpeed_leaveCluster = cell(numFiles,1);
+        tailAngularSpeed_leaveCluster = cell(numFiles,1);
         pathCurvature_leaveCluster = cell(numFiles,1);
-        midbodyAngularSpeed_loneWorms = cell(numFiles,1);
+        tailAngularSpeed_loneWorms = cell(numFiles,1);
         pathCurvature_loneWorms = cell(numFiles,1);
-        midbodyAngularSpeedFig = figure;
+        tailAngularSpeedFig = figure;
         pathCurvatureFig = figure;
         leaveClusterWormCount = 0;
         loneWormCount = 0;
@@ -95,53 +95,53 @@ for strainCtr = 1:length(strains)
             % restrict to lone worms
             loneWormLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & loneWormLogInd));
             % write individual file results into cell array for pooling across movies later
-            midbodyAngularSpeed_leaveCluster{fileCtr} = abs(features.midbody_motion_direction(features.filtered&leaveClusterLogInd));
+            tailAngularSpeed_leaveCluster{fileCtr} = abs(features.tail_motion_direction(features.filtered&leaveClusterLogInd));
             pathCurvature_leaveCluster{fileCtr} = abs(features.path_curvature(features.filtered&leaveClusterLogInd));
-            midbodyAngularSpeed_loneWorms{fileCtr} = abs(features.midbody_motion_direction(features.filtered&loneWormLogInd));
+            tailAngularSpeed_loneWorms{fileCtr} = abs(features.tail_motion_direction(features.filtered&loneWormLogInd));
             pathCurvature_loneWorms{fileCtr} = abs(features.path_curvature(features.filtered&loneWormLogInd));
             leaveClusterWormCount = leaveClusterWormCount + numel(unique(features.worm_index(leaveClusterLogInd)));
             loneWormCount = loneWormCount + numel(unique(features.worm_index(loneWormLogInd)));
         end
         % pool data from all files belonging to the same strain and worm density
-        midbodyAngularSpeed_leaveCluster = vertcat(midbodyAngularSpeed_leaveCluster{:});
+        tailAngularSpeed_leaveCluster = vertcat(tailAngularSpeed_leaveCluster{:});
         pathCurvature_leaveCluster = vertcat(pathCurvature_leaveCluster{:});
-        midbodyAngularSpeed_loneWorms = vertcat(midbodyAngularSpeed_loneWorms{:});
+        tailAngularSpeed_loneWorms = vertcat(tailAngularSpeed_loneWorms{:});
         pathCurvature_loneWorms = vertcat(pathCurvature_loneWorms{:});
         %% plot data
-        % midbodyAngularSpeed figure
-        set(0,'CurrentFigure',midbodyAngularSpeedFig)
-        histogram(midbodyAngularSpeed_leaveCluster,'Normalization','pdf','DisplayStyle','stairs') 
+        % tailAngularSpeed figure
+        set(0,'CurrentFigure',tailAngularSpeedFig)
+        histogram(tailAngularSpeed_leaveCluster,'Normalization','pdf','DisplayStyle','stairs') 
         hold on
-        histogram(midbodyAngularSpeed_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
+        histogram(tailAngularSpeed_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
         leaveClusterLegend = ['leave cluster, n = ' num2str(leaveClusterWormCount)];
         loneWormLegend = ['lone worm, n = ' num2str(loneWormCount)];
         legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_midbodyAngularSpeed'],'FontWeight','normal')
-        xlabel('midbody angular speed (degree/s)')
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_tailAngularSpeed'],'FontWeight','normal')
+        xlabel('tail angular speed (degree/s)')
         ylabel('probability')
         xlim([0 8])
         ylim([0 2])
-        set(midbodyAngularSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/midbodyAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
-        exportfig(midbodyAngularSpeedFig,[figurename '.eps'],exportOptions)
+        set(tailAngularSpeedFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/tailAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        exportfig(tailAngularSpeedFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);
         
-        % pathCurvature figure
-        set(0,'CurrentFigure',pathCurvatureFig)
-        histogram(pathCurvature_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
-        hold on
-        histogram(pathCurvature_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
-        legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_pathCurvature'],'FontWeight','normal')
-        xlabel('path curvature (radians/microns)')
-        ylabel('probability')
-        xlim([0 0.5])
-        ylim([0 60])
-        set(pathCurvatureFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/pathCurvature_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
-        exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
+%         % pathCurvature figure
+%         set(0,'CurrentFigure',pathCurvatureFig)
+%         histogram(pathCurvature_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
+%         hold on
+%         histogram(pathCurvature_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
+%         legend(leaveClusterLegend, loneWormLegend)
+%         title([strains{strainCtr} '\_' wormnums{numCtr} '\_pathCurvature'],'FontWeight','normal')
+%         xlabel('path curvature (radians/microns)')
+%         ylabel('probability')
+%         xlim([0 0.5])
+%         ylim([0 60])
+%         set(pathCurvatureFig,'PaperUnits','centimeters')
+%         figurename = ['figures/turns/pathCurvature_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+%         exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
     end
 end
