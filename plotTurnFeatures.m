@@ -42,7 +42,7 @@ for strainCtr = 1:length(strains)
         omegaTurnFreq_leaveCluster = cell(numFiles,1);
         omegaTurnFreq_loneWorm = cell(numFiles,1);
         headAngularSpeedFig = figure;
-        omegaTurnsFig = figure;
+        omegaTurnFreqFig = figure;
         leaveClusterWormCount = 0;
         loneWormCount = 0;
         %% go through individual movies
@@ -146,7 +146,7 @@ for strainCtr = 1:length(strains)
         %system(['rm ' figurename '.eps']);
         
         %omegaTurns figure
-        set(0,'CurrentFigure',omegaTurnsFig)
+        set(0,'CurrentFigure',omegaTurnFreqFig)
         histogram(omegaTurnFreq_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
         hold on
         histogram(omegaTurnFreq_loneWorm,'Normalization','pdf','DisplayStyle','stairs')
@@ -154,11 +154,12 @@ for strainCtr = 1:length(strains)
         title([strains{strainCtr} '\_' wormnums{numCtr} '\_omegaTurnFreq'],'FontWeight','normal')
         xlabel('omega turn frequency (1/s)')
         ylabel('probability')
-        xlim([0 0.7])
-        ylim([0 14])
-        set(omegaTurnsFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/omegaTurns_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
-        exportfig(omegaTurnsFig,[figurename '.eps'],exportOptions)
+        xlim([0 0.8])
+        ylim([0 18])
+        set(omegaTurnFreqFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/omegaTurnFreq_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        savefig(omegaTurnFreqFig,[figurename '.fig'])
+        exportfig(omegaTurnFreqFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);
         %system(['rm ' figurename '.eps']);
     end
