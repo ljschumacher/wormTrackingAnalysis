@@ -36,7 +36,7 @@ maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;% in microns
 minPathLength = 50; % minimum path length of reversals to be included
 inClusterNeighbourNum = 3;
-maxClusterLeaveTime = 10; % in seconds
+postExitDuration = 10; % set the duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 plotColors = lines(length(wormnums));
 
@@ -82,20 +82,8 @@ for strainCtr = 1:length(strains)
             assert(~any(diff(trajData_g.worm_index_joined)<0),['worm indices are not sorted as expected for ' filename_g])
             %% calculate stats
             if ~strcmp(wormnum,'1W')
-                min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');
-                num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
-                neighbr_dist = h5read(filename_g,'/neighbr_distances');
-                loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-                inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-                % find frames when worms are leaving cluster
-                leaveClusterLogInd = [false; inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)];
-                % add 5 more second after each leaving event
-                leaveClusterExtendedInd = unique(find(leaveClusterLogInd) + [0:5*frameRate]);
-                leaveClusterExtendedInd = leaveClusterExtendedInd(leaveClusterExtendedInd<numel(leaveClusterLogInd)); % exclude frames beyond highest frame number
-                leaveClusterLogInd(leaveClusterExtendedInd) = true; 
-                leaveClusterLogInd(inClusterLogInd) = false; % exclude times when worm moved back
-                leaveClusterLogInd(loneWormLogInd)=false; % exclude worms that have become lone worm
-
+                % find leave cluster and lone worms
+                [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterWorms(filename_g,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
                 if strcmp(phase,'stationary')
                     % restrict movie to stationary phase
                     firstFrame = double(round(max(trajData_g.frame_number)/10)); % define starting frame as 10% into the movie

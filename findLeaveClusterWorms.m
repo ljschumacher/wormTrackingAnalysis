@@ -15,22 +15,32 @@ min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
 num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
 neighbr_dist = h5read(filename,'/neighbr_distances');
 frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+trajData = h5read(filename,'/trajectories_data');
 
 %% classify worms
 % identify in cluster worms
 inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
 % find worm-frames where inCluster changes from true to false
 leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)); 
-leaveClusterFrameStart = find(leaveClusterLogInd);
-% retain frames for the specified duration after a worm exits cluster
-leaveClusterFrameEnd = leaveClusterFrameStart+postExitDuration*frameRate; 
+leaveClusterStart = find(leaveClusterLogInd);
+% loop through each exit event, retain frames for the specified duration after a worm exits cluster
+for exitCtr = 1:numel(leaveClusterStart)
+    wormIndex = trajData.worm_index_joined(leaveClusterStart(exitCtr));
+    % check for the number of frames that the same worm has beyond the point of cluster exit
+    wormPathLength = numel(find(trajData.worm_index_joined==wormIndex));
+    if wormPathLength>=postExitDuration*frameRate
+        leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate; 
+    else
+        leaveClusterEnd = leaveClusterStart+wormPathLength;
+    end
+end
 % exclude movie segments with ending frames beyond highest frame number
-leaveClusterFrameEnd = leaveClusterFrameEnd(leaveClusterFrameEnd<=numel(leaveClusterLogInd)); 
+leaveClusterEnd = leaveClusterEnd(leaveClusterEnd<=numel(leaveClusterLogInd)); 
 % trim starting frame list accordingly, since the ending frame list may be shortened at the end of the movie
-leaveClusterFrameStart = leaveClusterFrameStart(1:numel(leaveClusterFrameEnd));
+leaveClusterStart = leaveClusterStart(1:numel(leaveClusterEnd));
 % go through each starting frame to generate logical index for leave cluster worms
-for exitCtr = 1:numel(leaveClusterFrameStart)
-    leaveClusterLogInd(leaveClusterFrameStart(exitCtr):leaveClusterFrameEnd(exitCtr))=true;
+for exitCtr = 1:numel(leaveClusterStart)
+    leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
 end
 % exclude when worms move back into a cluster
 leaveClusterLogInd(inClusterLogInd)=false; 

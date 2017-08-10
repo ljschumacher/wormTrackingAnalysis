@@ -23,6 +23,7 @@ minSkelLength = 850;
 maxSkelLength = 1500;
 minNeighbrDist = 2000;
 inClusterNeighbourNum = 3;
+postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 %% go through strains, densities, movies
@@ -84,24 +85,7 @@ for strainCtr = 1:length(strains)
             trajData.filtered(~phaseFrameLogInd) = false;
             features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter out unwa
             % find worms that have just left a cluster
-            min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
-            num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
-            neighbr_dist = h5read(filename,'/neighbr_distances');
-            inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-            leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)); % find worm-frames where inCluster changes from true to false
-            leaveClusterFrameStart = find(leaveClusterLogInd);
-            leaveClusterFrameEnd = leaveClusterFrameStart+5*frameRate; %retain data for 5 seconds after a worm exits cluster
-            leaveClusterFrameEnd = leaveClusterFrameEnd(leaveClusterFrameEnd<=numel(leaveClusterLogInd)); % exclude movie segments with frames beyond highest frame number
-            leaveClusterFrameStart = leaveClusterFrameStart(1:numel(leaveClusterFrameEnd));
-            for exitCtr = 1:numel(leaveClusterFrameStart)
-                leaveClusterLogInd(leaveClusterFrameStart(exitCtr):leaveClusterFrameEnd(exitCtr))=true;
-            end
-            %the following line should do the same as the loop above, if dimensions of
-            %terms added are compatible (eg row + column vector)
-            %leaveClusterLogInd(unique(leaveClusterFrameStart + 0:5*frameRate)) = true;
-            leaveClusterLogInd(inClusterLogInd)=false; % exclude when worms move back into a cluster
-            loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-            leaveClusterLogInd(loneWormLogInd)=false; % exclude worms that have become lone worm
+            [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterWorms(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             leaveClusterLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & leaveClusterLogInd)); % make clusterClusterLogInd the same size as features.filtered
             % find lone worms
             loneWormLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & loneWormLogInd));

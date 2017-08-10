@@ -12,7 +12,7 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-phase = 'sweeping'; % 'fullMovie', 'joining', or 'sweeping'.
+phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'pharynx'; % 'pharynx' or 'bodywall'
 strains = {'npr1','N2'}; % {'npr1','N2'}
@@ -51,9 +51,9 @@ for strainCtr = 1:length(strains)
         phaseFrames = phaseFrames-1; % correct for python indexing at 0
         numFiles = length(filenames);
         % create empty cell arrays to hold individual file values, so they can be pooled for a given strain/density combination
-        maxcHeadAngleChange_leaveCluster = cell(numFiles,1);
-        maxcHeadAngleChange_loneWorm = cell(numFiles,1);
-        maxcHeadAngleChangeFig = figure;
+        sHeadAngleChangeRate_leaveCluster = cell(numFiles,1);
+        sHeadAngleChangeRate_loneWorm = cell(numFiles,1);
+        sHeadAngleChangeRateFig = figure;
         
         %% go through individual movies
         for fileCtr = 1:numFiles
@@ -103,15 +103,15 @@ for strainCtr = 1:length(strains)
             uniqueWormpaths = unique(trajData.worm_index_joined);
             worm_xcoords = squeeze(skelData(1,:,:))'; 
             worm_ycoords = squeeze(skelData(2,:,:))';
-            maxcSmoothHeadAngleChange_leaveCluster = [1 zeros(1,numel(uniqueWormpaths))];
-            maxcSmoothHeadAngleChange_loneWorm = [1 zeros(1,numel(uniqueWormpaths))];
+            sHeadAngleChangeRate_leaveCluster_thisFile = NaN(1,numel(uniqueWormpaths));
+            sHeadAngleChangeRate_loneWorm_thisFile = NaN(1,numel(uniqueWormpaths));
             for wormpathCtr = 1:numel(uniqueWormpaths)
                 wormpathLogInd = trajData.worm_index_joined==uniqueWormpaths(wormpathCtr);
                 wormpath_xcoords_leaveCluster = worm_xcoords((wormpathLogInd & leaveClusterLogInd & trajData.filtered),:);
                 wormpath_ycoords_leaveCluster = worm_ycoords((wormpathLogInd & leaveClusterLogInd & trajData.filtered),:);
                 wormpath_xcoords_loneWorm = worm_xcoords(wormpathLogInd & loneWormLogInd & trajData.filtered,:);
                 wormpath_ycoords_loneWorm = worm_ycoords(wormpathLogInd & loneWormLogInd & trajData.filtered,:);
-                % randomly sample a section of the specified postExitDuration for trajectories
+                % sample a section of the specified postExitDuration for trajectories
                 if size(wormpath_xcoords_leaveCluster,1)>(postExitDuration+1)*frameRate
                     firstFrame = 1;
                     lastFrame = firstFrame + (postExitDuration+1)*frameRate;
@@ -124,65 +124,62 @@ for strainCtr = 1:length(strains)
                     wormpath_xcoords_loneWorm = wormpath_xcoords_loneWorm(firstFrame:lastFrame,:);
                     wormpath_ycoords_loneWorm = wormpath_ycoords_loneWorm(firstFrame:lastFrame,:);
                 end
+                % calculate angles
                 [angleArray_leaveCluster,meanAngles_leaveCluster] = makeAngleArray(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster);
                 angleArray_leaveCluster = angleArray_leaveCluster+meanAngles_leaveCluster;
                 [angleArray_loneWorm,meanAngles_loneWorm] = makeAngleArray(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm);
                 angleArray_loneWorm = angleArray_loneWorm + meanAngles_loneWorm;
                 if strcmp(marker,'bodywall')
-                    %restrict to head angles only
+                    % take mean head angles
                     headAngle_leaveCluster = nanmean(angleArray_leaveCluster(:,1:8),2); 
                     headAngle_loneWorm = nanmean(angleArray_loneWorm(:,1:8),2);
                 elseif strcmp(marker,'pharynx')
                     headAngle_leaveCluster = angleArray_leaveCluster;
                     headAngle_loneWorm = angleArray_loneWorm;
                 end
+                % set to head angles to smooth over 1 second
                 smoothFactor = frameRate; 
-                % set to smooth over 1 second
+                smoothHeadAngle_leaveCluster = zeros(length(headAngle_leaveCluster)-smoothFactor,1);
+                smoothHeadAngle_loneWorm = zeros(length(headAngle_loneWorm)-smoothFactor,1);
                 for smoothCtr = 1:(length(headAngle_leaveCluster)-smoothFactor)
                     smoothHeadAngle_leaveCluster(smoothCtr) = nanmean(headAngle_leaveCluster(smoothCtr:smoothCtr+smoothFactor));
                 end
                 for smoothCtr = 1:(length(headAngle_loneWorm)-smoothFactor)
                     smoothHeadAngle_loneWorm(smoothCtr) = nanmean(headAngle_loneWorm(smoothCtr:smoothCtr+smoothFactor));
                 end
-                % calculate cumulative head angles
-                if exist('smoothHeadAngle_leaveCluster')
-                    cSmoothHeadAngle_leaveCluster = cumsum(smoothHeadAngle_leaveCluster);
-                    maxcSmoothHeadAngleChange_leaveCluster(wormpathCtr) = abs(max(cSmoothHeadAngle_leaveCluster)-min(cSmoothHeadAngle_leaveCluster));
-                end
-                if exist('smoothHeadAngle_loneWorm')
-                    cSmoothHeadAngle_loneWorm = cumsum(smoothHeadAngle_loneWorm);
-                    maxcSmoothHeadAngleChange_loneWorm(wormpathCtr) = abs(max(cSmoothHeadAngle_loneWorm)-min(cSmoothHeadAngle_loneWorm));
-                end
+                % calculate total smoothed head angle change over time
+                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) = nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster);
+                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) = nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm);
             end
+            sHeadAngleChangeRate_leaveCluster_thisFile(isnan(sHeadAngleChangeRate_leaveCluster_thisFile)) = [];
+            sHeadAngleChangeRate_loneWorm_thisFile(isnan(sHeadAngleChangeRate_loneWorm_thisFile)) = [];
             % pool from different movies
-            maxcSmoothHeadAngleChange_leaveCluster = unique(maxcSmoothHeadAngleChange_leaveCluster(maxcSmoothHeadAngleChange_leaveCluster>0));
-            maxcSmoothHeadAngleChange_loneWorm = unique(maxcSmoothHeadAngleChange_loneWorm(maxcSmoothHeadAngleChange_loneWorm>0));
-            maxcHeadAngleChange_leaveCluster{fileCtr} = maxcSmoothHeadAngleChange_leaveCluster;
-            maxcHeadAngleChange_loneWorm{fileCtr} = maxcSmoothHeadAngleChange_loneWorm;
+            sHeadAngleChangeRate_leaveCluster{fileCtr} = sHeadAngleChangeRate_leaveCluster_thisFile;
+            sHeadAngleChangeRate_loneWorm{fileCtr} = sHeadAngleChangeRate_loneWorm_thisFile;
         end
         % pool data from all files belonging to the same strain and worm density
-        maxcHeadAngleChange_leaveCluster = horzcat(maxcHeadAngleChange_leaveCluster{:});
-        maxcHeadAngleChange_loneWorm = horzcat(maxcHeadAngleChange_loneWorm{:});
+        sHeadAngleChangeRate_leaveCluster = abs(horzcat(sHeadAngleChangeRate_leaveCluster{:}));
+        sHeadAngleChangeRate_loneWorm = abs(horzcat(sHeadAngleChangeRate_loneWorm{:}));
         
         %% plot data, format, and export
-        set(0,'CurrentFigure',maxcHeadAngleChangeFig)
-        histogram(maxcHeadAngleChange_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
+        set(0,'CurrentFigure',sHeadAngleChangeRateFig)
+        histogram(sHeadAngleChangeRate_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
         hold on
-        histogram(maxcHeadAngleChange_loneWorm,'Normalization','pdf','DisplayStyle','stairs')
-        leaveClusterLegend = strcat('leave cluster, n=',num2str(size(maxcHeadAngleChange_leaveCluster,2)));
-        loneWormLegend = strcat('lone worm, n=',num2str(size(maxcHeadAngleChange_loneWorm,2)));
+        histogram(sHeadAngleChangeRate_loneWorm,'Normalization','pdf','DisplayStyle','stairs')
+        leaveClusterLegend = strcat('leave cluster, n=',num2str(size(sHeadAngleChangeRate_leaveCluster,2)));
+        loneWormLegend = strcat('lone worm, n=',num2str(size(sHeadAngleChangeRate_loneWorm,2)));
         legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_maxcHeadAngleChange'],'FontWeight','normal')
-        xlabel('maximum cumulative head angle change (degrees)')
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_smoothedHeadAngleChangeRate'],'FontWeight','normal')
+        xlabel('smoothed head angle change rate (degrees)')
         ylabel('probability')
         if strcmp(marker,'bodywall')
             %xlim([0 120])
-            %ylim([0 0.03])
+            %ylim([0 0.035])
         end
-        set(maxcHeadAngleChangeFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/maxcHeadAngleChange_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL'];
-        savefig(maxcHeadAngleChangeFig,[figurename '.fig'])
-        exportfig(maxcHeadAngleChangeFig,[figurename '.eps'],exportOptions)
+        set(sHeadAngleChangeRateFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/smoothedHeadAngleChangeRate_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL'];
+        savefig(sHeadAngleChangeRateFig,[figurename '.fig'])
+        exportfig(sHeadAngleChangeRateFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);
         %system(['rm ' figurename '.eps']);
     end
