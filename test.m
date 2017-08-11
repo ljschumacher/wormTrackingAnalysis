@@ -12,7 +12,7 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-phase = 'sweeping'; % 'fullMovie', 'joining', or 'sweeping'.
+phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'bodywall'; % 'pharynx' or 'bodywall'
 strains = {'npr1'}; % {'npr1','N2'}
@@ -147,13 +147,12 @@ for strainCtr = 1:length(strains)
                 for smoothCtr = 1:(length(headAngle_loneWorm)-smoothFactor)
                     smoothHeadAngle_loneWorm(smoothCtr) = nanmean(headAngle_loneWorm(smoothCtr:smoothCtr+smoothFactor));
                 end
-                % calculate total smoothed head angle change per second
+                % calculate total smoothed head angle change over time
                 sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) = nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster);
                 sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) = nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm);
             end
             sHeadAngleChangeRate_leaveCluster_thisFile(isnan(sHeadAngleChangeRate_leaveCluster_thisFile)) = [];
             sHeadAngleChangeRate_loneWorm_thisFile(isnan(sHeadAngleChangeRate_loneWorm_thisFile)) = [];
-            
             % pool from different movies
             sHeadAngleChangeRate_leaveCluster{fileCtr} = sHeadAngleChangeRate_leaveCluster_thisFile;
             sHeadAngleChangeRate_loneWorm{fileCtr} = sHeadAngleChangeRate_loneWorm_thisFile;
@@ -170,15 +169,15 @@ for strainCtr = 1:length(strains)
         leaveClusterLegend = strcat('leave cluster, n=',num2str(size(sHeadAngleChangeRate_leaveCluster,2)));
         loneWormLegend = strcat('lone worm, n=',num2str(size(sHeadAngleChangeRate_loneWorm,2)));
         legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr}],'FontWeight','normal')
-        xlabel('head angle change rate (°/s)')
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_smoothedHeadAngleChangeRate'],'FontWeight','normal')
+        xlabel('smoothed head angle change rate (degrees)')
         ylabel('probability')
         if strcmp(marker,'bodywall')
-            xlim([0 30])
-            ylim([0 0.09])
+            %xlim([0 120])
+            %ylim([0 0.035])
         end
         set(sHeadAngleChangeRateFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngleChangeRate_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL'];
+        figurename = ['figures/turns/smoothedHeadAngleChangeRate_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL'];
         %savefig(sHeadAngleChangeRateFig,[figurename '.fig'])
         %exportfig(sHeadAngleChangeRateFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);
