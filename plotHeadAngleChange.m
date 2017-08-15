@@ -15,7 +15,7 @@ exportOptions = struct('Format','eps2',...
 phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1','N2'}; % {'npr1','N2'}
+strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the analysis
 sHeadAngSpeedRanges = [0 1; 6 8; 13 18; 21 23; 27 30]; % ranges in degrees/s for plotting sample trajectories
@@ -54,6 +54,8 @@ for strainCtr = 1:length(strains)
         % create empty cell arrays to hold individual file values, so they can be pooled for a given strain/density combination
         sHeadAngleChangeRate_leaveCluster = cell(numFiles,1);
         sHeadAngleChangeRate_loneWorm = cell(numFiles,1);
+        headAngleChangeRate_leaveCluster = cell(numFiles,1);
+        headAngleChangeRate_loneWorm = cell(numFiles,1);
         sHeadAngleChangeRateFig = figure;
         
         % save up to 500 sets of xy coordinates for paths that fall within a certain angular speed range to plot sample trajectories
@@ -62,11 +64,21 @@ for strainCtr = 1:length(strains)
         headAngSpeedSample_leaveCluster3 = cell(500,2);
         headAngSpeedSample_leaveCluster4 = cell(500,2);
         headAngSpeedSample_leaveCluster5 = cell(500,2);
+        sHeadAngleSpeedSample_leaveCluster1 = cell(500,1);
+        sHeadAngleSpeedSample_leaveCluster2 = cell(500,1);
+        sHeadAngleSpeedSample_leaveCluster3 = cell(500,1);
+        sHeadAngleSpeedSample_leaveCluster4 = cell(500,1);
+        sHeadAngleSpeedSample_leaveCluster5 = cell(500,1);
         headAngSpeedSample_loneWorm1 = cell(500,2);
         headAngSpeedSample_loneWorm2 = cell(500,2);
         headAngSpeedSample_loneWorm3 = cell(500,2);
         headAngSpeedSample_loneWorm4 = cell(500,2);
         headAngSpeedSample_loneWorm5 = cell(500,2);
+        sHeadAngleSpeedSample_loneWorm1 = cell(500,1);
+        sHeadAngleSpeedSample_loneWorm2 = cell(500,1);
+        sHeadAngleSpeedSample_loneWorm3 = cell(500,1);
+        sHeadAngleSpeedSample_loneWorm4 = cell(500,1);
+        sHeadAngleSpeedSample_loneWorm5 = cell(500,1);
         headAngSpeedSample_leaveCluster1Ctr = 1;
         headAngSpeedSample_leaveCluster2Ctr = 1;
         headAngSpeedSample_leaveCluster3Ctr = 1;
@@ -87,6 +99,8 @@ for strainCtr = 1:length(strains)
         HeadAngSpeedSample_loneWorm3Fig = figure; hold on
         HeadAngSpeedSample_loneWorm4Fig = figure; hold on
         HeadAngSpeedSample_loneWorm5Fig = figure; hold on
+        frameRunLengths_leaveCluster = cell(numFiles,1);
+        frameRunLengths_loneWorm = cell(numFiles,1);
         
         %% go through individual movies
         for fileCtr = 1:numFiles
@@ -96,6 +110,7 @@ for strainCtr = 1:length(strains)
             blobFeats = h5read(filename,'/blob_features');
             skelData = h5read(filename,'/skeleton');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+            smoothFactor = 1*frameRate; % smooth head angles over 1 second
             if strcmp(phase, 'fullMovie')
                 firstFrame = 0;
                 lastFrame = phaseFrames(fileCtr,4);
@@ -133,165 +148,266 @@ for strainCtr = 1:length(strains)
             
             %% calculate or extract desired feature values
             % calculate cHeadAngle by looping through each worm path
-            uniqueWormpaths = unique(trajData.worm_index_joined);
+            uniqueWorms = unique(trajData.worm_index_joined);
             worm_xcoords = squeeze(skelData(1,:,:))';
             worm_ycoords = squeeze(skelData(2,:,:))';
-            % create empty vectors and cell arrays to hold values as the paths loop
-            sHeadAngleChangeRate_leaveCluster_thisFile = NaN(1,numel(uniqueWormpaths));
-            sHeadAngleChangeRate_loneWorm_thisFile = NaN(1,numel(uniqueWormpaths));
+            % initialise
+            headAngleChangeRate_leaveCluster_thisFile = NaN(numel(uniqueWorms),100);
+            headAngleChangeRate_loneWorm_thisFile = NaN(numel(uniqueWorms),100);
+            sHeadAngleChangeRate_leaveCluster_thisFile = NaN(numel(uniqueWorms),100); % assume each worm has up to 50 leave cluster traj. Checks for this later and warns if not enough
+            sHeadAngleChangeRate_loneWorm_thisFile = NaN(numel(uniqueWorms),1000);
+            frameRunLengths_leaveCluster_thisFile = [];
+            frameRunLengths_loneWorm_thisFile = [];
             
-            for wormpathCtr = 1:numel(uniqueWormpaths)
-                wormpathLogInd = trajData.worm_index_joined==uniqueWormpaths(wormpathCtr);
-                wormpath_xcoords_leaveCluster = worm_xcoords((wormpathLogInd & leaveClusterLogInd & trajData.filtered),:);
-                wormpath_ycoords_leaveCluster = worm_ycoords((wormpathLogInd & leaveClusterLogInd & trajData.filtered),:);
-                wormpath_xcoords_loneWorm = worm_xcoords(wormpathLogInd & loneWormLogInd & trajData.filtered,:);
-                wormpath_ycoords_loneWorm = worm_ycoords(wormpathLogInd & loneWormLogInd & trajData.filtered,:);
-                % sample a section of the specified postExitDuration for trajectories
-                if size(wormpath_xcoords_leaveCluster,1)>(postExitDuration+1)*frameRate
-                    firstFrame = 1;
-                    lastFrame = firstFrame + (postExitDuration+1)*frameRate;
-                    wormpath_xcoords_leaveCluster = wormpath_xcoords_leaveCluster(firstFrame:lastFrame,:);
-                    wormpath_ycoords_leaveCluster = wormpath_ycoords_leaveCluster(firstFrame:lastFrame,:);
+            for wormpathCtr = 1:numel(uniqueWorms)
+                wormpathLogInd = trajData.worm_index_joined==uniqueWorms(wormpathCtr) & trajData.filtered;
+                wormpathFrames_leaveCluster = trajData.frame_number(wormpathLogInd & leaveClusterLogInd)';
+                wormpathFrames_loneWorm = trajData.frame_number(wormpathLogInd & loneWormLogInd)';
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % break down leave cluster frames into continuous trajectories
+                if ~isempty(wormpathFrames_leaveCluster)
+                    frameStepSize = diff(wormpathFrames_leaveCluster);
+                    continuousFrameRuns = {};
+                    continuousRunCtr = 1;
+                    continuousFrameRuns{continuousRunCtr} = wormpathFrames_leaveCluster(1);
+                    for i = 1:numel(frameStepSize)
+                        if frameStepSize(i) == 1
+                            continuousFrameRuns{continuousRunCtr} = [continuousFrameRuns{continuousRunCtr} wormpathFrames_leaveCluster(i+1)];
+                        else
+                            continuousRunCtr = continuousRunCtr + 1;
+                            continuousFrameRuns{continuousRunCtr} = wormpathFrames_leaveCluster(i+1);
+                        end
+                    end
+                    % filter for minimum traj length
+                    frameRunLengths_leaveCluster_thisFile =  [frameRunLengths_leaveCluster_thisFile cellfun(@numel,continuousFrameRuns)];
+                    continuousFramesMinLengthLogInd = cellfun(@numel,continuousFrameRuns)>=round(1.5*frameRate);
+                    continuousFrameRuns = continuousFrameRuns(continuousFramesMinLengthLogInd); % gives cell arrays containing frame numbers for the chosen worm where frames are continuous
+                    % go through each traj that fits the min length criteria to obtain xy coordinates
+                    if size(continuousFrameRuns,2)>100
+                        warning('more trajectories present than allocated space to hold values for')
+                    end
+                    for trajRunCtr = 1:size(continuousFrameRuns,2)
+                        continuousframes = continuousFrameRuns{trajRunCtr};
+                        wormpath_xcoords_leaveCluster = NaN(numel(continuousframes),size(worm_xcoords,2));
+                        wormpath_ycoords_leaveCluster = NaN(numel(continuousframes),size(worm_ycoords,2));
+                        for trajRunFrameCtr = 1:numel(continuousframes)
+                            wormpath_xcoords_leaveCluster(trajRunFrameCtr,:) = worm_xcoords((wormpathLogInd & leaveClusterLogInd...
+                                & trajData.frame_number == continuousframes(trajRunFrameCtr)),:);
+                            wormpath_ycoords_leaveCluster(trajRunFrameCtr,:) = worm_ycoords((wormpathLogInd & leaveClusterLogInd...
+                                & trajData.frame_number == continuousframes(trajRunFrameCtr)),:);
+                        end
+                        % filter for maximum traj length
+                        if size(wormpath_xcoords_leaveCluster,1)>(postExitDuration+1)*frameRate
+                            firstFrame = 1;
+                            lastFrame = firstFrame + (postExitDuration+1)*frameRate;
+                            wormpath_xcoords_leaveCluster = wormpath_xcoords_leaveCluster(firstFrame:lastFrame,:);
+                            wormpath_ycoords_leaveCluster = wormpath_ycoords_leaveCluster(firstFrame:lastFrame,:);
+                        end
+                        % calculate angles
+                        [angleArray_leaveCluster,meanAngles_leaveCluster] = makeAngleArray(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster);
+                        angleArray_leaveCluster = angleArray_leaveCluster+meanAngles_leaveCluster;
+                        % take mean head angles
+                        if strcmp(marker,'bodywall')
+                            headAngle_leaveCluster = nanmean(angleArray_leaveCluster(:,1:8),2);
+                        elseif strcmp(marker,'pharynx')
+                            headAngle_leaveCluster = angleArray_leaveCluster;
+                        end
+                        % set to head angles to smooth over 1 second
+                        smoothHeadAngle_leaveCluster = NaN(length(headAngle_leaveCluster)-smoothFactor,1);
+                        for smoothCtr = 1:(length(headAngle_leaveCluster)-smoothFactor)
+                            smoothHeadAngle_leaveCluster(smoothCtr) = nanmean(headAngle_leaveCluster(smoothCtr:smoothCtr+smoothFactor));
+                        end
+                        % calculate total smoothed head angle change per second
+                        headAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_leaveCluster)/length(headAngle_leaveCluster)*frameRate);
+                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster)*frameRate);
+                        % save/plot trajectories that fall within certain angular speed ranges 
+                        wormpath_xcoords_leaveCluster = mean(wormpath_xcoords_leaveCluster,2);
+                        wormpath_ycoords_leaveCluster = mean(wormpath_ycoords_leaveCluster,2);
+                        if sHeadAngSpeedRanges(1,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) & ...
+                                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(1,2)
+                            headAngSpeedSample_leaveCluster1{headAngSpeedSample_leaveCluster1Ctr,1} = wormpath_xcoords_leaveCluster;
+                            headAngSpeedSample_leaveCluster1{headAngSpeedSample_leaveCluster1Ctr,2} = wormpath_ycoords_leaveCluster;
+                            sHeadAngleSpeedSample_leaveCluster1{headAngSpeedSample_leaveCluster1Ctr} = smoothHeadAngle_leaveCluster;
+                            if headAngSpeedSample_leaveCluster1Ctr < size(headAngSpeedSample_leaveCluster1,1)
+                                headAngSpeedSample_leaveCluster1Ctr = headAngSpeedSample_leaveCluster1Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster1Fig)
+                            plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
+                        elseif sHeadAngSpeedRanges(2,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(2,2)
+                            headAngSpeedSample_leaveCluster2{headAngSpeedSample_leaveCluster2Ctr,1} = wormpath_xcoords_leaveCluster;
+                            headAngSpeedSample_leaveCluster2{headAngSpeedSample_leaveCluster2Ctr,2} = wormpath_ycoords_leaveCluster;
+                            sHeadAngleSpeedSample_leaveCluster2{headAngSpeedSample_leaveCluster2Ctr} = smoothHeadAngle_leaveCluster;
+                            if headAngSpeedSample_leaveCluster2Ctr < size(headAngSpeedSample_leaveCluster2,1)
+                                headAngSpeedSample_leaveCluster2Ctr = headAngSpeedSample_leaveCluster2Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster2Fig)
+                            plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
+                        elseif sHeadAngSpeedRanges(3,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(3,2)
+                            headAngSpeedSample_leaveCluster3{headAngSpeedSample_leaveCluster3Ctr,1} = wormpath_xcoords_leaveCluster;
+                            headAngSpeedSample_leaveCluster3{headAngSpeedSample_leaveCluster3Ctr,2} = wormpath_ycoords_leaveCluster;
+                            sHeadAngleSpeedSample_leaveCluster3{headAngSpeedSample_leaveCluster3Ctr} = smoothHeadAngle_leaveCluster;
+                            if headAngSpeedSample_leaveCluster3Ctr < size(headAngSpeedSample_leaveCluster3,1)
+                                headAngSpeedSample_leaveCluster3Ctr = headAngSpeedSample_leaveCluster3Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster3Fig)
+                            plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
+                        elseif sHeadAngSpeedRanges(4,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(4,2)
+                            headAngSpeedSample_leaveCluster4{headAngSpeedSample_leaveCluster4Ctr,1} = wormpath_xcoords_leaveCluster;
+                            headAngSpeedSample_leaveCluster4{headAngSpeedSample_leaveCluster4Ctr,2} = wormpath_ycoords_leaveCluster;
+                            sHeadAngleSpeedSample_leaveCluster4{headAngSpeedSample_leaveCluster4Ctr} = smoothHeadAngle_leaveCluster;
+                            if headAngSpeedSample_leaveCluster4Ctr < size(headAngSpeedSample_leaveCluster4,1)
+                                headAngSpeedSample_leaveCluster4Ctr = headAngSpeedSample_leaveCluster4Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster4Fig)
+                            plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
+                        elseif sHeadAngSpeedRanges(5,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(5,2)
+                            headAngSpeedSample_leaveCluster5{headAngSpeedSample_leaveCluster5Ctr,1} = wormpath_xcoords_leaveCluster;
+                            headAngSpeedSample_leaveCluster5{headAngSpeedSample_leaveCluster5Ctr,2} = wormpath_ycoords_leaveCluster;
+                            sHeadAngleSpeedSample_leaveCluster5{headAngSpeedSample_leaveCluster5Ctr} = smoothHeadAngle_leaveCluster;
+                            if headAngSpeedSample_leaveCluster5Ctr < size(headAngSpeedSample_leaveCluster5,1)
+                                headAngSpeedSample_leaveCluster5Ctr = headAngSpeedSample_leaveCluster5Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster5Fig)
+                            plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
+                        end
+                    end
                 end
-                if size(wormpath_xcoords_loneWorm,1)>(postExitDuration+1)*frameRate
-                    firstFrame = randi(size(wormpath_xcoords_loneWorm,1)-(postExitDuration+1)*frameRate,1);
-                    lastFrame = firstFrame + (postExitDuration+1)*frameRate;
-                    wormpath_xcoords_loneWorm = wormpath_xcoords_loneWorm(firstFrame:lastFrame,:);
-                    wormpath_ycoords_loneWorm = wormpath_ycoords_loneWorm(firstFrame:lastFrame,:);
-                end
-                % calculate angles
-                [angleArray_leaveCluster,meanAngles_leaveCluster] = makeAngleArray(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster);
-                angleArray_leaveCluster = angleArray_leaveCluster+meanAngles_leaveCluster;
-                [angleArray_loneWorm,meanAngles_loneWorm] = makeAngleArray(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm);
-                angleArray_loneWorm = angleArray_loneWorm + meanAngles_loneWorm;
-                if strcmp(marker,'bodywall')
-                    % take mean head angles
-                    headAngle_leaveCluster = nanmean(angleArray_leaveCluster(:,1:8),2);
-                    headAngle_loneWorm = nanmean(angleArray_loneWorm(:,1:8),2);
-                elseif strcmp(marker,'pharynx')
-                    headAngle_leaveCluster = angleArray_leaveCluster;
-                    headAngle_loneWorm = angleArray_loneWorm;
-                end
-                % set to head angles to smooth over 1 second
-                smoothFactor = frameRate;
-                smoothHeadAngle_leaveCluster = NaN(length(headAngle_leaveCluster)-smoothFactor,1);
-                smoothHeadAngle_loneWorm = NaN(length(headAngle_loneWorm)-smoothFactor,1);
-                for smoothCtr = 1:(length(headAngle_leaveCluster)-smoothFactor)
-                    smoothHeadAngle_leaveCluster(smoothCtr) = nanmean(headAngle_leaveCluster(smoothCtr:smoothCtr+smoothFactor));
-                end
-                for smoothCtr = 1:(length(headAngle_loneWorm)-smoothFactor)
-                    smoothHeadAngle_loneWorm(smoothCtr) = nanmean(headAngle_loneWorm(smoothCtr:smoothCtr+smoothFactor));
-                end
-                % calculate total smoothed head angle change per second
-                sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) = abs(nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster)*frameRate);
-                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) = abs(nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm)*frameRate);
-                % save/plot trajectories that fit certain angular speed range criteria
-                wormpath_xcoords_leaveCluster = mean(wormpath_xcoords_leaveCluster,2);
-                wormpath_ycoords_leaveCluster = mean(wormpath_ycoords_leaveCluster,2);
-                if sHeadAngSpeedRanges(1,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) & ...
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr)<sHeadAngSpeedRanges(1,2)
-                    headAngSpeedSample_leaveCluster1{headAngSpeedSample_leaveCluster1Ctr,1} = wormpath_xcoords_leaveCluster;
-                    headAngSpeedSample_leaveCluster1{headAngSpeedSample_leaveCluster1Ctr,2} = wormpath_ycoords_leaveCluster;
-                    if headAngSpeedSample_leaveCluster1Ctr < size(headAngSpeedSample_leaveCluster1,1)
-                        headAngSpeedSample_leaveCluster1Ctr = headAngSpeedSample_leaveCluster1Ctr+1;
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % break down lone worm frames into continuous trajectories
+                if ~isempty(wormpathFrames_loneWorm)
+                    frameStepSize = diff(wormpathFrames_loneWorm);
+                    continuousFrameRuns = {};
+                    continuousRunCtr = 1;
+                    continuousFrameRuns{continuousRunCtr} = wormpathFrames_loneWorm(1);
+                    for i = 1:numel(frameStepSize)
+                        if frameStepSize(i) == 1
+                            continuousFrameRuns{continuousRunCtr} = [continuousFrameRuns{continuousRunCtr} wormpathFrames_loneWorm(i+1)];
+                        else
+                            continuousRunCtr = continuousRunCtr + 1;
+                            continuousFrameRuns{continuousRunCtr} = wormpathFrames_loneWorm(i+1);
+                        end
                     end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster1Fig)
-                    plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
-                elseif sHeadAngSpeedRanges(2,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr)<sHeadAngSpeedRanges(2,2)
-                    headAngSpeedSample_leaveCluster2{headAngSpeedSample_leaveCluster2Ctr,1} = wormpath_xcoords_leaveCluster;
-                    headAngSpeedSample_leaveCluster2{headAngSpeedSample_leaveCluster2Ctr,2} = wormpath_ycoords_leaveCluster;
-                    if headAngSpeedSample_leaveCluster2Ctr < size(headAngSpeedSample_leaveCluster2,1)
-                        headAngSpeedSample_leaveCluster2Ctr = headAngSpeedSample_leaveCluster2Ctr+1;
+                    % filter for minimum traj length
+                    if size(continuousFrameRuns,2)>1000
+                        warning('more trajectories present than allocated space to hold values for')
                     end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster2Fig)
-                    plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
-                elseif sHeadAngSpeedRanges(3,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr)<sHeadAngSpeedRanges(3,2)
-                    headAngSpeedSample_leaveCluster3{headAngSpeedSample_leaveCluster3Ctr,1} = wormpath_xcoords_leaveCluster;
-                    headAngSpeedSample_leaveCluster3{headAngSpeedSample_leaveCluster3Ctr,2} = wormpath_ycoords_leaveCluster;
-                    if headAngSpeedSample_leaveCluster3Ctr < size(headAngSpeedSample_leaveCluster3,1)
-                        headAngSpeedSample_leaveCluster3Ctr = headAngSpeedSample_leaveCluster3Ctr+1;
+                    frameRunLengths_loneWorm_thisFile =  [frameRunLengths_loneWorm_thisFile cellfun(@numel,continuousFrameRuns)];
+                    continuousFramesMinLengthLogInd = cellfun(@numel,continuousFrameRuns)>=round(1.5*frameRate);
+                    continuousFrameRuns = continuousFrameRuns(continuousFramesMinLengthLogInd); % gives cell arrays containing frame numbers for the chosen worm where frames are continuous
+                    for trajRunCtr = 1:size(continuousFrameRuns,2)
+                        continuousframes = continuousFrameRuns{trajRunCtr};
+                        wormpath_xcoords_loneWorm = NaN(numel(continuousframes),size(worm_xcoords,2));
+                        wormpath_ycoords_loneWorm = NaN(numel(continuousframes),size(worm_ycoords,2));
+                        for trajRunFrameCtr = 1:numel(continuousframes)
+                            wormpath_xcoords_loneWorm(trajRunFrameCtr,:) = worm_xcoords((wormpathLogInd & loneWormLogInd...
+                                & trajData.frame_number == continuousframes(trajRunFrameCtr)),:);
+                            wormpath_ycoords_loneWorm(trajRunFrameCtr,:) = worm_ycoords((wormpathLogInd & loneWormLogInd...
+                                & trajData.frame_number == continuousframes(trajRunFrameCtr)),:);
+                        end
+                        %randomly sample the start of lone worm traj if exceeding specified maximum traj duration
+                        if size(wormpath_xcoords_loneWorm,1)>(postExitDuration+1)*frameRate
+                            firstFrame = randi(size(wormpath_xcoords_loneWorm,1)-(postExitDuration+1)*frameRate,1);
+                            lastFrame = firstFrame + (postExitDuration+1)*frameRate;
+                            wormpath_xcoords_loneWorm = wormpath_xcoords_loneWorm(firstFrame:lastFrame,:);
+                            wormpath_ycoords_loneWorm = wormpath_ycoords_loneWorm(firstFrame:lastFrame,:);
+                        end
+                        % calculate angles
+                        [angleArray_loneWorm,meanAngles_loneWorm] = makeAngleArray(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm);
+                        angleArray_loneWorm = angleArray_loneWorm + meanAngles_loneWorm;
+                        % take mean head angles
+                        if strcmp(marker,'bodywall')
+                            headAngle_loneWorm = nanmean(angleArray_loneWorm(:,1:8),2);
+                        elseif strcmp(marker,'pharynx')
+                            headAngle_loneWorm = angleArray_loneWorm;
+                        end
+                        % set to head angles to smooth over 1 second
+                        smoothHeadAngle_loneWorm = NaN(length(headAngle_loneWorm)-smoothFactor,1);
+                        for smoothCtr = 1:(length(headAngle_loneWorm)-smoothFactor)
+                            smoothHeadAngle_loneWorm(smoothCtr) = nanmean(headAngle_loneWorm(smoothCtr:smoothCtr+smoothFactor));
+                        end
+                        % calculate total smoothed head angle change per second
+                        headAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_loneWorm)/length(headAngle_loneWorm)*frameRate);
+                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm)*frameRate);
+                        % save/plot trajectories that fit certain angular speed range criteria
+                        wormpath_xcoords_loneWorm = mean(wormpath_xcoords_loneWorm,2);
+                        wormpath_ycoords_loneWorm = mean(wormpath_ycoords_loneWorm,2);
+                        if sHeadAngSpeedRanges(1,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(1,2)
+                            headAngSpeedSample_loneWorm1{headAngSpeedSample_loneWorm1Ctr,1} = wormpath_xcoords_loneWorm;
+                            headAngSpeedSample_loneWorm1{headAngSpeedSample_loneWorm1Ctr,2} = wormpath_ycoords_loneWorm;
+                            sHeadAngleSpeedSample_loneWorm1{headAngSpeedSample_loneWorm1Ctr} = smoothHeadAngle_loneWorm;
+                            if headAngSpeedSample_loneWorm1Ctr < size(headAngSpeedSample_loneWorm1,1)
+                                headAngSpeedSample_loneWorm1Ctr = headAngSpeedSample_loneWorm1Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm1Fig)
+                            plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
+                        elseif sHeadAngSpeedRanges(2,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(2,2)
+                            headAngSpeedSample_loneWorm2{headAngSpeedSample_loneWorm2Ctr,1} = wormpath_xcoords_loneWorm;
+                            headAngSpeedSample_loneWorm2{headAngSpeedSample_loneWorm2Ctr,2} = wormpath_ycoords_loneWorm;
+                            sHeadAngleSpeedSample_loneWorm2{headAngSpeedSample_loneWorm2Ctr} = smoothHeadAngle_loneWorm;
+                            if headAngSpeedSample_loneWorm2Ctr < size(headAngSpeedSample_loneWorm2,1)
+                                headAngSpeedSample_loneWorm2Ctr = headAngSpeedSample_loneWorm2Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm2Fig)
+                            plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
+                        elseif sHeadAngSpeedRanges(3,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(3,2)
+                            headAngSpeedSample_loneWorm3{headAngSpeedSample_loneWorm3Ctr,1} = wormpath_xcoords_loneWorm;
+                            headAngSpeedSample_loneWorm3{headAngSpeedSample_loneWorm3Ctr,2} = wormpath_ycoords_loneWorm;
+                            sHeadAngleSpeedSample_loneWorm3{headAngSpeedSample_loneWorm3Ctr} = smoothHeadAngle_loneWorm;
+                            if headAngSpeedSample_loneWorm3Ctr < size(headAngSpeedSample_loneWorm3,1)
+                                headAngSpeedSample_loneWorm3Ctr = headAngSpeedSample_loneWorm3Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm3Fig)
+                            plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
+                        elseif sHeadAngSpeedRanges(4,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(4,2)
+                            headAngSpeedSample_loneWorm4{headAngSpeedSample_loneWorm4Ctr,1} = wormpath_xcoords_loneWorm;
+                            headAngSpeedSample_loneWorm4{headAngSpeedSample_loneWorm4Ctr,2} = wormpath_ycoords_loneWorm;
+                            sHeadAngleSpeedSample_loneWorm4{headAngSpeedSample_loneWorm4Ctr} = smoothHeadAngle_loneWorm;
+                            if headAngSpeedSample_loneWorm4Ctr < size(headAngSpeedSample_loneWorm4,1)
+                                headAngSpeedSample_loneWorm4Ctr = headAngSpeedSample_loneWorm4Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm4Fig)
+                            plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
+                        elseif sHeadAngSpeedRanges(5,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) &...
+                                sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr)<sHeadAngSpeedRanges(5,2)
+                            headAngSpeedSample_loneWorm5{headAngSpeedSample_loneWorm5Ctr,1} = wormpath_xcoords_loneWorm;
+                            headAngSpeedSample_loneWorm5{headAngSpeedSample_loneWorm5Ctr,2} = wormpath_ycoords_loneWorm;
+                            sHeadAngleSpeedSample_loneWorm5{headAngSpeedSample_loneWorm5Ctr} = smoothHeadAngle_loneWorm;
+                            if headAngSpeedSample_loneWorm5Ctr < size(headAngSpeedSample_loneWorm5,1)
+                                headAngSpeedSample_loneWorm5Ctr = headAngSpeedSample_loneWorm5Ctr+1;
+                            end
+                            set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm5Fig)
+                            plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
+                        end
                     end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster3Fig)
-                    plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
-                elseif sHeadAngSpeedRanges(4,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr)<sHeadAngSpeedRanges(4,2)
-                    headAngSpeedSample_leaveCluster4{headAngSpeedSample_leaveCluster4Ctr,1} = wormpath_xcoords_leaveCluster;
-                    headAngSpeedSample_leaveCluster4{headAngSpeedSample_leaveCluster4Ctr,2} = wormpath_ycoords_leaveCluster;
-                    if headAngSpeedSample_leaveCluster4Ctr < size(headAngSpeedSample_leaveCluster4,1)
-                        headAngSpeedSample_leaveCluster4Ctr = headAngSpeedSample_leaveCluster4Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster4Fig)
-                    plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
-                elseif sHeadAngSpeedRanges(5,1)<sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr)<sHeadAngSpeedRanges(5,2)
-                    headAngSpeedSample_leaveCluster5{headAngSpeedSample_leaveCluster5Ctr,1} = wormpath_xcoords_leaveCluster;
-                    headAngSpeedSample_leaveCluster5{headAngSpeedSample_leaveCluster5Ctr,2} = wormpath_ycoords_leaveCluster;
-                    if headAngSpeedSample_leaveCluster5Ctr < size(headAngSpeedSample_leaveCluster5,1)
-                        headAngSpeedSample_leaveCluster5Ctr = headAngSpeedSample_leaveCluster5Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster5Fig)
-                    plot(wormpath_xcoords_leaveCluster,wormpath_ycoords_leaveCluster)
-                end
-                if sHeadAngSpeedRanges(1,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr)<sHeadAngSpeedRanges(1,2)
-                    headAngSpeedSample_loneWorm1{headAngSpeedSample_loneWorm1Ctr,1} = wormpath_xcoords_loneWorm;
-                    headAngSpeedSample_loneWorm1{headAngSpeedSample_loneWorm1Ctr,2} = wormpath_ycoords_loneWorm;
-                    if headAngSpeedSample_loneWorm1Ctr < size(headAngSpeedSample_loneWorm1,1)
-                        headAngSpeedSample_loneWorm1Ctr = headAngSpeedSample_loneWorm1Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm1Fig)
-                    plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
-                elseif sHeadAngSpeedRanges(2,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr)<sHeadAngSpeedRanges(2,2)
-                    headAngSpeedSample_loneWorm2{headAngSpeedSample_loneWorm2Ctr,1} = wormpath_xcoords_loneWorm;
-                    headAngSpeedSample_loneWorm2{headAngSpeedSample_loneWorm2Ctr,2} = wormpath_ycoords_loneWorm;
-                    if headAngSpeedSample_loneWorm2Ctr < size(headAngSpeedSample_loneWorm2,1)
-                        headAngSpeedSample_loneWorm2Ctr = headAngSpeedSample_loneWorm2Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm2Fig)
-                    plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
-                elseif sHeadAngSpeedRanges(3,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr)<sHeadAngSpeedRanges(3,2)
-                    headAngSpeedSample_loneWorm3{headAngSpeedSample_loneWorm3Ctr,1} = wormpath_xcoords_loneWorm;
-                    headAngSpeedSample_loneWorm3{headAngSpeedSample_loneWorm3Ctr,2} = wormpath_ycoords_loneWorm;
-                    if headAngSpeedSample_loneWorm3Ctr < size(headAngSpeedSample_loneWorm3,1)
-                        headAngSpeedSample_loneWorm3Ctr = headAngSpeedSample_loneWorm3Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm3Fig)
-                    plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
-                elseif sHeadAngSpeedRanges(4,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr)<sHeadAngSpeedRanges(4,2)
-                    headAngSpeedSample_loneWorm4{headAngSpeedSample_loneWorm4Ctr,1} = wormpath_xcoords_loneWorm;
-                    headAngSpeedSample_loneWorm4{headAngSpeedSample_loneWorm4Ctr,2} = wormpath_ycoords_loneWorm;
-                    if headAngSpeedSample_loneWorm4Ctr < size(headAngSpeedSample_loneWorm4,1)
-                        headAngSpeedSample_loneWorm4Ctr = headAngSpeedSample_loneWorm4Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm4Fig)
-                    plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
-                elseif sHeadAngSpeedRanges(5,1)<sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr) &...
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr)<sHeadAngSpeedRanges(5,2)
-                    headAngSpeedSample_loneWorm5{headAngSpeedSample_loneWorm5Ctr,1} = wormpath_xcoords_loneWorm;
-                    headAngSpeedSample_loneWorm5{headAngSpeedSample_loneWorm5Ctr,2} = wormpath_ycoords_loneWorm;
-                    if headAngSpeedSample_loneWorm5Ctr < size(headAngSpeedSample_loneWorm5,1)
-                        headAngSpeedSample_loneWorm5Ctr = headAngSpeedSample_loneWorm5Ctr+1;
-                    end
-                    set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm5Fig)
-                    plot(wormpath_xcoords_loneWorm,wormpath_ycoords_loneWorm)
                 end
             end
-            
+            headAngleChangeRate_leaveCluster_thisFile(isnan(headAngleChangeRate_leaveCluster_thisFile)) = [];
+            headAngleChangeRate_loneWorm_thisFile(isnan(headAngleChangeRate_loneWorm_thisFile)) = [];
             sHeadAngleChangeRate_leaveCluster_thisFile(isnan(sHeadAngleChangeRate_leaveCluster_thisFile)) = [];
             sHeadAngleChangeRate_loneWorm_thisFile(isnan(sHeadAngleChangeRate_loneWorm_thisFile)) = [];
-            
             % pool from different movies
+            headAngleChangeRate_leaveCluster{fileCtr} = headAngleChangeRate_leaveCluster_thisFile;
+            headAngleChangeRate_loneWorm{fileCtr} = headAngleChangeRate_loneWorm_thisFile;
             sHeadAngleChangeRate_leaveCluster{fileCtr} = sHeadAngleChangeRate_leaveCluster_thisFile;
             sHeadAngleChangeRate_loneWorm{fileCtr} = sHeadAngleChangeRate_loneWorm_thisFile;
+            frameRunLengths_leaveCluster{fileCtr} = frameRunLengths_leaveCluster_thisFile;
+            frameRunLengths_loneWorm{fileCtr} = frameRunLengths_loneWorm_thisFile;
         end
         % pool data from all files belonging to the same strain and worm density
         sHeadAngleChangeRate_leaveCluster = horzcat(sHeadAngleChangeRate_leaveCluster{:});
         sHeadAngleChangeRate_loneWorm = horzcat(sHeadAngleChangeRate_loneWorm{:});
+        headAngleChangeRate_leaveCluster = horzcat(headAngleChangeRate_leaveCluster{:});
+        headAngleChangeRate_loneWorm = horzcat(headAngleChangeRate_loneWorm{:});
+        frameRunLengths_leaveCluster = horzcat(frameRunLengths_leaveCluster{:});
+        frameRunLengths_loneWorm = horzcat(frameRunLengths_loneWorm{:});
         
         %% plot data, format, and export
         %
@@ -316,26 +432,29 @@ for strainCtr = 1:length(strains)
         
         %
         set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster1Fig)
-        title('HeadAngSpeedSample_leaveCluster1Fig')
+        title('HeadAngSpeedSample\_leaveCluster1Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster2Fig)
-        title('HeadAngSpeedSample_leaveCluster2Fig')
+        title('HeadAngSpeedSample\_leaveCluster2Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster3Fig)
-        title('HeadAngSpeedSample_leaveCluster3Fig')
+        title('HeadAngSpeedSample\_leaveCluster3Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster4Fig)
-        title('HeadAngSpeedSample_leaveCluster4Fig')
+        title('HeadAngSpeedSample\_leaveCluster4Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_leaveCluster5Fig)
-        title('HeadAngSpeedSample_leaveCluster5Fig')
+        title('HeadAngSpeedSample\_leaveCluster5Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm1Fig)
-        title('HeadAngSpeedSample_loneWorm1Fig')
+        title('HeadAngSpeedSample\_loneWorm1Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm1Fig)
-        title('HeadAngSpeedSample_loneWorm1Fig')
+        title('HeadAngSpeedSample\_loneWorm1Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm2Fig)
-        title('HeadAngSpeedSample_loneWorm2Fig')
+        title('HeadAngSpeedSample\_loneWorm2Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm3Fig)
-        title('HeadAngSpeedSample_loneWorm3Fig')
+        title('HeadAngSpeedSample\_loneWorm3Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm4Fig)
-        title('HeadAngSpeedSample_loneWorm4Fig')
+        title('HeadAngSpeedSample\_loneWorm4Fig')
         set(0,'CurrentFigure',HeadAngSpeedSample_loneWorm5Fig)
-        title('HeadAngSpeedSample_loneWorm5Fig')
+        title('HeadAngSpeedSample\_loneWorm5Fig')
+        %save(['figures/turns/results/sHeadAngleSpeedSample_leaveCluster1_'...
+        %    strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '.mat'],...
+        %    'sHeadAngleSpeedSample_leaveCluster1')
     end
 end
