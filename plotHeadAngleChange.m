@@ -15,7 +15,7 @@ exportOptions = struct('Format','eps2',...
 phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1'}; % {'npr1','N2'}
+strains = {'npr1','N2'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the analysis
 sHeadAngSpeedRanges = [0 1; 6 8; 13 18; 21 23; 27 30]; % ranges in degrees/s for plotting sample trajectories
@@ -218,8 +218,8 @@ for strainCtr = 1:length(strains)
                             smoothHeadAngle_leaveCluster(smoothCtr) = nanmean(headAngle_leaveCluster(smoothCtr:smoothCtr+smoothFactor));
                         end
                         % calculate total smoothed head angle change per second
-                        headAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_leaveCluster)/length(headAngle_leaveCluster)*frameRate);
-                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster)*frameRate);
+                        headAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_leaveCluster)/length(headAngle_leaveCluster)/length(headAngle_leaveCluster)*frameRate*frameRate);
+                        sHeadAngleChangeRate_leaveCluster_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster)/length(smoothHeadAngle_leaveCluster)*frameRate*frameRate);
                         % save/plot trajectories that fall within certain angular speed ranges 
                         wormpath_xcoords_leaveCluster = mean(wormpath_xcoords_leaveCluster,2);
                         wormpath_ycoords_leaveCluster = mean(wormpath_ycoords_leaveCluster,2);
@@ -330,8 +330,8 @@ for strainCtr = 1:length(strains)
                             smoothHeadAngle_loneWorm(smoothCtr) = nanmean(headAngle_loneWorm(smoothCtr:smoothCtr+smoothFactor));
                         end
                         % calculate total smoothed head angle change per second
-                        headAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_loneWorm)/length(headAngle_loneWorm)*frameRate);
-                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm)*frameRate);
+                        headAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(headAngle_loneWorm)/length(headAngle_loneWorm)/length(headAngle_loneWorm)*frameRate);
+                        sHeadAngleChangeRate_loneWorm_thisFile(wormpathCtr,trajRunCtr) = abs(nansum(smoothHeadAngle_loneWorm)/length(smoothHeadAngle_loneWorm)/length(headAngle_loneWorm)*frameRate);
                         % save/plot trajectories that fit certain angular speed range criteria
                         wormpath_xcoords_loneWorm = mean(wormpath_xcoords_loneWorm,2);
                         wormpath_ycoords_loneWorm = mean(wormpath_ycoords_loneWorm,2);
@@ -421,10 +421,10 @@ for strainCtr = 1:length(strains)
         title([strains{strainCtr} '\_' wormnums{numCtr}],'FontWeight','normal')
         xlabel('head angle change rate (°/s)')
         ylabel('probability')
-        xlim([0 30])
-        ylim([0 0.09])
+        %xlim([0 30])
+        %ylim([0 0.09])
         set(sHeadAngleChangeRateFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngleChangeRate_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL'];
+        figurename = ['figures/turns/headAngleChangeRate_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_' marker '_CL_2tDiv'];
         %savefig(sHeadAngleChangeRateFig,[figurename '.fig'])
         %exportfig(sHeadAngleChangeRateFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);

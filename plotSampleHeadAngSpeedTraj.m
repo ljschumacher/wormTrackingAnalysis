@@ -1,8 +1,8 @@
 samplePathFig = figure; hold on
 sampleAngSpeedFig = figure; hold on
-samplePaths = importdata('headAngSpeedSample_loneWorm2.mat');
+samplePaths = importdata('headAngSpeedSample_leaveCluster2.mat');
 %samplePaths = headAngSpeedSample_loneWorm2;
-sampleAngSpeed = importdata('sHeadAngleSpeedSample_loneWorm2.mat');
+sampleAngSpeed = importdata('sHeadAngleSpeedSample_leaveCluster2.mat');
 %sampleAngSpeed = sHeadAngleSpeedSample_loneWorm2;
 samplePaths = samplePaths(~cellfun('isempty',samplePaths)); 
 samplePaths = reshape(samplePaths,length(samplePaths)/2,2);
