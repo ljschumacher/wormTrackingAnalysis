@@ -1,11 +1,15 @@
-
 function [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterWorms(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
+
+% function takes the path of the skeleton file and various worm
+% classification variables and returns logical indices for leaveCluster and
+% loneWorms according to the classificiation definitions. 
 
 %% INPUTS:
 % filename: full path to the _skeletons.hdf5 file
-% inClusterNeighbourNum: 3. The number of close neighbors needed for worm to be considered 'in cluster'
-% minNeighbrDist: 2000. The minimum distance required for a worm to be considered 'lone worm'
-% postExitDuration: 5. The duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
+% inClusterNeighbourNum: [1x1] double = 3. The number of close neighbors needed for worm to be considered 'in cluster'
+% minNeighbrDist: [1x1] double = 2000. The minimum distance required for a worm to be considered 'lone worm'
+% postExitDuration: [1x1] double = 5. The duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
+
 %% OUTPUTS:
 % leaveClusterLogInd: logical index of leave cluster worms in the size of '/trajectories_data'
 % loneWormLogInd: logical index of lone worms in the size of '/trajectories_data'
