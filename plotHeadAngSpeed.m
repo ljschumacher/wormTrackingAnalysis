@@ -16,7 +16,7 @@ marker = 'pharynx'; % 'pharynx' or 'bodywall'
 strains = {'npr1','N2'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
-smoothing = false;
+smoothing = true;
 postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the analysis
 headAngSpeedRanges = [0 0.5; 1 1.5; 2 2.5; 3 3.5; 4 20]; % one div
 %headAngSpeedRanges = [0 2; 5 7; 10 12; 20 25; 26 50]; % second div
@@ -177,12 +177,21 @@ for strainCtr = 1:length(strains)
                             % get angle difference
                             if smoothing
                                 smoothFactor = frameRate+1; % set smoothing to be over 1 second
-                                headAngleDiff = (headAngle(smoothFactor:end) - headAngle(1:end-smoothFactor+1))/frameRate;
+                                angleDiff = headAngle(2:end) - headAngle(1:end-1);
+                                totalSmoothedFrames = length(angleDiff)-smoothFactor;
+                                smoothedHeadAngleDiff = NaN(totalSmoothedFrames,1);
+                                for smoothFrameCtr = 1:totalSmoothedFrames
+                                    smoothedHeadAngleDiff(smoothFrameCtr) = nanmean(angleDiff(smoothFrameCtr:smoothFrameCtr+smoothFactor));
+                                end
+                                % calculate total smoothed head angle change per second
+                                headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
+                                    abs(nansum(smoothedHeadAngleDiff)/totalSmoothedFrames*frameRate);
                             else
                                 headAngleDiff = headAngle(2:end) - headAngle(1:end-1);
+                                % calculate total smoothed head angle change per second
+                                headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
+                                    abs(nansum(headAngleDiff)/length(headAngle)*frameRate);
                             end
-                            % calculate total smoothed head angle change per second
-                            headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) = abs(nansum(headAngleDiff)/length(headAngle)*frameRate);
                             % save xy coordinates for paths that fall within certain angular speed ranges
                             if visualiseAngSpeedRangeSamples
                                 % loop through each range to see which one it falls within

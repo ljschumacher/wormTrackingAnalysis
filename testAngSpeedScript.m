@@ -8,18 +8,20 @@
 % As a negative control, straight lines should give angular speed of zero. 
 % script also tests for the effect of smoothing
 
+clear
+close all
+
 % set parameters
 smoothing = false;
-frameRate = 9;
-
+frameRate = 110;
 
 % generate circles
 r=1; % radius
 C=[1 1];
 theta=0:2*pi/360:2*pi; % the angle
 circle1=r*[cos(theta')+C(1) sin(theta')+C(2)]; % 360 points for the circle
-circle2 = circle360(1:2:end,:); %180 points for the circle
-circle3 = circle360(1:3:end,:); %120 points for the circle
+circle2 = circle1(1:2:end,:); %180 points for the circle
+circle3 = circle1(1:3:end,:); %120 points for the circle
 
 % generate bigger circles
 r=2; % radius
@@ -59,12 +61,19 @@ for trajCtr = 1:length(trajList)
     % get angle difference over 1 second (over 1 second rather than between each frame to implement smoothing)
     if ~smoothing
         angleDiff = angles(2:end) - angles(1:end-1); % no smoothing
+        % calculate total smoothed head angle change per second
+        angSpeed(trajCtr) = abs(nansum(angleDiff)/length(angles)*frameRate);
     else
         smoothFactor = frameRate+1;
-        angleDiff = ((angles(smoothFactor:end) - angles(1:end-smoothFactor+1)))/frameRate;
+        angleDiff = angles(2:end) - angles(1:end-1);
+        totalSmoothedFrames = length(angleDiff)-smoothFactor;
+        smoothedAngleDiff = NaN(totalSmoothedFrames,1);
+        for frameCtr = 1:totalSmoothedFrames
+            smoothedAngleDiff(frameCtr) = nanmean(angleDiff(frameCtr:frameCtr+smoothFactor));
+        end
+        % calculate total smoothed head angle change per second
+        angSpeed(trajCtr) = abs(nansum(smoothedAngleDiff)/totalSmoothedFrames*frameRate);
     end
-    % calculate total smoothed head angle change per second
-    angSpeed(trajCtr) = abs(nansum(angleDiff)/length(angles)*frameRate);
 end
 
 % display values
