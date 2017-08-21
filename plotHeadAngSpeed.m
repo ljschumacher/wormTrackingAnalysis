@@ -1,7 +1,7 @@
 % plot head angular speed distribution
 
 %% issues to address:
-% How can some of the straighter-looking trajectories produce high angles?
+% sample traj and angle calculations still don't match up
 % Truncate N2 traj according to npr1 traj length distribution - circumvet issues caused by half turns etc. 
 % No leave cluster traj for some npr1 movies
 % The traj over 5 seconds look quite short in micron terms compared with worm length
@@ -13,7 +13,7 @@ close all
 phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1','N2'}; % {'npr1','N2'}
+strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
 smoothing = true;
@@ -69,7 +69,7 @@ for strainCtr = 1:length(strains)
         end
         
         %% go through individual movies
-        for fileCtr = 1:numFiles
+        for fileCtr = 9%1:numFiles
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -163,17 +163,29 @@ for strainCtr = 1:length(strains)
                                 wormtraj_xcoords = wormtraj_xcoords(firstFrame:lastFrame,:);
                                 wormtraj_ycoords = wormtraj_ycoords(firstFrame:lastFrame,:);
                             end
-                            % take mean head coordinates
-                            if strcmp(marker,'bodywall')
-                                wormhead_xcoords = nanmean(wormtraj_xcoords(:,1:8),2)'; % take mean of the first 8 out of 49 nodes (head only)
-                                wormhead_ycoords = nanmean(wormtraj_ycoords(:,1:8),2)';
-                            elseif strcmp(marker,'pharynx')
-                                wormhead_xcoords = nanmean(wormtraj_xcoords,2)'; % pharynx marker has 2 nodes so take the mean of those 2
-                                wormhead_ycoords = nanmean(wormtraj_ycoords,2)';
-                            end
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                             % take mean head coordinates
+%                             if strcmp(marker,'bodywall')
+%                                 wormtraj_xcoords = nanmean(wormtraj_xcoords(:,1:8),2)'; % take mean of the first 8 out of 49 nodes (head only)
+%                                 wormtraj_ycoords = nanmean(wormtraj_ycoords(:,1:8),2)';
+%                             elseif strcmp(marker,'pharynx')
+%                                 wormtraj_xcoords = nanmean(wormtraj_xcoords,2)'; % pharynx marker has 2 nodes so take the mean of those 2
+%                                 wormtraj_ycoords = nanmean(wormtraj_ycoords,2)';
+%                             end
+%                             % calculate head angles
+%                             [angleArray,meanAngles] = makeAngleArray(wormtraj_xcoords,wormtraj_ycoords);
+%                             headAngle = angleArray+meanAngles;
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             % calculate head angles
-                            [angleArray,meanAngles] = makeAngleArray(wormhead_xcoords,wormhead_ycoords);
+                            [angleArray,meanAngles] = makeAngleArray(wormtraj_xcoords,wormtraj_ycoords);
                             headAngle = angleArray+meanAngles;
+                            % take mean head angles
+                            if strcmp(marker,'bodywall')
+                                headAngle = nanmean(headAngle(:,1:8),2); % take mean of the first 8 out of 49 nodes (head only)
+                            elseif strcmp(marker,'pharynx')
+                                headAngle = headAngle; % pharynx marker has 2 nodes so take the mean of those 2
+                            end
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                             % get angle difference
                             if smoothing
                                 smoothFactor = frameRate+1; % set smoothing to be over 1 second
@@ -196,13 +208,14 @@ for strainCtr = 1:length(strains)
                             if visualiseAngSpeedRangeSamples
                                 % loop through each range to see which one it falls within
                                 for rangeCtr = 1:size(headAngSpeedRanges,1)
+                                    % if a headAngSpeed value falls in between the limits of specifiedranges
                                     if headAngSpeedRanges(rangeCtr,1)<headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) & ...
                                         headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)<headAngSpeedRanges(rangeCtr,2)
                                         % save xy coordinates in microns
-                                        wormhead_xcoords = wormhead_xcoords * pixelsize; % turn pixels into microns
-                                        wormhead_ycoords = wormhead_ycoords * pixelsize;
-                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),1,rangeCtr} = wormhead_xcoords;
-                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),2,rangeCtr} = wormhead_ycoords;
+                                        wormtraj_xcoords = wormtraj_xcoords * pixelsize; % turn pixels into microns
+                                        wormtraj_ycoords = wormtraj_ycoords * pixelsize;
+                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),1,rangeCtr} = wormtraj_xcoords;
+                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),2,rangeCtr} = wormtraj_ycoords;
                                         % update the traj counter for that range (until up to 500 preallocated trajectory spaces)
                                         if headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr) < size(headAngSpeedSampleTraj.(wormcats{wormcatCtr}),1)
                                            headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr) = headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr)+1;
@@ -215,6 +228,7 @@ for strainCtr = 1:length(strains)
                 end
             end
             for wormcatCtr = 1:length(wormcats)
+                % remove empty entries
                 headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(isnan(headAngSpeed.(wormcats{wormcatCtr}){fileCtr}))=[];
             end
         end

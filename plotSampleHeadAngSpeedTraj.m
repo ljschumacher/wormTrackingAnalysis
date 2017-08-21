@@ -23,10 +23,15 @@ for rangeCtr = 1:size(headAngSpeedRanges,1)
         samplePathFig = figure; hold on
         % remove empty cells
         headAngSpeedSampleTrajRange = squeeze(headAngSpeedSampleTraj.(wormcats{wormcatCtr})(:,:,rangeCtr));
-        headAngSpeedSampleTrajRange =  headAngSpeedSampleTrajRange(~cellfun('isempty',headAngSpeedSampleTrajRange));
+        headAngSpeedSampleTrajRange = headAngSpeedSampleTrajRange(~cellfun('isempty',headAngSpeedSampleTrajRange));
         headAngSpeedSampleTrajRange = reshape(headAngSpeedSampleTrajRange,[],2);
-        % randomly sample 10 trajectories from the 500 saved ones
-        trajSamples = randi(size(headAngSpeedSampleTrajRange,1),[numSampleTraj,1]);
+        % randomly up to 10 sample trajectories from the saved ones
+        numSavedTraj = size(headAngSpeedSampleTrajRange,1);
+        if numSampleTraj<=numSavedTraj
+            trajSamples = randi(size(headAngSpeedSampleTrajRange,1),[numSampleTraj,1]);
+        else
+            trajSamples = 1:numSavedTraj;
+        end
         % loop through each saved trajectory xy coordinates
         for trajCtr = 1:length(trajSamples)
             % get xy coordinates for sample traj
