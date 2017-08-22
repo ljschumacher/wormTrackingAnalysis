@@ -29,9 +29,10 @@ leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:e
 leaveClusterStart = find(leaveClusterLogInd);
 % loop through each exit event, retain frames for the specified duration after a worm exits cluster
 for exitCtr = 1:numel(leaveClusterStart)
-    wormIndex = trajData.worm_index_joined(leaveClusterStart(exitCtr));
+    thisExitIdx = leaveClusterStart(exitCtr);
+    wormIndex = trajData.worm_index_joined(thisExitIdx);
     % check for the number of frames that the same worm has beyond the point of cluster exit
-    wormPathLength = numel(find(trajData.worm_index_joined==wormIndex));
+    wormPathLength = nnz(trajData.worm_index_joined(thisExitIdx:end)==wormIndex);
     if wormPathLength>=postExitDuration*frameRate
         leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate; 
     else
@@ -39,9 +40,10 @@ for exitCtr = 1:numel(leaveClusterStart)
     end
 end
 % exclude movie segments with ending frames beyond highest frame number
-leaveClusterEnd = leaveClusterEnd(leaveClusterEnd<=numel(leaveClusterLogInd)); 
-% trim starting frame list accordingly, since the ending frame list may be shortened at the end of the movie
-leaveClusterStart = leaveClusterStart(1:numel(leaveClusterEnd));
+keepLogInd = leaveClusterEnd<=numel(leaveClusterLogInd);
+leaveClusterEnd = leaveClusterEnd(keepLogInd); 
+% trim starting frame list accordingly
+leaveClusterStart = leaveClusterStart(keepLogInd);
 % go through each starting frame to generate logical index for leave cluster worms
 for exitCtr = 1:numel(leaveClusterStart)
     leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;

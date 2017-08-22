@@ -16,13 +16,13 @@ marker = 'pharynx'; % 'pharynx' or 'bodywall'
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
-smoothing = true;
-postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the analysis
-headAngSpeedRanges = [0 0.5; 1 1.5; 2 2.5; 3 3.5; 4 20]; % one div
-%headAngSpeedRanges = [0 2; 5 7; 10 12; 20 25; 26 50]; % second div
+smoothing = false;
+postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the analysis
+headAngSpeedRanges = [0 0.25; pi/2-0.25 pi/2+0.25; pi-0.25 pi+0.25; 3/2*pi-0.25 3/2*pi+0.25; 2*pi-0.25 2*pi];
+pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 visualiseAngSpeedRangeSamples = true; % true or false
 numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
-pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+
 
 if dataset == 1
     intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
@@ -45,11 +45,11 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load file list
         if dataset ==1 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'bodywall')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         else
             warning('specified dataset/marker combination does not exist')
         end
@@ -69,7 +69,7 @@ for strainCtr = 1:length(strains)
         end
         
         %% go through individual movies
-        for fileCtr = 9%1:numFiles
+        for fileCtr = 9 %1:numFiles
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -115,7 +115,9 @@ for strainCtr = 1:length(strains)
             
             % initialise
             for wormcatCtr = 1:length(wormcats)
-                headAngSpeed.(wormcats{wormcatCtr}){fileCtr} = NaN(numel(uniqueWorms),100); % assume each worm has up to 100 leave cluster traj. Checks for this later and warns if not enough
+                % assume each worm has up to 100 leave cluster traj. Checks for this later and warns if not enough
+                headAngSpeed.(wormcats{wormcatCtr}){fileCtr} = NaN(numel(uniqueWorms),100); 
+                % create variable to keep track of trajectory lengths
                 frameRunLengths.(wormcats{wormcatCtr}){fileCtr} = [];
             end
             
@@ -125,19 +127,21 @@ for strainCtr = 1:length(strains)
                 for wormcatCtr = 1:length(wormcats)
                     wormCatLogInd = wormLogInd & eval([wormcats{wormcatCtr} 'LogInd']);
                     wormFrames = trajData.frame_number(wormCatLogInd)';
+                    
                     % break down frames into continuous trajectories
                     if ~isempty(wormFrames)
                         continuousFrameRuns = getContinuousTraj(wormFrames);
                         % save the length of each continuous trajectory
                         frameRunLengths.(wormcats{wormcatCtr}){fileCtr} = [frameRunLengths.(wormcats{wormcatCtr}){fileCtr} cellfun(@numel,continuousFrameRuns)];
+                        
                         % filter for minimum traj length
                         continuousFramesMinLengthLogInd = cellfun(@numel,continuousFrameRuns)>=frameRate+1;
                         continuousFrameRuns = continuousFrameRuns(continuousFramesMinLengthLogInd);
+                        
                         % go through each traj that fits the min length criteria to obtain xy coordinates
                         if size(continuousFrameRuns,2)>100
                             warning('more trajectories present than allocated space to hold values for')
                         end
-                        % loop through each trajectory
                         for trajCtr = 1:size(continuousFrameRuns,2)
                             continuousframes = continuousFrameRuns{trajCtr};
                             wormtraj_xcoords = NaN(numel(continuousframes),size(worm_xcoords,2));
@@ -148,6 +152,7 @@ for strainCtr = 1:length(strains)
                                 wormtraj_ycoords(trajRunFrameCtr,:) = worm_ycoords(wormCatLogInd...
                                     & trajData.frame_number == continuousframes(trajRunFrameCtr),:);
                             end
+                            
                             % filter for maximum traj length
                             maxTotalFrames = postExitDuration*frameRate;
                             if size(wormtraj_xcoords,1)> maxTotalFrames
@@ -163,48 +168,15 @@ for strainCtr = 1:length(strains)
                                 wormtraj_xcoords = wormtraj_xcoords(firstFrame:lastFrame,:);
                                 wormtraj_ycoords = wormtraj_ycoords(firstFrame:lastFrame,:);
                             end
-                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                             % take mean head coordinates
-%                             if strcmp(marker,'bodywall')
-%                                 wormtraj_xcoords = nanmean(wormtraj_xcoords(:,1:8),2)'; % take mean of the first 8 out of 49 nodes (head only)
-%                                 wormtraj_ycoords = nanmean(wormtraj_ycoords(:,1:8),2)';
-%                             elseif strcmp(marker,'pharynx')
-%                                 wormtraj_xcoords = nanmean(wormtraj_xcoords,2)'; % pharynx marker has 2 nodes so take the mean of those 2
-%                                 wormtraj_ycoords = nanmean(wormtraj_ycoords,2)';
-%                             end
-%                             % calculate head angles
-%                             [angleArray,meanAngles] = makeAngleArray(wormtraj_xcoords,wormtraj_ycoords);
-%                             headAngle = angleArray+meanAngles;
-                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                            % calculate head angles
-                            [angleArray,meanAngles] = makeAngleArray(wormtraj_xcoords,wormtraj_ycoords);
-                            headAngle = angleArray+meanAngles;
-                            % take mean head angles
-                            if strcmp(marker,'bodywall')
-                                headAngle = nanmean(headAngle(:,1:8),2); % take mean of the first 8 out of 49 nodes (head only)
-                            elseif strcmp(marker,'pharynx')
-                                headAngle = headAngle; % pharynx marker has 2 nodes so take the mean of those 2
-                            end
-                            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                            % get angle difference
-                            if smoothing
-                                smoothFactor = frameRate+1; % set smoothing to be over 1 second
-                                angleDiff = headAngle(2:end) - headAngle(1:end-1);
-                                totalSmoothedFrames = length(angleDiff)-smoothFactor;
-                                smoothedHeadAngleDiff = NaN(totalSmoothedFrames,1);
-                                for smoothFrameCtr = 1:totalSmoothedFrames
-                                    smoothedHeadAngleDiff(smoothFrameCtr) = nanmean(angleDiff(smoothFrameCtr:smoothFrameCtr+smoothFactor));
-                                end
-                                % calculate total smoothed head angle change per second
-                                headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
-                                    abs(nansum(smoothedHeadAngleDiff)/totalSmoothedFrames*frameRate);
-                            else
-                                headAngleDiff = headAngle(2:end) - headAngle(1:end-1);
-                                % calculate total smoothed head angle change per second
-                                headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
-                                    abs(nansum(headAngleDiff)/length(headAngle)*frameRate);
-                            end
-                            % save xy coordinates for paths that fall within certain angular speed ranges
+                            
+                            % calculate head angle changes per frame
+                            headAngleDiff = getHeadAngleDiff(wormtraj_xcoords,wormtraj_ycoords, marker, smoothing, frameRate);
+                            % calculate head angular speed
+                            headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
+                                abs(nansum(headAngleDiff));
+                                %/totalSmoothedFrames*frameRate);
+                            
+                            % optional: save xy coordinates for paths that fall within certain angular speed ranges
                             if visualiseAngSpeedRangeSamples
                                 % loop through each range to see which one it falls within
                                 for rangeCtr = 1:size(headAngSpeedRanges,1)
@@ -240,7 +212,7 @@ for strainCtr = 1:length(strains)
         
         %% plot data, format, and export
         % save angular speed values
-        %save(['figures/turns/results/headAngSpeed_' strains{strainCtr} '_' wormnums{numCtr} '.mat'],'headAngSpeed')
+%         save(['figures/turns/results/headAngSpeed_' strains{strainCtr} '_' wormnums{numCtr} '.mat'],'headAngSpeed')
         % plot angular speed distribution
         headAngSpeedFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
@@ -249,23 +221,23 @@ for strainCtr = 1:length(strains)
         end
         legend(Legend)
         title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
-        xlabel('head angle change rate (°/s)')
+        xlabel('head angular speed (radian/s)')
         ylabel('probability')
         xlim([0 12])
         ylim([0 2])
         set(headAngSpeedFig,'PaperUnits','centimeters')
         figurename = ['figures/turns/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
-        %savefig(headAngSpeedFig,[figurename '.fig'])
-        load('exportOptions.mat')
-        %exportfig(headAngSpeedFig,[figurename '.eps'],exportOptions)
-        %system(['epstopdf ' figurename '.eps']);
-        %system(['rm ' figurename '.eps']);
+%         savefig(headAngSpeedFig,[figurename '.fig'])
+%         load('exportOptions.mat')
+%         exportfig(headAngSpeedFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
         
         if visualiseAngSpeedRangeSamples
-            %save trajectories
+            % save trajectories
             save(['figures/turns/results/headAngSpeedSampleTraj_' strain '_' wormnum '.mat'],'headAngSpeedSampleTraj')
-            %plot trajectories
-            plotSampleHeadAngSpeedTraj(headAngSpeedRanges,wormcats,numSampleTraj,strain,wormnum);
+            % plot trajectories
+            plotSampleHeadAngSpeedTraj(headAngSpeedRanges,wormcats,numSampleTraj,strain,wormnum,marker,smoothing,frameRate);
         end
     end
 end
