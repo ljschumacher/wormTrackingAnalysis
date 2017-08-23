@@ -28,7 +28,7 @@ end
 headAngle = angleArray+meanAngles;
 % take mean head angles for body wall marker
 if strcmp(marker,'bodywall')
-    headAngle = nanmean(headAngle(:,1:7),2); % take mean of the first 8 out of 49 nodes (head only)
+    headAngle = nanmean(headAngle,2); % take mean of the 8 head nodes
 end
 % get angle difference
 if smoothing
