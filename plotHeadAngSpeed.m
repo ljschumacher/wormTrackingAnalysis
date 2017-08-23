@@ -18,11 +18,20 @@ wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
 smoothing = false;
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the analysis
-headAngSpeedRanges = [0 0.25; pi/2-0.25 pi/2+0.25; pi-0.25 pi+0.25; 3/2*pi-0.25 3/2*pi+0.25; 2*pi-0.25 2*pi];
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-visualiseAngSpeedRangeSamples = true; % true or false
-numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
+visualiseSampleTraj = true; % true or false
 
+if visualiseSampleTraj == true
+    numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
+    featureToSample = 'headAngNorm'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
+    if strcmp(featureToSample,'headAngTotal') | strcmp(featureToSample,'headAngSpeed')
+        headAngRanges = [0, 0.25; pi/2-0.25, pi/2+0.25; pi-0.25, pi+0.25; 3/2*pi-0.25, 3/2*pi+0.25; 2*pi-0.25, 2*pi];
+    elseif strcmp(featureToSample,'headAngNorm')
+        headAngRanges = [0 0.01; 0.01 0.02; 0.02 0.04; 0.04 0.1; 0.1 1];
+    else
+        warning('Wrong feature selected for trajectory visualisation')
+    end
+end
 
 if dataset == 1
     intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
@@ -56,22 +65,24 @@ for strainCtr = 1:length(strains)
         numFiles = length(filenames);
         % create empty cell arrays to hold individual file values, so they can be pooled for a given strain/density combination
         for wormcatCtr = 1:length(wormcats)
+            headAngTotal.(wormcats{wormcatCtr}) = cell(numFiles,1);
+            headAngNorm.(wormcats{wormcatCtr}) = cell(numFiles,1);
             headAngSpeed.(wormcats{wormcatCtr}) = cell(numFiles,1);
             frameRunLengths.(wormcats{wormcatCtr}) = cell(numFiles,1);
         end
         
-        if visualiseAngSpeedRangeSamples
+        if visualiseSampleTraj
             % save up to 500 sets of xy coordinates for paths that fall within a certain angular speed range to plot sample trajectories
             for wormcatCtr = 1:length(wormcats)
-                headAngSpeedSampleTraj.(wormcats{wormcatCtr}) = cell(500,2,size(headAngSpeedRanges,1));
-                headAngSpeedSampleCtr.(wormcats{wormcatCtr}) = ones(size(headAngSpeedRanges,1),1);
+                headAngSampleTraj.(wormcats{wormcatCtr}) = cell(500,2,size(headAngRanges,1));
+                headAngSampleCtr.(wormcats{wormcatCtr}) = ones(size(headAngRanges,1),1);
             end
         end
         
         %% go through individual movies
-        for fileCtr = 9 %1:numFiles
+        for fileCtr =  1:numFiles
             %% load data
-            filename = filenames{fileCtr}
+            filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
             skelData = h5read(filename,'/skeleton'); % in pixels
@@ -116,6 +127,8 @@ for strainCtr = 1:length(strains)
             % initialise
             for wormcatCtr = 1:length(wormcats)
                 % assume each worm has up to 100 leave cluster traj. Checks for this later and warns if not enough
+                headAngTotal.(wormcats{wormcatCtr}){fileCtr} = NaN(numel(uniqueWorms),100); 
+                headAngNorm.(wormcats{wormcatCtr}){fileCtr} = NaN(numel(uniqueWorms),100); 
                 headAngSpeed.(wormcats{wormcatCtr}){fileCtr} = NaN(numel(uniqueWorms),100); 
                 % create variable to keep track of trajectory lengths
                 frameRunLengths.(wormcats{wormcatCtr}){fileCtr} = [];
@@ -170,27 +183,35 @@ for strainCtr = 1:length(strains)
                             end
                             
                             % calculate head angle changes per frame
-                            headAngleDiff = getHeadAngleDiff(wormtraj_xcoords,wormtraj_ycoords, marker, smoothing, frameRate);
-                            % calculate head angular speed
-                            headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
+                            [headAngleDiff, framesElapsed] = getHeadAngleDiff(wormtraj_xcoords,wormtraj_ycoords, marker, smoothing, frameRate);
+                            % calculate total head turn over full trajectory
+                            headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
                                 abs(nansum(headAngleDiff));
-                                %/totalSmoothedFrames*frameRate);
+                            % normalise head turn over path length
+                            wormtraj_xcoords = mean(wormtraj_xcoords,2)*pixelsize; % turn pixels into microns
+                            wormtraj_ycoords = mean(wormtraj_ycoords,2)*pixelsize;
+                            xdiff = wormtraj_xcoords(2:end) - wormtraj_xcoords(1:end-1);
+                            ydiff = wormtraj_ycoords(2:end) - wormtraj_ycoords(1:end-1);
+                            pathLength = sum(sqrt(xdiff.^2+ydiff.^2)); % calculate path length
+                            headAngNorm.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) =...
+                                headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)/pathLength;
+                            % calculate head angular speed
+                            headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) = ...
+                                headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)/framesElapsed*frameRate;
                             
                             % optional: save xy coordinates for paths that fall within certain angular speed ranges
-                            if visualiseAngSpeedRangeSamples
+                            if visualiseSampleTraj
                                 % loop through each range to see which one it falls within
-                                for rangeCtr = 1:size(headAngSpeedRanges,1)
+                                for rangeCtr = 1:size(headAngRanges,1)
                                     % if a headAngSpeed value falls in between the limits of specifiedranges
-                                    if headAngSpeedRanges(rangeCtr,1)<headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) & ...
-                                        headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)<headAngSpeedRanges(rangeCtr,2)
-                                        % save xy coordinates in microns
-                                        wormtraj_xcoords = wormtraj_xcoords * pixelsize; % turn pixels into microns
-                                        wormtraj_ycoords = wormtraj_ycoords * pixelsize;
-                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),1,rangeCtr} = wormtraj_xcoords;
-                                        headAngSpeedSampleTraj.(wormcats{wormcatCtr}){headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr),2,rangeCtr} = wormtraj_ycoords;
+                                    if headAngRanges(rangeCtr,1)<headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) & ...
+                                        headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)<headAngRanges(rangeCtr,2)
+                                        % save xy coordinates (in microns)
+                                        headAngSampleTraj.(wormcats{wormcatCtr}){headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr),1,rangeCtr} = wormtraj_xcoords;
+                                        headAngSampleTraj.(wormcats{wormcatCtr}){headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr),2,rangeCtr} = wormtraj_ycoords;
                                         % update the traj counter for that range (until up to 500 preallocated trajectory spaces)
-                                        if headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr) < size(headAngSpeedSampleTraj.(wormcats{wormcatCtr}),1)
-                                           headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr) = headAngSpeedSampleCtr.(wormcats{wormcatCtr})(rangeCtr)+1;
+                                        if headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr) < size(headAngSampleTraj.(wormcats{wormcatCtr}),1)
+                                           headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr) = headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr)+1;
                                         end
                                     end
                                 end
@@ -201,43 +222,85 @@ for strainCtr = 1:length(strains)
             end
             for wormcatCtr = 1:length(wormcats)
                 % remove empty entries
+                headAngTotal.(wormcats{wormcatCtr}){fileCtr}(isnan(headAngTotal.(wormcats{wormcatCtr}){fileCtr}))=[];
+                headAngNorm.(wormcats{wormcatCtr}){fileCtr}(isnan(headAngNorm.(wormcats{wormcatCtr}){fileCtr}))=[];
                 headAngSpeed.(wormcats{wormcatCtr}){fileCtr}(isnan(headAngSpeed.(wormcats{wormcatCtr}){fileCtr}))=[];
             end
         end
         % pool data from all files belonging to the same strain and worm density
         for wormcatCtr = 1:length(wormcats)
+            headAngTotalPool.(wormcats{wormcatCtr}) = horzcat(headAngTotal.(wormcats{wormcatCtr}){:});
+            headAngNormPool.(wormcats{wormcatCtr}) = horzcat(headAngNorm.(wormcats{wormcatCtr}){:});
             headAngSpeedPool.(wormcats{wormcatCtr}) = horzcat(headAngSpeed.(wormcats{wormcatCtr}){:});
             frameRunLengths.(wormcats{wormcatCtr}) = horzcat(frameRunLengths.(wormcats{wormcatCtr}){:});
         end
         
         %% plot data, format, and export
-        % save angular speed values
+        % save head angle values
+%         save(['figures/turns/results/headAngTotal_' strains{strainCtr} '_' wormnums{numCtr} '.mat'],'headAngTotal')
+%         save(['figures/turns/results/headAngNorm_' strains{strainCtr} '_' wormnums{numCtr} '.mat'],'headAngNorm')
 %         save(['figures/turns/results/headAngSpeed_' strains{strainCtr} '_' wormnums{numCtr} '.mat'],'headAngSpeed')
-        % plot angular speed distribution
-        headAngSpeedFig = figure; hold on
+
+        % plot total head angle change
+        headAngTotalFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
-            histogram(headAngSpeedPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
-            Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngSpeedPool.(wormcats{wormcatCtr}),2)));
+            histogram(headAngTotalPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+            Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngTotalPool.(wormcats{wormcatCtr}),2)));
         end
         legend(Legend)
         title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
-        xlabel('head angular speed (radian/s)')
-        ylabel('probability')
-        xlim([0 12])
-        ylim([0 2])
-        set(headAngSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
-%         savefig(headAngSpeedFig,[figurename '.fig'])
+        xlabel('Total head angle change (radians)')
+        ylabel('Probability')
+        xlim([0 7])
+        %ylim([0 2])
+        set(headAngTotalFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
 %         load('exportOptions.mat')
-%         exportfig(headAngSpeedFig,[figurename '.eps'],exportOptions)
+%         exportfig(headAngTotalFig,[figurename '.eps'],exportOptions)
 %         system(['epstopdf ' figurename '.eps']);
 %         system(['rm ' figurename '.eps']);
-        
-        if visualiseAngSpeedRangeSamples
+
+        % plot normalised head angle change
+        headAngNormFig = figure; hold on
+        for wormcatCtr = 1:length(wormcats)
+            histogram(headAngNormPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+        end
+        legend(Legend)
+        title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
+        xlabel('Normalised head angle change (radian/micron)')
+        ylabel('Probability')
+        %xlim([0 12])
+        %ylim([0 2])
+        set(headAngNormFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
+%         load('exportOptions.mat')
+%         exportfig(headAngNormFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
+%         
+        % plot normalised head angle change
+        headAngSpeedFig = figure; hold on
+        for wormcatCtr = 1:length(wormcats)
+            histogram(headAngSpeedPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+        end
+        legend(Legend)
+        title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
+        xlabel('Head angular speed (radian/s)')
+        ylabel('Probability')
+        xlim([0 7])
+        %ylim([0 2])
+        set(headAngSpeedFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
+%         load('exportOptions.mat')
+%         exportfig(headAngNormFig,[figurename '.eps'],exportOptions)
+%         system(['epstopdf ' figurename '.eps']);
+%         system(['rm ' figurename '.eps']);
+
+        if visualiseSampleTraj
             % save trajectories
-            save(['figures/turns/results/headAngSpeedSampleTraj_' strain '_' wormnum '.mat'],'headAngSpeedSampleTraj')
+            save(['figures/turns/results/headAngSampleTraj_' strain '_' wormnum '.mat'],'headAngSampleTraj')
             % plot trajectories
-            plotSampleHeadAngSpeedTraj(headAngSpeedRanges,wormcats,numSampleTraj,strain,wormnum,marker,smoothing,frameRate);
+            plotSampleHeadAngTraj(headAngRanges,featureToSample,numSampleTraj,wormcats,strain,wormnum);
         end
     end
 end

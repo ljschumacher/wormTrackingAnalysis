@@ -1,4 +1,4 @@
-function headAngleDiff = getHeadAngleDiff(xcoords, ycoords, marker, smoothing, frameRate)
+function [headAngleDiff,framesElapsed] = getHeadAngleDiff(xcoords, ycoords, marker, smoothing, frameRate)
 
 % function returns a vector of head angle differences (in radian) between
 % each frame of a given trajectory
@@ -9,10 +9,20 @@ function headAngleDiff = getHeadAngleDiff(xcoords, ycoords, marker, smoothing, f
 % marker: string, 'pharynx' or 'bodywall'.
 % smoothing: logical, true or false.
 % frameRate: [1x1] scalar, 3 or 9.
-%% OUTPUT:
+%% OUTPUTS:
 % headAngleDiff: vector of head angle differences (in radian) between each frame of the given trajectory
+% framesElapsed: [1x1] scalar indicating the number of frames of the trajectory
 
 %% FUNCTION
+
+if nargin<4
+    smoothing = false;
+    frameRate = [];
+    if nargin<3
+        marker = 'notBodyWall';
+    end
+end
+
 % calculate head angles
 [angleArray,meanAngles] = makeAngleArray(xcoords,ycoords);
 headAngle = angleArray+meanAngles;
@@ -29,6 +39,8 @@ if smoothing
     for smoothFrameCtr = 1:totalSmoothedFrames
         headAngleDiff(smoothFrameCtr) = nanmean(angleDiff(smoothFrameCtr:smoothFrameCtr+smoothFactor));
     end
+    framesElapsed = length(angleDiff);
 else
     headAngleDiff = headAngle(2:end) - headAngle(1:end-1);
+    framesElapsed = length(headAngleDiff);
 end

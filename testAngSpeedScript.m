@@ -12,8 +12,9 @@ clear
 close all
 
 % set parameters
-smoothing = false;
-frameRate = 110;
+smoothing = true;
+frameRate = 9;
+marker = 'notBodyWall';
 
 % generate circles
 r=1; % radius
@@ -39,13 +40,12 @@ circle7=r*[cos(theta')+C(1) sin(theta')+C(2)]; % 360 points for the circle
 circle8 = circle7(1:2:end,:); %180 points for the circle
 circle9 = circle7(1:3:end,:); %120 points for the circle
 
-
 % generate a line
 line360 = [1:360; 1:360]'; %360 points for a straight line
 line180 = line360(1:2:end,:); %180 points for a straight line
 line120 = line360(1:3:end,:); %120 points for a straight line
 
-trajList = {circle1,circle2,circle3,circle4,circle5,circle6,circle7,circle8,circle9,line360,line180,line120};
+trajList = {circle1,circle2,circle3,circle4,circle5,circle6,circle7,circle8,circle9}; %,line360,line180,line120};
 angDiff = cell(length(trajList),1);
 angSpeed = NaN(length(trajList),1);
 
@@ -55,25 +55,10 @@ for trajCtr = 1:length(trajList)
     % get xy coordinates
     xcoords = traj(:,1)';
     ycoords = traj(:,2)';
-    % calculate angles
-    [angleArray,meanAngles] = makeAngleArray(xcoords,ycoords);
-    angles= angleArray+meanAngles;
-    % get angle difference over 1 second (over 1 second rather than between each frame to implement smoothing)
-    if ~smoothing
-        angleDiff = angles(2:end) - angles(1:end-1); % no smoothing
-        % calculate total smoothed head angle change per second
-        angSpeed(trajCtr) = abs(nansum(angleDiff)/length(angles)*frameRate);
-    else
-        smoothFactor = frameRate+1;
-        angleDiff = angles(2:end) - angles(1:end-1);
-        totalSmoothedFrames = length(angleDiff)-smoothFactor;
-        smoothedAngleDiff = NaN(totalSmoothedFrames,1);
-        for frameCtr = 1:totalSmoothedFrames
-            smoothedAngleDiff(frameCtr) = nanmean(angleDiff(frameCtr:frameCtr+smoothFactor));
-        end
-        % calculate total smoothed head angle change per second
-        angSpeed(trajCtr) = abs(nansum(smoothedAngleDiff)/totalSmoothedFrames*frameRate);
-    end
+    % calculate angle difference
+    [angleDiff,framesElapsed] = getHeadAngleDiff(xcoords,ycoords, marker, smoothing, frameRate);
+    % calculate total smoothed head angle change per second
+    angSpeed(trajCtr) = abs(nansum(angleDiff)/framesElapsed*frameRate);
 end
 
 % display values
