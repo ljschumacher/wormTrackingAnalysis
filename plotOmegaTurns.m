@@ -33,7 +33,6 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load data
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
-        phaseFrames = phaseFrames-1; % to correct for python indexing at 0
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
         %
@@ -60,16 +59,6 @@ for strainCtr = 1:length(strains)
             skelData = h5read(filename,'/skeleton');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-            if strcmp(phase, 'fullMovie')
-                firstFrame = 0;
-                lastFrame = phaseFrames(fileCtr,4);
-            elseif strcmp(phase,'joining')
-                firstFrame = phaseFrames(fileCtr,1);
-                lastFrame = phaseFrames(fileCtr,2);
-            elseif strcmp(phase,'sweeping')
-                firstFrame = phaseFrames(fileCtr,3);
-                lastFrame = phaseFrames(fileCtr,4);
-            end
             
             %% filter worms by various criteria
             % filter red by blob size and intensity
@@ -84,6 +73,7 @@ for strainCtr = 1:length(strains)
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                 &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             % apply phase restriction
+            [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter out unwanted data
