@@ -32,7 +32,7 @@ for strainCtr = 1:length(strains)
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         % load data
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
         %

@@ -58,11 +58,11 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load file list
         if dataset ==1 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'bodywall')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         else
             warning('specified dataset/marker combination does not exist')
         end
@@ -85,7 +85,6 @@ for strainCtr = 1:length(strains)
         
         %% go through individual movies
         for fileCtr = 1:numFiles
-            fileCtr
             %% load data
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
