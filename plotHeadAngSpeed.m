@@ -12,22 +12,22 @@ close all
 
 %% set parameters
 phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
-dataset = 1; % 1 or 2
-marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1'}; % {'npr1','N2'}
+dataset = 2; % 1 or 2
+marker = 'bodywall'; % 'pharynx' or 'bodywall'
+strains = {'npr1','N2'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
 smoothing = false;
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 minTrajDuration = 1; % duration (in seconds) of minimum traj length
-maxTrajDuration = 5; % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
+maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-saveResults = true;
+saveResults = false;
 visualiseSampleTraj = true; % true or false
 
 if visualiseSampleTraj == true
     numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
-    featureToSample = 'headAngNorm'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
+    featureToSample = 'headAngTotal'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
     if strcmp(featureToSample,'headAngTotal') | strcmp(featureToSample,'headAngSpeed')
         headAngRanges = [0, 0.25; pi/2-0.25, pi/2+0.25; pi-0.25, pi+0.25; 3/2*pi-0.25, 3/2*pi+0.25; 2*pi-0.25, 2*pi];
     elseif strcmp(featureToSample,'headAngNorm')
@@ -58,11 +58,11 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load file list
         if dataset ==1 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list_hamm.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'pharynx')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list_hamm.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2 & strcmp(marker,'bodywall')
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
         else
             warning('specified dataset/marker combination does not exist')
         end
@@ -247,9 +247,10 @@ for strainCtr = 1:length(strains)
         %% plot data, format, and export
         % save head angle values
         if saveResults
-            save(['figures/turns/results/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngTotal')
-            save(['figures/turns/results/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngNorm')
-            save(['figures/turns/results/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSpeed')
+            save(['figures/turns/results/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '0.mat'],'headAngTotal')
+            save(['figures/turns/results/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '0.mat'],'headAngNorm')
+            save(['figures/turns/results/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '0.mat'],'headAngSpeed')
+            save(['figures/turns/results/frameRunLengths_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '0.mat'],'frameRunLengths')
         end
         
         % plot total head angle change
@@ -268,7 +269,7 @@ for strainCtr = 1:length(strains)
         figurename = ['figures/turns/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
-            exportfig(headAngTotalFig,[figurename '.eps'],exportOptions)
+            exportfig(headAngTotalFig,[figurename '0.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
@@ -277,29 +278,35 @@ for strainCtr = 1:length(strains)
         headAngNormFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
             histogram(headAngNormPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+            Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngNormPool.(wormcats{wormcatCtr}),2)));
         end
         legend(Legend)
         title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
         xlabel('Normalised head angle change (radian/micron)')
         ylabel('Probability')
-        %xlim([0 12])
+        if strcmp(marker,'pharynx')
+            xlim([0 0.1])
+        elseif strcmp(marker,'bodywall')
+            xlim([0 0.3])
+        end
         %ylim([0 2])
         set(headAngNormFig,'PaperUnits','centimeters')
         figurename = ['figures/turns/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
-            exportfig(headAngNormFig,[figurename '.eps'],exportOptions)
+            exportfig(headAngNormFig,[figurename '0.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
         
-        % plot normalised head angle change
+        % plot head angle speed
         headAngSpeedFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
             histogram(headAngSpeedPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+            Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngSpeedPool.(wormcats{wormcatCtr}),2)));
         end
         legend(Legend)
-        title([strains{strainCtr} '\_' wormnum],'FontWeight','normal')
+        title([strain '\_' wormnum],'FontWeight','normal')
         xlabel('Head angular speed (radian/s)')
         ylabel('Probability')
         xlim([0 7])
@@ -308,7 +315,7 @@ for strainCtr = 1:length(strains)
         figurename = ['figures/turns/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
-            exportfig(headAngNormFig,[figurename '.eps'],exportOptions)
+            exportfig(headAngSpeedFig,[figurename '0.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
