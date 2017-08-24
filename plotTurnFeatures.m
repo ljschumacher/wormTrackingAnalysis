@@ -13,9 +13,10 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-phase = 'fullMovie'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
+phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 strains = {'npr1','N2'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40','HD'};
+postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the analysis
 
 intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize = 2.5e5;
@@ -30,18 +31,20 @@ for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
-        [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:B15','basic');
+        % load data
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
-        midbodyAngularSpeed_leaveCluster = cell(numFiles,1);
-        pathCurvature_leaveCluster = cell(numFiles,1);
-        midbodyAngularSpeed_loneWorms = cell(numFiles,1);
-        pathCurvature_loneWorms = cell(numFiles,1);
-        midbodyAngularSpeedFig = figure;
-        pathCurvatureFig = figure;
+        maxPathNum = 200; % assume maximum number of paths per file is as set. Script checks for this later and gives warning if this is not enough
+        headAngularSpeed_leaveCluster = cell(numFiles,1);
+        headAngularSpeed_loneWorms = cell(numFiles,1);
+        omegaTurnFreq_leaveCluster = cell(numFiles,1);
+        omegaTurnFreq_loneWorm = cell(numFiles,1);
+        headAngularSpeedFig = figure;
+        omegaTurnFreqFig = figure;
         leaveClusterWormCount = 0;
         loneWormCount = 0;
-       % go through individual movies
+        %% go through individual movies
         for fileCtr = 1:numFiles
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -49,11 +52,7 @@ for strainCtr = 1:length(strains)
             skelData = h5read(filename,'/skeleton');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-            if strcmp(phase, 'fullMovie')
-                lastFrame = double(max(trajData.frame_number));
-            elseif strcmp(phase,'stationary')
-                lastFrame = lastFrames(fileCtr);
-            end
+            %% filter worms by various criteria
             % filter red by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
                 intensityThreshold = 80;
@@ -65,87 +64,77 @@ for strainCtr = 1:length(strains)
             % filter red by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                 &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
-            % restrict movies to stationary phase
-            if strcmp(phase,'stationary')
-                firstFrame = double(round(max(trajData.frame_number)/10)); % define starting frame as 10% into the movie
-                phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
-                trajData.filtered(~phaseFrameLogInd) = false;
-            end
-            features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter out unwa
-            % restrict to worms that have just left a cluster
-            min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
-            num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
-            neighbr_dist = h5read(filename,'/neighbr_distances');
-            inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-            leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)); % find worm-frames where inCluster changes from true to false
-            leaveClusterFrameStart = find(leaveClusterLogInd); 
-            leaveClusterFrameEnd = leaveClusterFrameStart+5*frameRate; %retain data for 5 seconds after a worm exits cluster
-            leaveClusterFrameEnd = leaveClusterFrameEnd(leaveClusterFrameEnd<=numel(leaveClusterLogInd)); % exclude movie segments with frames beyond highest frame number
-            leaveClusterFrameStart = leaveClusterFrameStart(1:numel(leaveClusterFrameEnd));
-            for exitCtr = 1:numel(leaveClusterFrameStart)
-                leaveClusterLogInd(leaveClusterFrameStart(exitCtr):leaveClusterFrameEnd(exitCtr))=true;
-            end
-            %the following line should do the same as the loop above, if dimensions of
-            %terms added are compatible (eg row + column vector)
-             %leaveClusterLogInd(unique(leaveClusterFrameStart + 0:5*frameRate)) = true;
-            leaveClusterLogInd(inClusterLogInd)=false; % exclude when worms move back into a cluster 
-            loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-            leaveClusterLogInd(loneWormLogInd)=false; % exclude worms that have become lone worm
-            leaveClusterLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & leaveClusterLogInd)); % make clusterClusterLogInd the same size as features.filtered
-            % restrict to lone worms
+            % apply phase restriction
+            [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
+            phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
+            trajData.filtered(~phaseFrameLogInd) = false;
+            features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter features file
+            % find worms that have just left a cluster
+            [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterWorms(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
+            % turn the LogInd to the same size as features.filtered
+            leaveClusterLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & leaveClusterLogInd)); 
             loneWormLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & loneWormLogInd));
-            % write individual file results into cell array for pooling across movies later
-            midbodyAngularSpeed_leaveCluster{fileCtr} = abs(features.midbody_motion_direction(features.filtered&leaveClusterLogInd));
-            pathCurvature_leaveCluster{fileCtr} = abs(features.path_curvature(features.filtered&leaveClusterLogInd));
-            midbodyAngularSpeed_loneWorms{fileCtr} = abs(features.midbody_motion_direction(features.filtered&loneWormLogInd));
-            pathCurvature_loneWorms{fileCtr} = abs(features.path_curvature(features.filtered&loneWormLogInd));
+            %% calculate or extract desired feature values
+            % write additional turn features into cell array for pooling across movies later
+            headAngularSpeed_leaveCluster{fileCtr} = abs(features.head_motion_direction(features.filtered&leaveClusterLogInd));
+            headAngularSpeed_loneWorms{fileCtr} = abs(features.head_motion_direction(features.filtered&loneWormLogInd));
+            uniqueLeaveClusterWorm = unique(features.worm_index(features.filtered&leaveClusterLogInd));
+            uniqueLoneWorm = unique(features.worm_index(features.filtered&loneWormLogInd));
+            omegaTurnFreq_leaveCluster_thisFile = zeros(1,numel(uniqueLeaveClusterWorm));
+            for wormCtr = 1:numel(uniqueLeaveClusterWorm)
+                omegaTurnFreq_leaveCluster_thisFile(wormCtr)= h5read(strrep(filename,'skeletons','features'),['/features_events/worm_' num2str(uniqueLeaveClusterWorm(wormCtr)) '/omega_turns_frequency']);
+            end
+            omegaTurnFreq_leaveCluster{fileCtr} = omegaTurnFreq_leaveCluster_thisFile;
+            omegaTurnFreq_loneWorm_thisFile = zeros(1,numel(uniqueLoneWorm));
+            for wormCtr = 1:numel(uniqueLoneWorm)
+                omegaTurnFreq_loneWorm_thisFile(wormCtr)= h5read(strrep(filename,'skeletons','features'),['/features_events/worm_' num2str(uniqueLoneWorm(wormCtr)) '/omega_turns_frequency']);
+            end
+            omegaTurnFreq_loneWorm{fileCtr} = omegaTurnFreq_loneWorm_thisFile;
+            % add number of worms for total n number across movies
             leaveClusterWormCount = leaveClusterWormCount + numel(unique(features.worm_index(leaveClusterLogInd)));
             loneWormCount = loneWormCount + numel(unique(features.worm_index(loneWormLogInd)));
         end
-        % pool data from all files belonging to the same strain and worm density
-        midbodyAngularSpeed_leaveCluster = vertcat(midbodyAngularSpeed_leaveCluster{:});
-        pathCurvature_leaveCluster = vertcat(pathCurvature_leaveCluster{:});
-        midbodyAngularSpeed_loneWorms = vertcat(midbodyAngularSpeed_loneWorms{:});
-        pathCurvature_loneWorms = vertcat(pathCurvature_loneWorms{:});
-        %% plot data
-        % midbodyAngularSpeed figure
-        set(0,'CurrentFigure',midbodyAngularSpeedFig)
-        histogram(midbodyAngularSpeed_leaveCluster,'Normalization','pdf','DisplayStyle','stairs') 
+        %% pool data from all files belonging to the same strain and worm density
+        headAngularSpeed_leaveCluster = vertcat(headAngularSpeed_leaveCluster{:});
+        headAngularSpeed_loneWorms = vertcat(headAngularSpeed_loneWorms{:});
+        omegaTurnFreq_leaveCluster = horzcat(omegaTurnFreq_leaveCluster{:})';
+        omegaTurnFreq_loneWorm = horzcat(omegaTurnFreq_loneWorm{:})';
+        %% plot data, format, and export
+        %headAngularSpeed figure
+        set(0,'CurrentFigure',headAngularSpeedFig)
+        histogram(headAngularSpeed_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
         hold on
-        histogram(midbodyAngularSpeed_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
+        histogram(headAngularSpeed_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
         leaveClusterLegend = ['leave cluster, n = ' num2str(leaveClusterWormCount)];
         loneWormLegend = ['lone worm, n = ' num2str(loneWormCount)];
         legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_midbodyAngularSpeed'],'FontWeight','normal')
-        xlabel('midbody angular speed (degree/s)')
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_headAngularSpeed'],'FontWeight','normal')
+        xlabel('head angular speed (degree/s)')
         ylabel('probability')
         xlim([0 8])
         ylim([0 2])
-        set(midbodyAngularSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/midbodyAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
-        exportfig(midbodyAngularSpeedFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
+        set(headAngularSpeedFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/headAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        %exportfig(headAngularSpeedFig,[figurename '.eps'],exportOptions)
+        %system(['epstopdf ' figurename '.eps']);
+        %system(['rm ' figurename '.eps']);
         
-        % pathCurvature figure
-        set(0,'CurrentFigure',pathCurvatureFig)
-        histogram(pathCurvature_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
+        %omegaTurns figure
+        set(0,'CurrentFigure',omegaTurnFreqFig)
+        histogram(omegaTurnFreq_leaveCluster,'Normalization','pdf','DisplayStyle','stairs')
         hold on
-        histogram(pathCurvature_loneWorms,'Normalization','pdf','DisplayStyle','stairs')
+        histogram(omegaTurnFreq_loneWorm,'Normalization','pdf','DisplayStyle','stairs')
         legend(leaveClusterLegend, loneWormLegend)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_pathCurvature'],'FontWeight','normal')
-        xlabel('path curvature (radians/microns)')
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_omegaTurnFreq'],'FontWeight','normal')
+        xlabel('omega turn frequency (1/s)')
         ylabel('probability')
-        xlim([0 0.5])
-        ylim([0 60])
-        set(pathCurvatureFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/pathCurvature_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
-        exportfig(pathCurvatureFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        
-        % T-test for equal means without assuming equal variance
-        %[midbodyAngularSpeed_h, midbodyAngularSpeed_p] = ttest2(midbodyAngularSpeed_leaveCluster, midbodyAngularSpeed_loneWorms,'Vartype','unequal')
-        %[pathCurvature_h, pathCurvature_p] = ttest2(pathCurvature_leaveCluster, pathCurvature_loneWorms,'Vartype','unequal')
+        xlim([0 0.8])
+        ylim([0 18])
+        set(omegaTurnFreqFig,'PaperUnits','centimeters')
+        figurename = ['figures/turns/omegaTurnFreq_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        savefig(omegaTurnFreqFig,[figurename '.fig'])
+        exportfig(omegaTurnFreqFig,[figurename '.eps'],exportOptions)
+        %system(['epstopdf ' figurename '.eps']);
+        %system(['rm ' figurename '.eps']);
     end
 end

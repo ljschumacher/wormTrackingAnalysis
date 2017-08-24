@@ -1,5 +1,5 @@
 % plot percentage of worms in cluster, with the option to restrict movies
-% to the initial stationary phase
+% to the initial joining phase
 
 clear
 close all
@@ -13,13 +13,13 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 
 %% set parameters
-dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
-phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
+dataset = 1;  % '1' or '2'. To specify which dataset to run the script for.
+phase = 'sweeping'; % 'fullMovie', 'joining', or 'sweeping'.
 binSeconds = 30; % create bins measured in seconds - only applied to full movie analysis
 if dataset ==1
-    strains = {'npr1','N2'}; %{'npr1','HA','N2'}
+    strains = {'N2','npr1'}; %{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'npr1','N2'}; %{'npr1','N2'}
+    strains = {'N2','npr1'}; %{'npr1','N2'}
 end
 wormnums = {'40'};%{'40','HD'};
 if dataset == 1
@@ -40,10 +40,11 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load data
         if dataset == 1
-            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:B15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
         elseif dataset == 2
-            [lastFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:B15','basic');
+            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
         end
+        phaseFrames = phaseFrames-1; % to correct for python indexing at 0
         numFiles = length(filenames);
         inClusterProportionFig = figure; hold on
         loneWormProportionFig = figure; hold on
@@ -53,9 +54,14 @@ for strainCtr = 1:length(strains)
             blobFeats = h5read(filename,'/blob_features');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             if strcmp(phase, 'fullMovie')
-                lastFrame = double(max(trajData.frame_number));
-            elseif strcmp(phase,'stationary')
-                lastFrame = lastFrames(fileCtr);
+                firstFrame = 0;
+                lastFrame = phaseFrames(fileCtr,4);
+            elseif strcmp(phase,'joining')
+                firstFrame = phaseFrames(fileCtr,1);
+                lastFrame = phaseFrames(fileCtr,2);
+            elseif strcmp(phase,'sweeping')
+                firstFrame = phaseFrames(fileCtr,3);
+                lastFrame = phaseFrames(fileCtr,4);
             end
             % filter by blob size and intensity
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
@@ -68,33 +74,36 @@ for strainCtr = 1:length(strains)
             inClusterLogInd(~trajData.filtered)=false;
             loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
             loneWormLogInd(~trajData.filtered)=false;
-            % count in-cluster/lone worms in bins across the movie
-            totalObjInFrame = trajData.frame_number(trajData.filtered);
-            inClusterInFrame = trajData.frame_number(inClusterLogInd);
-            loneWormInFrame = trajData.frame_number(loneWormLogInd);
-            binEdges = linspace(1,lastFrame,lastFrame/frameRate/binSeconds);
-            if strcmp(phase,'stationary')  % restrict movies to stationary phase
-                firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for stationary phase restriction
-                phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
-                totalObjInFrame(~phaseFrameLogInd) = false;
-                inClusterInFrame(~phaseFrameLogInd) = false;
-                loneWormInFrame(~phaseFrameLogInd) = false;
-                binEdges = linspace(1,lastFrame,120); % create 120 bins over the stationary phase
+            % filter by worm category
+            totalObjInFrame = trajData.frame_number; totalObjInFrame(~trajData.filtered)=NaN;
+            inClusterInFrame = trajData.frame_number; inClusterInFrame(~inClusterLogInd)=NaN;
+            loneWormInFrame = trajData.frame_number; loneWormInFrame(~loneWormLogInd)=NaN;
+            % apply phase restriction
+            % firstFrame = double(round(max(trajData.frame_number)/10)); % cut out the first 10 percent of the movie for joining phase restriction
+            phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
+            totalObjInFrame(~phaseFrameLogInd) = false;
+            inClusterInFrame(~phaseFrameLogInd) = false;
+            loneWormInFrame(~phaseFrameLogInd) = false;
+            % binning and extracting counts for each bin
+            if strcmp(phase,'fullMovie')
+                numBins = (lastFrame-firstFrame)/frameRate/binSeconds;
+            else
+                numBins = 120; % create 120 bins over restricted phases
             end
+            binEdges = linspace(firstFrame,lastFrame,numBins);
             [totalObjPerSecond,~]=histcounts(totalObjInFrame,binEdges);
             [inClusterPerSecond,~]=histcounts(inClusterInFrame,binEdges);
             [loneWormPerSecond,~]=histcounts(loneWormInFrame,binEdges);
             % plot in-cluster/lone worms as percentage of total worms
             % across the movie
-            percentInCluster = inClusterPerSecond./totalObjPerSecond*100;
-            percentLoneWorm = loneWormPerSecond./totalObjPerSecond*100;
+            percentInCluster = smooth(inClusterPerSecond./totalObjPerSecond*100,'moving');
+            percentLoneWorm = smooth(loneWormPerSecond./totalObjPerSecond*100,'moving');
             set(0,'CurrentFigure',inClusterProportionFig)
             plot(percentInCluster)
             set(0,'CurrentFigure',loneWormProportionFig)
             plot(percentLoneWorm)
         end
-        % format plot and export
-        %
+        %format plot and export
         set(0,'CurrentFigure',inClusterProportionFig)
         title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
         xlabel('time')
