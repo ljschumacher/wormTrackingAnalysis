@@ -33,7 +33,6 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load data
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list_hamm.xlsx'],1,'A1:E15','basic');
-        phaseFrames = phaseFrames-1; % to correct for python indexing at 0
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
         maxPathNum = 200; % assume maximum number of paths per file is as set. Script checks for this later and gives warning if this is not enough
@@ -53,16 +52,6 @@ for strainCtr = 1:length(strains)
             skelData = h5read(filename,'/skeleton');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','features'),'/features_timeseries');
-            if strcmp(phase, 'fullMovie')
-                firstFrame = 0;
-                lastFrame = phaseFrames(fileCtr,4);
-            elseif strcmp(phase,'joining')
-                firstFrame = phaseFrames(fileCtr,1);
-                lastFrame = phaseFrames(fileCtr,2);
-            elseif strcmp(phase,'sweeping')
-                firstFrame = phaseFrames(fileCtr,3);
-                lastFrame = phaseFrames(fileCtr,4);
-            end
             %% filter worms by various criteria
             % filter red by blob size and intensity
             if contains(filename,'55')||contains(filename,'54')
@@ -76,29 +65,14 @@ for strainCtr = 1:length(strains)
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                 &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
             % apply phase restriction
+            [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
-            features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter out unwa
+            features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter features file
             % find worms that have just left a cluster
-            min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
-            num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
-            neighbr_dist = h5read(filename,'/neighbr_distances');
-            inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-            leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end)); % find worm-frames where inCluster changes from true to false
-            leaveClusterFrameStart = find(leaveClusterLogInd);
-            leaveClusterFrameEnd = leaveClusterFrameStart+postExitDuration*frameRate; %retain data for thespecified duration after a worm exits cluster
-            leaveClusterFrameEnd = leaveClusterFrameEnd(leaveClusterFrameEnd<=numel(leaveClusterLogInd)); % exclude movie segments with frames beyond highest frame number
-            leaveClusterFrameStart = leaveClusterFrameStart(1:numel(leaveClusterFrameEnd));
-            for exitCtr = 1:numel(leaveClusterFrameStart)
-                leaveClusterLogInd(leaveClusterFrameStart(exitCtr):leaveClusterFrameEnd(exitCtr))=true;
-            end
-            %the following line should do the same as the loop above, if dimensions of terms added are compatible (eg row + column vector)
-            %leaveClusterLogInd(unique(leaveClusterFrameStart + 0:5*frameRate)) = true;
-            leaveClusterLogInd(inClusterLogInd)=false; % exclude when worms move back into a cluster
-            loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
-            leaveClusterLogInd(loneWormLogInd)=false; % exclude worms that have become lone worm
-            leaveClusterLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & leaveClusterLogInd)); % make clusterClusterLogInd the same size as features.filtered
-            % find lone worms
+            [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterWorms(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
+            % turn the LogInd to the same size as features.filtered
+            leaveClusterLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & leaveClusterLogInd)); 
             loneWormLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & loneWormLogInd));
             %% calculate or extract desired feature values
             % write additional turn features into cell array for pooling across movies later
