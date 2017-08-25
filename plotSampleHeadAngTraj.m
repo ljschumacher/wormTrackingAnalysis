@@ -84,8 +84,8 @@ for rangeCtr = 1:size(headAngRanges,1)
         if saveResults
             load('exportOptions.mat')
             exportfig(samplePathFig,[figurename '.eps'],exportOptions)
-            system(['epstopdf ' figurename '.eps']);
-            system(['rm ' figurename '.eps']);
+%             system(['epstopdf ' figurename '.eps']);
+%             system(['rm ' figurename '.eps']);
         end
     end
 end
