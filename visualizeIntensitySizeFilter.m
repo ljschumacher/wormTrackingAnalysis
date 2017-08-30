@@ -1,4 +1,4 @@
-function [ ] =  plotIntensitySizeFilter(blobFeats,pixelsize,intensityThreshold,maxBlobSize,figurename)
+function [ ] =  visualizeIntensitySizeFilter(blobFeats,pixelsize,intensityThreshold,maxBlobSize,figurename)
 % makes a diagnostic plot of the joint distribution of blob intensity and
 % size for purposes of filtering tracked objects
 exportOptions = struct('Format','eps2',...

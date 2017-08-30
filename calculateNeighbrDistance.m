@@ -1,5 +1,5 @@
 function [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] = ...
-    calculateClusterStatus(trajData_a,trajData_b,pixelsize,inClusterRadius)
+    calculateNeighbrDistance(trajData_a,trajData_b,pixelsize,inClusterRadius)
 % loops through all frames and calculates number of close neighbrs, and
 % minimum distance to a neighbr for determining in cluster / lone status
 numFrames = numel(unique(trajData_a.frame_number));

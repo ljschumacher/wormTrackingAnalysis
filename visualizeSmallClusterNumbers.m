@@ -8,9 +8,9 @@ clear
 %% set parameters
 strains = {'npr1','N2'};
 wormnums = {'40','HD'};
-minIntensities_r = [40, 80]; % script takes 40 for all movies but recordings 54 and 55, which takes 80 because the dynamic ranges were different for those movies
-maxBlobSize_r = 250000;
+maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
+maxSkelLength_r = 1500;
 pixelsize = 100/19.5; % 100 microns is 19.5 pixels
 loneClusterRadius = 2000;
 inClusterRadius = 500;
@@ -31,17 +31,17 @@ for numCtr = 1:length(wormnums)
             skelData_r = h5read(filename_r,'/skeleton');
             numCloseNeighbr_r = h5read(filename_r,'/num_close_neighbrs');
             neighbrDist_r = h5read(filename_r,'/neighbr_distances');
-            % filter worms
-            if isempty(find(filename_r == 54)) || isempty(find(filename_r == 55)) == (3>2)
-                minIntensity = minIntensities_r(1);
+            % filter red by blob size and intensity
+            if contains(filename,'55')||contains(filename,'54')
+                intensityThreshold = 80;
             else
-                minIntensity = minIntensities_r(2);
+                intensityThreshold = 40;
             end
-            skelLengths = sum(sqrt(sum((diff(skelData_r,1,2)*pixelsize).^2)));
-            trajData_r.filtered = (blobFeats_r.intensity_mean >= minIntensity)&...
-                (blobFeats_r.area*pixelsize^2 <= maxBlobSize_r)&...
-                logical(trajData_r.is_good_skel)&...
-                logical(skelLengths(:)>minSkelLength_r);
+            trajData.filtered = filterIntensityAndSize(blobFeats_r,pixelsize,...
+                intensityThreshold,maxBlobSize_r);
+            % filter red by skeleton length
+            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
+                    &filterSkelLength(skelData_r,pixelsize,minSkelLength_r,maxSkelLength_r);
             % filter for small clusters and write logical indices into D
             numNeighbrs = length(minNumNeighbrs);
             D = zeros(length(trajData_r.filtered),numNeighbrs);

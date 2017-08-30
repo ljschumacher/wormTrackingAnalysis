@@ -51,7 +51,7 @@ for strainCtr = 1:length(strains)
             catch
                 disp(['Calculating cluster status from ' filename_r ])
                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
-                    = calculateClusterStatus(trajData_r,trajData_g,pixelsize,clusterCutOff);
+                    = calculateNeighbrDistance(trajData_r,trajData_g,pixelsize,clusterCutOff);
                 % check lengths
                 assert(size(neighbr_distances,1)==length(trajData_r.frame_number))
                 assert(size(neighbr_distances,2)==10)
@@ -78,7 +78,7 @@ for strainCtr = 1:length(strains)
 %             catch
 %                 disp(['Calculating cluster status from ' filename_g ])
 %                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
-%                     = calculateClusterStatus(trajData_g,trajData_r,pixelsize,clusterCutOff);
+%                     = calculateNeighbrDistance(trajData_g,trajData_r,pixelsize,clusterCutOff);
 %                 % check lengths
 %                 assert(size(neighbr_distances,1)==length(trajData_g.frame_number))
 %                 assert(size(neighbr_distances,2)==10)
@@ -127,7 +127,7 @@ for strainCtr = 1:length(strains)
             catch
                 disp(['Calculating cluster status from ' filename_g ])
                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
-                    = calculateClusterStatus(trajData_g,[],pixelsize,clusterCutOff);
+                    = calculateNeighbrDistance(trajData_g,[],pixelsize,clusterCutOff);
                 % check lengths
                 assert(size(neighbr_distances,1)==length(trajData_g.frame_number))
                 assert(size(neighbr_distances,2)==10)

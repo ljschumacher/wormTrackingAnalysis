@@ -35,7 +35,7 @@ for wormnum = wormnums
                 trajData_g = h5read(filename_g,'/trajectories_data');
                 blobFeats_g = h5read(filename_g,'/blob_features');
                 %% filter data
-                % filter by blob size and intensity
+                % filter red by blob size and intensity
                 if contains(filename,'55')||contains(filename,'54')
                     intensityThreshold = 80;
                 else
@@ -43,10 +43,10 @@ for wormnum = wormnums
                 end
                  trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                     intensityThreshold,maxBlobSize);
-                % filter by skeleton length
+                % filter red by skeleton length
                 trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                     &filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
-                % filter green channel by blob size and intensity
+                % filter green by blob size and intensity
                 trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
                     intensityThresholds_g(wormnum{1}),maxBlobSize_g);
                 % filter for in-cluster
