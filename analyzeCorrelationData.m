@@ -25,15 +25,15 @@ bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParalle
 
 %% set parameters
 dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
-phase = 'stationary'; % 'fullMovie' or 'stationary'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
+phase = 'sweeping'; % 'fullMovie' or 'joining' or 'sweeping'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 plotDiagnostics = false; % true or false
 
 if dataset ==1
-    strains = {'npr1','N2'}%{'npr1','HA','N2'}
+    strains = {'npr1','N2'};%{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'npr1','N2'}
+    strains = {'npr1','N2'};
 end
-wormnums = {'40'};  %{'40','HD'};
+wormnums = {'40'}%,'HD'};
 nStrains = length(strains);
 plotColors = lines(nStrains);
 if dataset == 1
@@ -44,7 +44,7 @@ end
 maxBlobSize = 1e4;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
-distBinWidth = 35; % in units of micrometers
+distBinWidth = 50; % in units of micrometers
 maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:maxDist;
@@ -88,7 +88,6 @@ for wormnum = wormnums
             [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             numFrames = round((lastFrame-firstFrame)/frameRate/3);
             framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
-            end
             %% filter worms
             if plotDiagnostics
                 visualizeIntensitySizeFilter(blobFeats,pixelsize,...
@@ -102,7 +101,6 @@ for wormnum = wormnums
             % apply phase restriction
             phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
             trajData.filtered(~phaseFrameLogInd)=false;
-            end
             %% calculate stats
             if wormnum{1} == '40'
                 OverallArea = pi*(8300/2)^2;

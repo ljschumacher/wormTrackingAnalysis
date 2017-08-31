@@ -53,8 +53,12 @@ revStartInd = revStartInd(keepLogInd);
 untrackedRevEnds = untrackedRevEnds(keepLogInd);
 % calculate duration and interrevtime
 revDuration = revEndIndMatched - revStartInd;
+try
 interRevTime = [diff(revStartInd); ...
     find(worm_index==worm_index(revStartInd(end)),1,'last') - revStartInd(end)]; % the last reversal has a censored interrev time until the end of tracking
+catch
+    1;
+end
 incompleteInterRev = false(size(interRevTime));
 incompleteInterRev(end) = true;
 % censor those inter-reversal times where the worm_index changes

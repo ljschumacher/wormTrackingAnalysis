@@ -2,15 +2,19 @@ function [ timeToRev, timeToRev_censored ] = ...
                 filterReversalsByEvent(revStartInd, eventLogInd, worm_index, maxPostEventTime)
 % filters reversals occurring after specified events, and gives back time
 % to reversal after the event
-eventInd = find(eventLogInd);
-nEvents = numel(eventInd);
+% eventLogInd specifies whether event is ongoing
+
+%find start of events
+eventStartInd = find([eventLogInd(1); ~eventLogInd(1:end-1)&eventLogInd(2:end)]);
+nEvents = numel(eventStartInd);
 timeToRev = NaN(nEvents,1);
 timeToRev_censored = false(nEvents,1);
 % find the next reversal occuring after each event
 for eventCtr = 1:nEvents
-    thisEventInd = eventInd(eventCtr);
+    thisEventInd = eventStartInd(eventCtr);
     nextRevInd = revStartInd(find(revStartInd>=thisEventInd,1,'first'));
     % check if this reversal is still from the same worm
+    try
     if worm_index(thisEventInd)==worm_index(nextRevInd)
         timeToRev(eventCtr) = nextRevInd - thisEventInd;
     else % this means the track identity was lost before a reversal occurred
@@ -24,6 +28,9 @@ for eventCtr = 1:nEvents
     if timeToRev(eventCtr)>maxPostEventTime
         timeToRev(eventCtr) = maxPostEventTime;
         timeToRev_censored(eventCtr) = true;
+    end
+    catch
+        1;
     end
 end
 assert(~any(timeToRev<0),'Error: negative times until reversals after event')

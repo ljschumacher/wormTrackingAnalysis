@@ -1,4 +1,5 @@
-function [leaveClusterLogInd, loneWormLogInd, inClusterLogInd,smallClusterLogInd] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
+function [leaveClusterLogInd, loneWormLogInd, inClusterLogInd,smallClusterLogInd] = ...
+    findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
 
 % function takes the path of the skeleton file and various worm
 % classification variables and returns logical indices for leaveCluster and
@@ -48,16 +49,11 @@ else
         % check for the number of frames that the same worm has beyond the point of cluster exit
         wormPathLength = nnz(trajData.worm_index_joined(thisExitIdx:end)==wormIndex);
         if wormPathLength>=postExitDuration*frameRate
-            leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate;
+            leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate-1;
         else
-            leaveClusterEnd = leaveClusterStart+wormPathLength;
-        end
+            leaveClusterEnd = leaveClusterStart+wormPathLength-1;
+        end % this also excludes movie segments with ending frames beyond highest frame number
     end
-    % exclude movie segments with ending frames beyond highest frame number
-    keepLogInd = leaveClusterEnd<=numel(leaveClusterLogInd);
-    leaveClusterEnd = leaveClusterEnd(keepLogInd);
-    % trim starting frame list accordingly
-    leaveClusterStart = leaveClusterStart(keepLogInd);
     % go through each starting frame to generate logical index for leave cluster worms
     for exitCtr = 1:numel(leaveClusterStart)
         leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
