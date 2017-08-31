@@ -116,7 +116,7 @@ for strainCtr = 1:length(strains)
                 interRevTime, revDuration, incompleteInterRev);
             % filter reversals after leaving cluster
             [ timeToRevLeaveCluster, interrevT_leaveCluster_censored{fileCtr} ] = ...
-                filterReversalsByEvent(revStartInd, leaveClusterLogInd, trajData_g.worm_index_joined,maxClusterLeaveTime*frameRate);
+                filterReversalsByEvent(revStartInd, leaveClusterLogInd, trajData_g.worm_index_joined,postExitDuration*frameRate);
             % subtracting revDuration will more accurately reflect the
             % interreversal time
             interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
