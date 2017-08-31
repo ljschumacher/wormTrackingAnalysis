@@ -6,15 +6,17 @@
 % Script compares leaveCluster and loneWorm, and can be modified to include further worm categories.
 % Script contains an option to save xy coordinates for all trajectories that pass various filters.
 % Script also contains an option to visualise sample trajectories that give rise
-% to values that fall within pre-specified value ranges.
+% to values that fall within pre-specified value ranges. Enabling this
+% will allow trajectory xy coordinates to be saved, so they can be
+% subsequently visualized by running visualiseSampleHeadAngTraj.m
 
 clear
 close all
 
 %% set parameters
 phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
-dataset = 1; % 1 or 2
-marker = 'pharynx'; % 'pharynx' or 'bodywall'
+dataset = 2; % 1 or 2
+marker = 'bodywall'; % 'pharynx' or 'bodywall'
 strains = {'npr1','N2'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
@@ -28,7 +30,6 @@ saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
 
 if visualiseSampleTraj == true
-    numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
     featureToSample = 'headAngNorm'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
     if strcmp(featureToSample,'headAngTotal') | strcmp(featureToSample,'headAngSpeed')
         headAngRanges = [0, 0.25; pi/2-0.25, pi/2+0.25; pi-0.25, pi+0.25; 3/2*pi-0.25, 3/2*pi+0.25; 2*pi-0.25, 2*pi];
@@ -371,8 +372,6 @@ for strainCtr = 1:length(strains)
             if saveResults
                 save(['figures/turns/results/headAngSampleTraj_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
             end
-            % plot trajectories
-            visualizeSampleHeadAngTraj(headAngSampleTraj,headAngRanges,featureToSample,numSampleTraj,wormcats,strain,wormnum,marker,phase, dataset, saveResults)
         end
     end
 end

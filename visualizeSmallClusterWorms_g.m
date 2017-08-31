@@ -11,8 +11,8 @@ clear
 
 % specify data sets
 dataset = 2; % specify which dataset to run the script for. Enter either 1 or 2
-strains = {'npr1','N2'};
-wormnums = {'40','HD'};
+strains = {'N2'};
+wormnums = {'HD'};
 numFramesSampled = 10; % how many frames to randomly sample per file
 
 % set parameter for plotting trajectory/pharynx direction
@@ -49,6 +49,8 @@ for numCtr = 1:length(wormnums)
             if dataset ==1
                 filename = filenames{fileCtr};
                 trajData = h5read(filename,'/trajectories_data');
+
+                
                 skelData = h5read(filename,'/skeleton');
                 blobFeats = h5read(filename,'/blob_features');
                 numCloseNeighbr = h5read(filename,'/num_close_neighbrs');
