@@ -2,10 +2,8 @@
 % on plate
 
 % issues / todo:
-% - censoring reversals when a cluster status changes drastically reduces
-% the length of observed interrev times
-% - one could further exclude times when worm is lone or in cluster from
-% the leaving cluster reversal analysis
+% - for the kaplan-meier survival curves, we should not plot the inter rev
+% time for lone worms, but the time from a random starting point until rev
 
 clear
 close all
@@ -20,7 +18,7 @@ exportOptions = struct('Format','eps2',...
 
 %% set parameters
 dataset = 2; % '1' or '2'. To specify which dataset to run the script for.
-phase = 'fullMovie'; % 'fullMovie','joining', or 'sweeping'.
+phase = 'joining'; % 'fullMovie','joining', or 'sweeping'.
 if dataset ==1
     strains = {'npr1','N2'}; %{'npr1','HA','N2'}
 elseif dataset ==2
@@ -36,7 +34,7 @@ maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;% in microns
 minPathLength = 50; % minimum path length of reversals to be included
 inClusterNeighbourNum = 3;
-postExitDuration = 5; % set the duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
+postExitDuration = 10; % set the duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 plotColors = lines(length(wormnums));
 
@@ -48,9 +46,9 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         %% load data
         if dataset ==1
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
         elseif dataset ==2
-            [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+            [phaseFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
         end
         numFiles = length(filenames_g);
         reversalfreq_lone = NaN(numFiles,1);
@@ -89,47 +87,49 @@ for strainCtr = 1:length(strains)
                 leaveClusterLogInd = false(size(trajData_g.frame_number));
             end
             %% load signed speed from blobFeats
-            % sign speed based on relative orientation of velocity to midbody
-            speedSigned = blobFeats_g.signed_speed*pixelsize*frameRate;
-            % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
-            speedSigned(wormChangeIndcs)=NaN;
-            % ignore frames with bad skeletonization
-            speedSigned(~trajData_g.has_skeleton)=NaN;
-            % ignore skeletons otherwise filtered out
-            speedSigned(~trajData_g.filtered) = NaN;
-            % ignore frames outside of specified phase
-            if ~strcmp(phase,'fullMovie')
-                speedSigned(~phaseFrameLogInd) =NaN;
+            if any(phaseFrameLogInd)
+                % sign speed based on relative orientation of velocity to midbody
+                speedSigned = blobFeats_g.signed_speed*pixelsize*frameRate;
+                % ignore first and last frames of each worm's track
+                wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
+                speedSigned(wormChangeIndcs)=NaN;
+                % ignore frames with bad skeletonization
+                speedSigned(~trajData_g.has_skeleton)=NaN;
+                % ignore skeletons otherwise filtered out
+                speedSigned(~trajData_g.filtered) = NaN;
+                % ignore frames outside of specified phase
+                if ~strcmp(phase,'fullMovie')
+                    speedSigned(~phaseFrameLogInd) =NaN;
+                end
+                % smooth speed to denoise
+                speedSigned = smooth(speedSigned,3,'moving');
+                % find reversals in signed speed
+                [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
+                    findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
+                % if we subtract rev duration from interrevtime (below), we
+                % need to set all reversals with untracked ends as incomplete interrevs
+                incompleteInterRev = incompleteInterRev|untrackedRevEnds;
+                % detect cluster status of reversals and associated features
+                [ loneReversalsLogInd, interRevTimesLone, revDurationLone, interrevT_lone_censored{fileCtr} ] = ...
+                    filterReversalsByClusterStatus(revStartInd, loneWormLogInd,...
+                    interRevTime, revDuration, incompleteInterRev);
+                % filter reversals after leaving cluster
+                [ timeToRevLeaveCluster, interrevT_leaveCluster_censored{fileCtr} ] = ...
+                    filterReversalsByEvent(revStartInd, leaveClusterLogInd, trajData_g.worm_index_joined,postExitDuration*frameRate);
+                % subtracting revDuration will more accurately reflect the
+                % interreversal time
+                interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
+                % ignore negative interRevTimes, as this (most likely) means
+                % that the track was lost during a reversal
+                interrevT_lone{fileCtr}(interrevT_lone{fileCtr}<0) = NaN;
+                if ~strcmp(wormnum,'1W')
+                    interrevT_leaveCluster{fileCtr} = timeToRevLeaveCluster/frameRate;
+                end
+                % counting reversal events
+                reversalfreq_lone(fileCtr) = countReversalFrequency(loneReversalsLogInd,...
+                    frameRate, speedSigned, loneWormLogInd );
+                reversalfreq_leaveCluster(fileCtr) = nnz(interrevT_leaveCluster_censored{fileCtr})/sum(interrevT_leaveCluster{fileCtr});
             end
-            % smooth speed to denoise
-            speedSigned = smooth(speedSigned,3,'moving');
-            % find reversals in signed speed
-            [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
-                findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
-            % if we subtract rev duration from interrevtime (below), we
-            % need to set all reversals with untracked ends as incomplete interrevs
-            incompleteInterRev = incompleteInterRev|untrackedRevEnds;
-            % detect cluster status of reversals and associated features
-            [ loneReversalsLogInd, interRevTimesLone, revDurationLone, interrevT_lone_censored{fileCtr} ] = ...
-                filterReversalsByClusterStatus(revStartInd, loneWormLogInd,...
-                interRevTime, revDuration, incompleteInterRev);
-            % filter reversals after leaving cluster
-            [ timeToRevLeaveCluster, interrevT_leaveCluster_censored{fileCtr} ] = ...
-                filterReversalsByEvent(revStartInd, leaveClusterLogInd, trajData_g.worm_index_joined,postExitDuration*frameRate);
-            % subtracting revDuration will more accurately reflect the
-            % interreversal time
-            interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
-            % ignore negative interRevTimes, as this (most likely) means
-            % that the track was lost during a reversal
-            interrevT_lone{fileCtr}(interrevT_lone{fileCtr}<0) = NaN;
-            if ~strcmp(wormnum,'1W')
-                interrevT_leaveCluster{fileCtr} = timeToRevLeaveCluster/frameRate;
-            end
-            % counting reversal events
-            reversalfreq_lone(fileCtr) = countReversalFrequency(loneReversalsLogInd,...
-                frameRate, speedSigned, loneWormLogInd );
-            reversalfreq_leaveCluster(fileCtr) = nnz(interrevT_leaveCluster_censored{fileCtr})/sum(interrevT_leaveCluster{fileCtr});
         end
         %pool data from all files
         interrevT_lone = vertcat(interrevT_lone{:});
@@ -176,8 +176,8 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.XLabel.String = 'worm number';
     revFreqFig.Children.YLabel.String = 'reversals (1/s)';
     revFreqFig.Children.YLim(1) = 0;
-    revFreqFig.Children.YLim(2) = 0.8;
-    figurename = ['figures/reversals/phaseSpecific/reversalfrequency_pharynx_' strains{strainCtr} '_' phase '_data' num2str(dataset) '_censored'];
+    revFreqFig.Children.YLim(2) = 1;
+    figurename = ['figures/reversals/phaseSpecific/reversalfrequency_pharynx_' strains{strainCtr} '_' phase '_data' num2str(dataset)];
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
