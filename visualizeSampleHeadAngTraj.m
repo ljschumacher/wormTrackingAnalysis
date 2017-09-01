@@ -6,12 +6,12 @@ clear
 %% set parameters
 featureToSample = 'headAngNorm'; %'headAngTotal','headAngNorm', or 'headAngSpeed'
 numSampleTraj = 200;
-saveResults = true;  %true or false.
+saveResults = false;  %true or false.
 
-dataset = 1; %1 or 2.
-strains = {'N2','npr1'}; % 'N2' or 'npr1'
-wormnum = '40';
+dataset = 2; %1 or 2.
 marker = 'pharynx'; %'pharynx' or 'bodywall'.
+strains = {'npr1'}; % 'N2' or 'npr1'
+wormnum = '40';
 phase = 'joining'; %'fullMovie','joining', or 'sweeping'.
 wormcats = {'leaveCluster','loneWorm'};
 
@@ -34,7 +34,7 @@ end
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     % load file
-    load(['figures/turns/results/headAngSampleTraj_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
+    load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
     for rangeCtr = 1:size(headAngRanges,1)
         for wormcatCtr = 1:length(wormcats)
             samplePathFig = figure; hold on
@@ -73,8 +73,8 @@ for strainCtr = 1:length(strains)
                     sprintf('%0.2f',headAngRanges(rangeCtr,1)) '-' sprintf('%0.2f',headAngRanges(rangeCtr,2)) sampleTrajUnit],'FontWeight','normal')
             end
             set(samplePathFig,'PaperUnits','centimeters')
-            xlim([-1e3 1e3])
-            ylim([-1e3 1e3])
+            xlim([-1.5e3 1.5e3])
+            ylim([-1.5e3 1.5e3])
             xlabel('microns');
             ylabel('microns');
             ax = gca;
@@ -84,8 +84,8 @@ for strainCtr = 1:length(strains)
             if saveResults
                 load('exportOptions.mat')
                 exportfig(samplePathFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+%                 system(['epstopdf ' figurename '.eps']);
+%                 system(['rm ' figurename '.eps']);
             end
         end
     end
