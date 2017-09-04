@@ -1,5 +1,5 @@
-function [leaveClusterLogInd, loneWormLogInd, inClusterLogInd,smallClusterLogInd] = ...
-    findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration)
+function [leaveClusterLogInd, loneWormLogInd, inClusterLogInd,smallClusterLogInd,retention] = ...
+    findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration,trajDataW,trajDataF)
 
 % function takes the path of the skeleton file and various worm
 % classification variables and returns logical indices for leaveCluster and
@@ -56,8 +56,20 @@ else
         % go through each starting frame to generate logical index for leave cluster worms
         leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
     end
+    initialCount = nnz(leaveClusterLogInd); %
+    initialWormCount = numel(unique(trajDataW(trajDataF & leaveClusterLogInd))); %
     % exclude when worms move back into a cluster
     leaveClusterLogInd(inClusterLogInd)=false;
+    numReEnter = initialCount-nnz(leaveClusterLogInd); %
+    percentReEnter = numReEnter/initialCount*100; %
+    reEnterWormCount = initialWormCount - numel(unique(trajDataW(trajDataF & leaveClusterLogInd))); %
+    reEnterWormPercent = reEnterWormCount/initialWormCount * 100; %
     % exclude worms that have become lone worm
     leaveClusterLogInd(loneWormLogInd)=false;
+    numLeave = initialCount-numReEnter-nnz(leaveClusterLogInd); %
+    percentLeave = numLeave/initialCount*100; %
+    leaveWormCount = initialWormCount - reEnterWormCount - numel(unique(trajDataW(trajDataF & leaveClusterLogInd))); %
+    leaveWormPercent = leaveWormCount/initialWormCount * 100; %
+    % create output
+    retention = [percentReEnter,percentLeave,reEnterWormPercent,leaveWormPercent]; %
 end
