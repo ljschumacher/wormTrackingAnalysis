@@ -6,7 +6,7 @@ clear
 %% set parameters
 featureToSample = 'headAngNorm'; %'headAngTotal','headAngNorm', or 'headAngSpeed'
 numSampleTraj = 200;
-saveResults = true;  %true or false.
+saveResults = false;  %true or false.
 
 dataset = 2; %1 or 2.
 marker = 'pharynx'; %'pharynx' or 'bodywall'.
