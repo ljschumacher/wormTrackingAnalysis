@@ -52,7 +52,7 @@ for sim = 1:length(sim_file_names)
 end
 
 %% Building the blind references
-% Then consider the blind simulation data, which will become the reference 
+% Then consider the blind simulation data, which will become the reference
 % for computing distances to simulations.
 
 % Supply the list files, which contain the directory locations of the
@@ -60,8 +60,8 @@ end
 
 
 % Firstly, read in the list of blind simulation files
-in_list = {'these_blind_trials'}
 blind_file_list = 'blind_trials.txt';
+blind_file_list = 'full_blind_list';
 
 blind_sim_file_names = {};
 my_list_file = fopen(blind_file_list);
@@ -110,13 +110,13 @@ end
 %% Then, compute the appropriate distances between each of the
 %  simulations and the experimental references
 exp_ss_array = blind_sim_ss_array;
-expsim_dists = zeros(length(in_list),length(sim_file_names), num_statistics);
+expsim_dists = zeros(length(blind_sim_file_names),length(sim_file_names), num_statistics);
 
-for i = 1:length(in_list)
+for i = 1:length(blind_sim_file_names)
     for j = 1:length(sim_file_names)
         
         if i ==1 & j ==1
-            running_dists = zeros(1,size(exp_ss_array,2)-1,length(in_list));
+            running_dists = zeros(1,size(exp_ss_array,2)-1,length(blind_sim_file_names));
         end
         
         exp_data = exp_ss_array(i,2:end);
@@ -136,12 +136,12 @@ for i = 1:length(in_list)
     end
 end
 
-%% Optional: divide the distances from each ss by the mean for that strain
-for strain = 1:length(in_list)
+% Optional: divide the distances from each ss by the mean for that strain
+for strain = 1:length(blind_sim_file_names)
     for ss = 2:num_statistics
         strain_dist_means(strain, ss-1) = mean(expsim_dists(strain,:,ss));
         expsim_dists(strain,:,ss) = expsim_dists(strain,:,ss)...
-            ./mean(expsim_dists(strain,:,ss));  
+            ./mean(expsim_dists(strain,:,ss));
     end
     
     for sim = 1:length(sim_file_names)
@@ -149,151 +149,141 @@ for strain = 1:length(in_list)
     end
 end
 
-%% OR: divide the distances from each ss by the mean across all strains
-    for ss = 2:num_statistics
-        expsim_dists(:,:,ss) = expsim_dists(:,:,ss)...
-            ./mean(expsim_dists(:,:,ss));  
-    end
+
+% %% Consider the distance composition
+%
+% strain_dist_means = zeros(length(blind_sim_file_names),num_statistics-1);
+% for strain = 1:length(blind_sim_file_names)
+%     for ss = 2:num_statistics
+%         sim_strain_vars(strain, ss-1) = var(expsim_dists(strain,:,ss));
+%     end
+% end
+%
+% figure;
+% if sum(sim_strain_vars)<=1
+%     sim_strain_vars(:) = sim_strain_vars(:).*1e10
+% end
+%
+% pie_data = zeros(strain,num_statistics-1);
+% for strain = 1:length(blind_sim_file_names)
+%     for ss = 1:num_statistics-1
+%         pie_data(strain,ss) = sum(expsim_dists(strain,:,ss+1));
+%     end
+%
+%     subplot(2,length(blind_sim_file_names)+1,strain)
+%     pie(pie_data(strain,:))
+%     title(blind_sim_file_names(strain), 'interpreter','none')
+%
+%     subplot(2,length(blind_sim_file_names)+1,strain+length(blind_sim_file_names)+1)
+%     pie(sim_strain_vars(strain,:))
+%     title('var in adjusted distances')
+% end
+%
+%
+% subplot(2,length(blind_sim_file_names)+1,strain+1)
+% if size(pie_data,1) == 1
+%     pie(pie_data)
+% else
+%     pie(sum(pie_data))
+% end
+% title('Average across strains')
+
+% We want to accept the best n% of simulations
+blind_predictions = cell(length(blind_sim_file_names), 3)
+
+for blind_trial = 1:length(blind_sim_file_names)
     
-for strain = 1:length(in_list)    
-    for sim = 1:length(sim_file_names)
-        expsim_dists(strain,sim,1) = sum(expsim_dists(strain,sim,2:num_statistics));
-    end
-end
-
-
-%% Consider the distance composition
-
-strain_dist_means = zeros(length(in_list),num_statistics-1);
-for strain = 1:length(in_list)
-    for ss = 2:num_statistics
-        sim_strain_vars(strain, ss-1) = var(expsim_dists(strain,:,ss));
-    end
-end
-
-figure;
-if sum(sim_strain_vars)<=1
-    sim_strain_vars(:) = sim_strain_vars(:).*1e10
-end
-
-pie_data = zeros(strain,num_statistics-1);
-for strain = 1:length(in_list)
-    for ss = 1:num_statistics-1
-        pie_data(strain,ss) = sum(expsim_dists(strain,:,ss+1));
-    end
+    % Set the cutoffs for taking the top n% of simulations
+    n_cuts = [0.01];
+    test_params = {'vs', 'revRateClusterEdge', 'Rir', 'Ris'};
+    
+    chosen_params = zeros(floor(prod(size(expsim_dists))*max(n_cuts)/num_statistics),...
+        length(test_params), length(n_cuts));
+    
+    % For each of these cutoffs, produce distributions of the parameters
+    for cutoff = 1:length(n_cuts)
+        n = n_cuts(cutoff)
+        top_n = floor(size(expsim_dists,2))*n);
         
-    subplot(2,length(in_list)+1,strain)
-    pie(pie_data(strain,:))
-    title(in_list(strain), 'interpreter','none')
-    
-    subplot(2,length(in_list)+1,strain+length(in_list)+1)
-    pie(sim_strain_vars(strain,:))
-    title('var in adjusted distances')
-end
-
-
-subplot(2,length(in_list)+1,strain+1)
-if size(pie_data,1) == 1
-    pie(pie_data)
-else
-    pie(sum(pie_data))
-end
-title('Average across strains')
-
-%% We want to accept the best n% of simulations
-
-figure;
-imagesc(expsim_dists(:,:,1));
-set(gca, 'ytick', [1:length(in_list)], 'YTickLabel', in_list)
-colorbar;
-
-% Set the cutoffs for taking the top n% of simulations
-n_cuts = [0.04, 0.02, 0.01];
-test_params = {'vs', 'revRateClusterEdge', 'Rir', 'Ris'};
-
-chosen_params = zeros(floor(prod(size(expsim_dists))*max(n_cuts)/num_statistics),...
-    length(test_params), length(n_cuts));
-
-% For each of these cutoffs, produce distributions of the parameters
-for cutoff = 1:length(n_cuts)
-    n = n_cuts(cutoff)
-    top_n = floor(prod(size(expsim_dists))*n/num_statistics);
-    
-    lin = reshape( expsim_dists(:,:,1).' ,1,numel(expsim_dists(:,:,1)));
-    A = sort(lin);
-    %A = sort(expsim_dists(:,:,1));
-    B = (expsim_dists(:,:,1)<=A(top_n)).*expsim_dists(:,:,1);
-    
-    best_sims = floor(find(B)/length(in_list));
-    list_best = {};
-    
-    for sim = 1:length(best_sims)
-        list_best{end+1} = sim_file_names(best_sims(sim)+1);
-    end
-    
-    % Use the mat file to find the parameters for plotting, no need to reload
-    % each of the simulations
-    
-    for par = 1:length(test_params)
+        lin = reshape(expsim_dists(blind_trial,:,1).' ,1,numel(expsim_dists(blind_trial,:,1)));
+        A = sort(lin);
+        %A = sort(expsim_dists(:,:,1));
+        B = (expsim_dists(blind_trial,:,1)<=A(top_n)).*expsim_dists(blind_trial,:,1);
         
-        for i = 1:length(list_best)
-            load(list_best{i}{1});
-            chosen_params(i,par,cutoff) = eval(strcat('param.', test_params{par}));
+        %best_sims = floor(find(B)/length(blind_sim_file_names));
+        best_sims = find(B)
+        list_best = {};
+        
+        for sim = 1:length(best_sims)
+            list_best{end+1} = sim_file_names(best_sims(sim)+1);
+        end
+        
+        % Use the mat file to find the parameters for plotting, no need to reload
+        % each of the simulations
+        
+        for par = 1:length(test_params)
+            
+            for q = 1:length(list_best)
+                load(list_best{q}{1});
+                chosen_params(q,par,cutoff) = eval(strcat('param.', test_params{par}));
+            end
+            
         end
         
     end
+ 
     
-end
-
-%% Comparing joint distributions of parameters
-
-figure;
-for cutoff = 1:length(n_cuts)
-    to_plot = chosen_params(:,:,cutoff);
+    % Producing an estimate for the reference/blind-sim parameters
+    
+    top_params = chosen_params(:,:,size(chosen_params,3));
     
     %Eliminate redundantrows, where all parameter values are zero
-    to_plot = to_plot(any(to_plot~=0,2),:);
+    top_params = top_params(any(top_params~=0,2),:);
     
-    subplot(1,length(n_cuts),cutoff)
-    [S,AX,BigAx,H,HAx] = plotmatrix(to_plot);
+    [blind_sim_dists, sort_index] = sort(B(B~=0));
+    blind_sim_dists = blind_sim_dists ./ min(blind_sim_dists);
+    blind_sim_dists = 1 ./ (blind_sim_dists);
     
-    title(['Top ' num2str(n_cuts(cutoff)*100) '% of simulations'])
-    
-    for i = 1:length(test_params)
-        ylabel(AX(i,1),test_params(i))
-        xlabel(AX(length(test_params),i),test_params(i))
+    for p = 1:size(top_params,2)
+        to_sort = top_params(:,p);
+        top_params(:,p) = to_sort(sort_index);
     end
     
+    % Report the closest single simulation match
+    list_best = list_best(sort_index)
+    single_best_match = list_best{1};
+    single_best_match = single_best_match{1}
+    single_best_params = top_params(1,:)
+    
+    pure_means = mean(top_params)
+    
+    weighted_params = top_params;
+    
+    for i = 1:length(blind_sim_dists)
+        weighted_params(i,:) = top_params(i,:).*blind_sim_dists(i);
+    end
+    
+    weighted_means = sum(weighted_params)/sum(blind_sim_dists);
+    
+    blind_predictions{blind_trial,1} = blind_sim_file_names{blind_trial};
+    blind_predictions{blind_trial,2} = weighted_means;
 end
 
-%% Producing an estimate for the reference/blind-sim parameters
+% Then want to read in the real values from Linus and compare them
+secret_values = 0
 
-top_params = chosen_params(:,:,size(chosen_params,3));
-   
-%Eliminate redundantrows, where all parameter values are zero
-top_params = top_params(any(top_params~=0,2),:);
-
-[blind_sim_dists, sort_index] = sort(B(B~=0));
-blind_sim_dists = blind_sim_dists ./ min(blind_sim_dists);
-blind_sim_dists = 1 ./ (blind_sim_dists);
-
-for p = 1:size(top_params,2)
-to_sort = top_params(:,p);
-top_params(:,p) = to_sort(sort_index);
-end
-
-% Report the closest single simulation match
-list_best = list_best(sort_index)
-single_best_match = list_best{1};
-single_best_match = single_best_match{1}
-single_best_params = top_params(1,:)
-
-pure_means = mean(top_params)
-
-weighted_params = top_params;
-
-for i = 1:length(blind_sim_dists)
-    weighted_params(i,:) = top_params(i,:).*blind_sim_dists(i);
-end
-
-weighted_means = sum(weighted_params)/sum(blind_sim_dists)
+% Might need to move this up into the above loop, to have access to the
+% posterior's distribution / standard deviation.
+for blind_trial = 1:length(blind_sim_file_names)
+    
+    % Make this line underneath less terrible
+    blind_predictions{blind_trial,3} = secret_value(blind_trial);
+    
+    % Ratios = abs(predicted - real)/real
+    blind_predictions{blind_trial,4} = abs(blind_predictions{blind_trial,2}...
+        - blind_predictions{blind_trial,3})/blind_predictions{blind_trial,3};
+    
+    % Have to provide the error too
+    blind_predictions{blind_trial,5} = 
+    
+end 
