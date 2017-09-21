@@ -53,9 +53,7 @@ else
         else
             leaveClusterEnd = leaveClusterStart+wormPathLength-1;
         end % this also excludes movie segments with ending frames beyond highest frame number
-    end
-    % go through each starting frame to generate logical index for leave cluster worms
-    for exitCtr = 1:numel(leaveClusterStart)
+        % go through each starting frame to generate logical index for leave cluster worms
         leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
     end
     % exclude when worms move back into a cluster

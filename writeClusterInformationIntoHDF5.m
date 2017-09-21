@@ -7,7 +7,7 @@ close all
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
 strains = {'N2','npr1'};
-wormnums = {'40','HD'};
+wormnums = {'40'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
@@ -20,7 +20,7 @@ for strainCtr = 1:length(strains)
         %% load data
         filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_r_list.txt']);
         filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
-        numFiles = length(filenames_r);
+        numFiles = length(filenames_g);
         for fileCtr = 1:numFiles % can be parfor
             filename_r = filenames_r{fileCtr};
             trajData_r = h5read(filename_r,'/trajectories_data');

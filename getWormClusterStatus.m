@@ -7,7 +7,7 @@ function [ numCloseNeighbrs, mindist] = getWormClusterStatus(trajData, frame,...
 [x, y] = getWormPositions(trajData, frame, false);
 
 if numel(x)>1 % need at least two worms in frame to calculate distances
-    D = squareform(pdist([x y]).*pixelsize); % distance of every worm to every other
+    D = squareform(pdist([double(x) double(y)]).*double(pixelsize)); % distance of every worm to every other
     % find lone worms
     mindist = min(D + max(max(D))*eye(size(D)));
     % find worms in clusters
