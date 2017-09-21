@@ -26,7 +26,7 @@ minTrajDuration = 1; % duration (in seconds) of minimum traj length
 maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 saveResults = true;
-saveAllTraj = false;
+saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
 useManualTraj = true; % option to use manually joined trajectories; only can be true if using bodywall data
 if useManualTraj
@@ -150,9 +150,9 @@ for strainCtr = 1:length(strains)
                 worm_ycoords = worm_ycoords(:,1:8);
             end
             if useManualTraj
-                uniqueWorms = unique(trajData.worm_index_manual);
+                uniqueWorms = unique(features.worm_index);
             else
-                uniqueWorms = unique(trajData.worm_index_joined);
+                uniqueWorms = unique(trajData.worm_index_joined(trajData.filtered));
             end
             % initialise
             for wormcatCtr = 1:length(wormcats)
