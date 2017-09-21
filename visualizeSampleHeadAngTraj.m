@@ -4,12 +4,12 @@ close all
 clear
 
 %% set parameters
-featureToSample = 'headAngNorm'; %'headAngTotal','headAngNorm', or 'headAngSpeed'
+featureToSample = 'headAngTotal'; %'headAngTotal','headAngNorm', or 'headAngSpeed'
 numSampleTraj = 200;
 saveResults = false;  %true or false.
 
 dataset = 2; %1 or 2.
-marker = 'pharynx'; %'pharynx' or 'bodywall'.
+marker = 'bodywall'; %'pharynx' or 'bodywall'.
 strains = {'npr1'}; % 'N2' or 'npr1'
 wormnum = '40';
 phase = 'joining'; %'fullMovie','joining', or 'sweeping'.
@@ -34,7 +34,7 @@ end
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     % load file
-    load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])f
+    load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
     for rangeCtr = 1:size(headAngRanges,1)
         for wormcatCtr = 1:length(wormcats)
             samplePathFig = figure; hold on
