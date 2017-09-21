@@ -5,11 +5,11 @@ close all
 phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
 marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1','N2'}; % {'npr1','N2'}
+strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-saveResults = true;
+saveResults = false;
 
 if dataset == 1
     intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
@@ -90,7 +90,7 @@ for strainCtr = 1:length(strains)
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% local function
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% local function %%%%%%%%%%%%%%
 
 function leaveClusterFilterEffect = findWormCategoryFilterEffect(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration,trajDataWormIndexJoined,trajDataFiltered)
 

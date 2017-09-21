@@ -16,7 +16,7 @@ close all
 %% set parameters
 phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
-marker = 'pharynx'; % 'pharynx' or 'bodywall'
+marker = 'bodywall'; % 'pharynx' or 'bodywall'
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
@@ -25,12 +25,13 @@ postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be
 minTrajDuration = 1; % duration (in seconds) of minimum traj length
 maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+useManualTraj = true;
 saveResults = true;
 saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
 
 if visualiseSampleTraj == true
-    featureToSample = 'headAngNorm'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
+    featureToSample = 'headAngTotal'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
     if strcmp(featureToSample,'headAngTotal') | strcmp(featureToSample,'headAngSpeed')
         headAngRanges = [0, 0.25; pi/2-0.25, pi/2+0.25; pi-0.25, pi+0.25; 3/2*pi-0.25, 3/2*pi+0.25; 2*pi-0.25, 2*pi];
     elseif strcmp(featureToSample,'headAngNorm')
@@ -93,7 +94,7 @@ for strainCtr = 1:length(strains)
         end
         
         %% go through individual movies
-        for fileCtr = 2:numFiles
+        for fileCtr = 1:numFiles
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -124,7 +125,11 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % restrict to only forward-moving worms (bodywall data doesn't currently have signed_speed field)
-            if strcmp(marker,'pharynx')
+            if strcmp(marker,'bodywall') & useManualTraj
+                features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
+                features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter features file
+                signedSpeedLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & features.midbody_speed>=0));
+            end
                 signedSpeedLogInd = blobFeats.signed_speed>=0;
                 trajData.filtered(~signedSpeedLogInd) = false;
             end
