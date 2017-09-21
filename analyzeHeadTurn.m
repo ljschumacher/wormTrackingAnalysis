@@ -108,6 +108,11 @@ for strainCtr = 1:length(strains)
                 trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             elseif strcmp(marker, 'bodywall')
+                % filter red by manually joined traj
+                if useManualTraj
+                    features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
+                    trajData.filtered = ismember(trajData.worm_index_manual,int32(features.worm_index));
+                end
                 % filter red by blob size and intensity
                 if contains(filename,'55')||contains(filename,'54')
                     intensityThreshold = 80;
@@ -125,14 +130,8 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % restrict to only forward-moving worms (bodywall data doesn't currently have signed_speed field)
-            if strcmp(marker,'bodywall') & useManualTraj
-                features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
-                features.filtered = ismember(features.skeleton_id+1,find(trajData.filtered)); % use trajData.filtered to filter features file
-                signedSpeedLogInd = ismember(features.skeleton_id+1,find(trajData.filtered & features.midbody_speed>=0));
-            end
-                signedSpeedLogInd = blobFeats.signed_speed>=0;
-                trajData.filtered(~signedSpeedLogInd) = false;
-            end
+            signedSpeedLogInd = blobFeats.signed_speed>=0;
+            trajData.filtered(~signedSpeedLogInd) = false;
             % find worms that have just left a cluster vs lone worms
             [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             
