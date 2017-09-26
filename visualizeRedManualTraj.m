@@ -120,7 +120,13 @@ for strainCtr = 1:length(strains)
             uniqueWorms = unique(features.worm_index);
             for wormCtr = 1:numel(uniqueWorms)
                 uniqueWorm = uniqueWorms(wormCtr);
+                % use unique worm
                 wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr);
+                % apply phase restriction
+                [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
+                phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
+                wormLogInd(~phaseFrameLogInd) = false;
+                % get xy coordinates
                 wormtraj_xcoords = worm_xcoords(wormLogInd);
                 wormtraj_ycoords = worm_ycoords(wormLogInd);
                 fullTraj = figure; hold on
@@ -140,9 +146,11 @@ for strainCtr = 1:length(strains)
 
                 % now plot individually categorised traj on top of the full traj
                 wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr) & trajData.filtered;
+                % go through each worm category
                 for wormcatCtr = 1:length(wormcats)
                     wormCatLogInd = wormLogInd & eval([wormcats{wormcatCtr} 'LogInd']);
                     if ~colorDirection
+                        % plot xy coordinates for categorised worms
                         wormtraj_xcoords = worm_xcoords(wormCatLogInd);
                         wormtraj_ycoords = worm_ycoords(wormCatLogInd);
                         set(0,'CurrentFigure',fullTraj)
@@ -150,8 +158,9 @@ for strainCtr = 1:length(strains)
                             plot(wormtraj_xcoords,wormtraj_ycoords,'r.','MarkerSize',10)
                         elseif strcmp(wormcats{wormcatCtr},'loneWorm')
                             plot(wormtraj_xcoords,wormtraj_ycoords,'b.','MarkerSize',10)
-                        end
+                        end   
                     else
+                        % optional: color trajectory by direction of movement
                         wormtraj_xcoords_fwd = worm_xcoords(wormCatLogInd & fwdLogInd);
                         wormtraj_ycoords_fwd = worm_ycoords(wormCatLogInd & fwdLogInd);
                         wormtraj_xcoords_rev = worm_xcoords(wormCatLogInd & revLogInd);
@@ -185,8 +194,8 @@ for strainCtr = 1:length(strains)
                     figurename = (['figures/turns/redManualTrajFull/redManualTrajFullDir_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
                 end
                 exportfig(fullTraj,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+%                 system(['epstopdf ' figurename '.eps']);
+%                 system(['rm ' figurename '.eps']);
             end
         end
     end
