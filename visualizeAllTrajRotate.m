@@ -1,5 +1,5 @@
 % Script loads saved xy coordinate data and plots a number of sample
-% trajectories starting at the origin and rotated. 
+% trajectories starting at the origin and rotated.
 % Script gives the option to apply a minimum trajectory length filter.
 
 clear
@@ -10,14 +10,17 @@ dataset = 2;
 wormnum = '40';
 strain = 'npr1';
 marker = 'pharynx';
-phase = 'fullMovie';
-numTrajToPlot = 500;
+phase = 'joining';
+numTrajToPlot = 200;
+numFramesForRotationAngle = 3; % the number of frames to use for rotation angle calculation - only needed to rotate trajectories
 applyMinTrajLength = false;
+applyMaxTrajLength = false;
 minTrajFrameNum = 45; % minimum number of frames required for the trajectory
+maxTrajFrameNum = 180; % maximum number of frames to plot for the trajectory
 
-if strcmp(marker,'pharynx')
+if strcmp(marker,'pharynx') & applyMinTrajLength
     wormcats = {'loneWorm'}';
-elseif strcmp(marker,'bodywall')
+else
     wormcats = {'loneWorm','leaveCluster'};
 end
 
@@ -52,6 +55,9 @@ for wormcatCtr = 1:length(wormcats)
     else
         trajInd = [1:length(allTrajxcoords.(wormcats{wormcatCtr}))];
     end
+    if numTrajToPlot > numel(trajInd)
+        numTrajToPlot = numel(trajInd);
+    end
     sampleTrajInd = datasample(trajInd,numTrajToPlot-1,'Replace',false);
     trajLength.(wormcats{wormcatCtr}) = NaN(20,1);
     for trajCtr = 1:length(sampleTrajInd)
@@ -66,26 +72,43 @@ for wormcatCtr = 1:length(wormcats)
         % take centroid
         xcoords = mean(xcoords,2);
         ycoords = mean(ycoords,2);
+        % apply max traj length limit
+        if applyMaxTrajLength & length(xcoords)>maxTrajFrameNum
+            xcoords = xcoords(1:maxTrajFrameNum);
+            ycoords = ycoords(1:maxTrajFrameNum);
+        end
+        % save traj length
+        trajLength.(wormcats{wormcatCtr})(trajCtr) = length(xcoords);
         % set xy coordinates to start at 0
         xcoords = xcoords - xcoords(1);
         ycoords = ycoords - ycoords(1);
-        % display length of traj
-        trajLength.(wormcats{wormcatCtr})(trajCtr) = length(xcoords);
         % rotate the traj
-        
-        % plot traj
-        plot(xcoords,ycoords)
+        if length(xcoords)> numFramesForRotationAngle
+            [xcoords, ycoords] = rotateTraj(xcoords, ycoords,numFramesForRotationAngle);
+            % plot traj
+            plot(xcoords,ycoords)
+        end
     end
+    % format and save plot
     set(0,'CurrentFigure', eval([wormcats{wormcatCtr} 'TrajFig']))
     title(['sample ' wormcats{wormcatCtr} ' trajectories, max ' num2str(max(trajLength.(wormcats{wormcatCtr}))) ' frames']);
     axis equal
     ax = gca;
     ax.XAxisLocation = 'origin';
     ax.YAxisLocation = 'origin';
-    xlabel('microns');
     ylabel('microns');
+    figureHandle = gcf;
+    set(figureHandle,'PaperUnits','centimeters')
     if applyMinTrajLength
         xlim([-5000 5000])
         ylim([-5000 5000])
+    else
+        xlim([-1500 1500])
+        ylim([-1500 1500])
     end
+    figurename = ['figures/turns/allTraj_' strain '_' wormnum '_' phase '_' wormcats{wormcatCtr} '_data' num2str(dataset) '_' marker];
+    load('exportOptions.mat')
+    exportfig(figureHandle,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
 end

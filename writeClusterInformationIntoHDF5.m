@@ -20,7 +20,7 @@ for strainCtr = 1:length(strains)
         %% load data
         filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_r_list.txt']);
         filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_g_list.txt']);
-        numFiles = length(filenames_r);
+        numFiles = length(filenames_g);
         for fileCtr = 1:numFiles % can be parfor
             filename_r = filenames_r{fileCtr};
             trajData_r = h5read(filename_r,'/trajectories_data');

@@ -6,16 +6,18 @@
 % Script compares leaveCluster and loneWorm, and can be modified to include further worm categories.
 % Script contains an option to save xy coordinates for all trajectories that pass various filters.
 % Script also contains an option to visualise sample trajectories that give rise
-% to values that fall within pre-specified value ranges.
+% to values that fall within pre-specified value ranges. Enabling this
+% will allow trajectory xy coordinates to be saved, so they can be
+% subsequently visualized by running visualiseSampleHeadAngTraj.m
 
 clear
 close all
 
 %% set parameters
-phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
-dataset = 1; % 1 or 2
-marker = 'pharynx'; % 'pharynx' or 'bodywall'
-strains = {'npr1','N2'}; % {'npr1','N2'}
+phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
+dataset = 2; % 1 or 2
+marker = 'bodywall'; % 'pharynx' or 'bodywall'
+strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
 smoothing = false;
@@ -23,12 +25,12 @@ postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be
 minTrajDuration = 1; % duration (in seconds) of minimum traj length
 maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-saveResults = false;
+useManualTraj = true;
+saveResults = true;
 saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
 
 if visualiseSampleTraj == true
-    numSampleTraj = 5; % number of sample trajectories to be plotted for each angular speed range
     featureToSample = 'headAngTotal'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
     if strcmp(featureToSample,'headAngTotal') | strcmp(featureToSample,'headAngSpeed')
         headAngRanges = [0, 0.25; pi/2-0.25, pi/2+0.25; pi-0.25, pi+0.25; 3/2*pi-0.25, 3/2*pi+0.25; 2*pi-0.25, 2*pi];
@@ -106,6 +108,11 @@ for strainCtr = 1:length(strains)
                 trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             elseif strcmp(marker, 'bodywall')
+                % filter red by manually joined traj
+                if useManualTraj
+                    features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
+                    trajData.filtered = ismember(trajData.worm_index_manual,int32(features.worm_index));
+                end
                 % filter red by blob size and intensity
                 if contains(filename,'55')||contains(filename,'54')
                     intensityThreshold = 80;
@@ -123,10 +130,8 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % restrict to only forward-moving worms (bodywall data doesn't currently have signed_speed field)
-            if strcmp(marker,'pharynx')
-                signedSpeedLogInd = blobFeats.signed_speed>=0;
-                trajData.filtered(~signedSpeedLogInd) = false;
-            end
+            signedSpeedLogInd = blobFeats.signed_speed>=0;
+            trajData.filtered(~signedSpeedLogInd) = false;
             % find worms that have just left a cluster vs lone worms
             [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             
@@ -250,7 +255,7 @@ for strainCtr = 1:length(strains)
                                 for rangeCtr = 1:size(headAngRanges,1)
                                     % if a headAngSpeed value falls in between the limits of specified ranges
                                     if headAngRanges(rangeCtr,1)<headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr) & ...
-                                            headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)<headAngRanges(rangeCtr,2)
+                                            headAngTotal.(wormcats{wormcatCtr}){fileCtr}(wormCtr,trajCtr)<=headAngRanges(rangeCtr,2)
                                         % save xy coordinates (in microns)
                                         headAngSampleTraj.(wormcats{wormcatCtr}){headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr),1,rangeCtr} = wormtraj_xcoords;
                                         headAngSampleTraj.(wormcats{wormcatCtr}){headAngSampleCtr.(wormcats{wormcatCtr})(rangeCtr),2,rangeCtr} = wormtraj_ycoords;
@@ -297,6 +302,13 @@ for strainCtr = 1:length(strains)
         if saveAllTraj
             save(['figures/turns/results/allTrajxcoords_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajxcoords')
             save(['figures/turns/results/allTrajycoords_'  strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajycoords')
+        end
+        
+        if visualiseSampleTraj
+            % save trajectories
+            if saveResults
+                save(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
+            end
         end
         
         % plot total head angle change
@@ -364,15 +376,6 @@ for strainCtr = 1:length(strains)
             exportfig(headAngSpeedFig,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
-        end
-        
-        if visualiseSampleTraj
-            % save trajectories
-            if saveResults
-                save(['figures/turns/results/headAngSampleTraj_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
-            end
-            % plot trajectories
-            plotSampleHeadAngTraj(headAngSampleTraj,headAngRanges,featureToSample,numSampleTraj,wormcats,strain,wormnum,marker,phase, dataset, saveResults)
         end
     end
 end
