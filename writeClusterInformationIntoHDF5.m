@@ -6,8 +6,8 @@ close all
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 
-strains = {'N2','npr1'};
-wormnums = {'40','HD'};
+strains = {'npr1','N2'};
+wormnums = {'40'}%,'HD'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;
@@ -70,33 +70,33 @@ for strainCtr = 1:length(strains)
                 h5write(filename_r,'/num_close_neighbrs',...
                     uint16(num_close_neighbrs))
             end
-            %% calculate stats - green channel files
-%             try
-%                 neighbr_distances = h5read(filename_g,'/neighbr_distances');
-%                 min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');
-%                 num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
-%             catch
-%                 disp(['Calculating cluster status from ' filename_g ])
-%                 [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
-%                     = calculateNeighbrDistance(trajData_g,trajData_r,pixelsize,clusterCutOff);
-%                 % check lengths
-%                 assert(size(neighbr_distances,1)==length(trajData_g.frame_number))
-%                 assert(size(neighbr_distances,2)==10)
-%                 assert(length(min_neighbr_dist)==length(trajData_g.frame_number))
-%                 assert(length(num_close_neighbrs)==length(trajData_g.frame_number))
-%                 % write stats to hdf5-file
-%                 h5create(filename_g,'/neighbr_distances',size(neighbr_distances),...
-%                     'Datatype','single')
-%                 h5write(filename_g,'/neighbr_distances',single(neighbr_distances))
-%                 h5create(filename_g,'/min_neighbr_dist',...
-%                     size(min_neighbr_dist),'Datatype','single')
-%                 h5write(filename_g,'/min_neighbr_dist',...
-%                     single(min_neighbr_dist))
-%                 h5create(filename_g,'/num_close_neighbrs',...
-%                     size(num_close_neighbrs),'Datatype','uint16')
-%                 h5write(filename_g,'/num_close_neighbrs',...
-%                     uint16(num_close_neighbrs))
-%             end
+            % calculate stats - green channel files
+            try
+                neighbr_distances = h5read(filename_g,'/neighbr_distances');
+                min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');
+                num_close_neighbrs = h5read(filename_g,'/num_close_neighbrs');
+            catch
+                disp(['Calculating cluster status from ' filename_g ])
+                [ neighbr_distances, min_neighbr_dist, num_close_neighbrs ] ...
+                    = calculateNeighbrDistance(trajData_g,trajData_r,pixelsize,clusterCutOff);
+                % check lengths
+                assert(size(neighbr_distances,1)==length(trajData_g.frame_number))
+                assert(size(neighbr_distances,2)==10)
+                assert(length(min_neighbr_dist)==length(trajData_g.frame_number))
+                assert(length(num_close_neighbrs)==length(trajData_g.frame_number))
+                % write stats to hdf5-file
+                h5create(filename_g,'/neighbr_distances',size(neighbr_distances),...
+                    'Datatype','single')
+                h5write(filename_g,'/neighbr_distances',single(neighbr_distances))
+                h5create(filename_g,'/min_neighbr_dist',...
+                    size(min_neighbr_dist),'Datatype','single')
+                h5write(filename_g,'/min_neighbr_dist',...
+                    single(min_neighbr_dist))
+                h5create(filename_g,'/num_close_neighbrs',...
+                    size(num_close_neighbrs),'Datatype','uint16')
+                h5write(filename_g,'/num_close_neighbrs',...
+                    uint16(num_close_neighbrs))
+            end
         end
     end
 end
@@ -112,7 +112,7 @@ for strainCtr = 1:length(strains)
         %% load data
         filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum{1} '_list.txt']);
         numFiles = length(filenames_g);
-        parfor fileCtr = 1:numFiles % can be parfor
+        for fileCtr = 1:numFiles % can be parfor
             filename_g = filenames_g{fileCtr};
             trajData_g = h5read(filename_g,'/trajectories_data');
             % filter green channel data by blob size and intensity
