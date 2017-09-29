@@ -21,7 +21,11 @@ postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 colorDirection = false;
 colorSpeed = true;
-saveResults = true;
+saveResults = false;
+
+currentFile = 9;
+firstFrame = 10000; 
+lastFrame = 20000;
 
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -55,7 +59,7 @@ for strainCtr = 1:length(strains)
         
         
         %% go through individual movies
-        for fileCtr = 1:numFiles
+        for fileCtr = currentFile
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -85,8 +89,7 @@ for strainCtr = 1:length(strains)
             % filter red by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                 &filterSkelLength(skelData,pixelsize,minSkelLength_r,maxSkelLength_r);
-            % apply phase restriction
-            [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
+            % apply phase restriction            
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % find worms that have just left a cluster vs lone worms
@@ -136,7 +139,6 @@ for strainCtr = 1:length(strains)
                 % use unique worm
                 wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr);
                 % apply phase restriction
-                [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
                 phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
                 wormLogInd(~phaseFrameLogInd) = false;
                 % get xy coordinates
