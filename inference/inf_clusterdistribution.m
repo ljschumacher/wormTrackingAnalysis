@@ -4,6 +4,8 @@ function [wpc_hist, branch_hist, perc_worms_in_clust] ...
 
 % Specify the number of frames to sample
 num_samples = 500;
+% Also state the minimum number of worms that constitute a cluster, and the
+% maximum cluster width in mm.
 pop_thresh = 2;
 cluster_width_cutoffs = [2];
 
@@ -41,7 +43,10 @@ if format_in == 'simulation'
             coords(:,1) = data1(:,:,1);
             coords(:,2) = data1(:,:,2);
             
-            Y = pdist(coords);
+            % Calculate pairwise distances with custom distance function
+            % 'periodiceucdists' to take into account the horizontal and
+            % vertical periodicity of the simulations.
+            Y = pdist(coords, @periodiceucdists);
             
             Z = linkage(Y, 'complete');
             
@@ -78,6 +83,81 @@ if format_in == 'simulation'
         branch_hist = histcounts(lin_heights, branch_edges, ...
             'Normalization', 'probability');
         
+        perc_worms_in_clust = mean(perc_worms_in_clust)*100;
+    end
+    
+elseif format_in == 'complexsim'
+    
+    % Get the dimensions of the dataframe
+    dims = size(data);
+    data = data(:,:,:,:);
+    
+    % Get information from the dimensions of the input data
+    num_worms = dims(1);
+    final_t = dims(4);
+    
+    for curr_cluster_width = 1:length(cluster_width_cutoffs)
+        j = cluster_width_cutoffs(curr_cluster_width);
+        
+        % Generate a random list of frames to sample
+        frames = randi(final_t, 1, num_samples);
+        
+        bigger_counts = zeros(num_worms, num_samples);
+        z_store = zeros(num_worms - 1, num_samples);
+        
+        for frame=1:length(frames)
+            t = frames(frame);
+            
+            % Access the data for the 3rd worm node, initially for the first frame
+            data1 = data(:,3,:,t);
+            
+            % Initialise empty matrices to store location coordinates
+            coords = zeros(num_worms,2);
+            
+            coords(:,1) = data1(:,:,1);
+            coords(:,2) = data1(:,:,2);
+            
+            % Calculate pairwise distances with custom distance function
+            % 'periodiceucdists' to take into account the horizontal and
+            % vertical periodicity of the simulations.
+            Y = pdist(coords, @periodiceucdists);
+            
+            Z = linkage(Y, 'complete');
+            
+            T = cluster(Z,'cutoff',j, 'criterion', 'distance');
+            num_clusters = max(T);
+            
+            % Calculating the average number of worms per cluster
+            a = unique(T);
+            out = [a,histc(T(:),a)];
+            counts_for_clusters = out(:,2).*(out(:,2)>=pop_thresh);
+            wpc_counts(frame) = mean(counts_for_clusters);
+            
+            perc_worms_in_clust(frame) = sum(counts_for_clusters)/num_worms;
+            
+            for q = 1:length(counts_for_clusters)
+                bigger_counts(q, frame) = counts_for_clusters(q);
+            end
+            
+            for p = 1:num_worms-1
+                z_store(p,frame) = Z(p,3);
+            end
+            
+        end
+        
+        lin_counts = reshape(bigger_counts, 1, (num_worms*num_samples));
+        lin_counts = lin_counts(lin_counts ~= 0);
+        
+        lin_heights = reshape(z_store,1,((num_worms-1)*num_samples));
+        
+        cluster_edges = [0:1:num_worms];
+        wpc_hist = histcounts(lin_counts, cluster_edges, 'Normalization', 'probability');
+        
+        branch_edges = [0:0.5:20];
+        branch_hist = histcounts(lin_heights, branch_edges, ...
+            'Normalization', 'probability');
+        
+        perc_worms_in_clust = mean(perc_worms_in_clust)*100;
     end
     
 elseif format_in == 'experiment'
@@ -148,8 +228,7 @@ elseif format_in == 'experiment'
         branch_hist = histcounts(z_store, branch_edges, ...
             'Normalization', 'probability');
         
+        perc_worms_in_clust = mean(perc_worms_in_clust)*100;
     end
-    
-    
 end
 end

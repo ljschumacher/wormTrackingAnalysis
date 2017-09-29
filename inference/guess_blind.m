@@ -61,7 +61,7 @@ end
 
 % Firstly, read in the list of blind simulation files
 blind_file_list = 'blind_trials.txt';
-blind_file_list = 'full_blind_list';
+blind_file_list = 'full_blind_list.txt';
 
 blind_sim_file_names = {};
 my_list_file = fopen(blind_file_list);
@@ -107,13 +107,16 @@ for sim = 1:length(blind_sim_file_names)
 end
 
 
-%% Then, compute the appropriate distances between each of the
-%  simulations and the experimental references
+% COMPUTING DISTANCES
+% Then, compute the appropriate distances between each of the simulations 
+% and the blind references
 exp_ss_array = blind_sim_ss_array;
 expsim_dists = zeros(length(blind_sim_file_names),length(sim_file_names), num_statistics);
 
 for i = 1:length(blind_sim_file_names)
-    for j = 1:length(sim_file_names)
+    
+    for j = 1:length(sim_ss_array) 
+        
         
         if i ==1 & j ==1
             running_dists = zeros(1,size(exp_ss_array,2)-1,length(blind_sim_file_names));
@@ -136,7 +139,8 @@ for i = 1:length(blind_sim_file_names)
     end
 end
 
-% Optional: divide the distances from each ss by the mean for that strain
+% NORMALISATION
+% Divide the distances from each ss by the mean for that strain
 for strain = 1:length(blind_sim_file_names)
     for ss = 2:num_statistics
         strain_dist_means(strain, ss-1) = mean(expsim_dists(strain,:,ss));
@@ -144,66 +148,39 @@ for strain = 1:length(blind_sim_file_names)
             ./mean(expsim_dists(strain,:,ss));
     end
     
-    for sim = 1:length(sim_file_names)
+    for sim = 1:length(sim_ss_array) 
         expsim_dists(strain,sim,1) = sum(expsim_dists(strain,sim,2:num_statistics));
     end
 end
 
 
-% %% Consider the distance composition
-%
-% strain_dist_means = zeros(length(blind_sim_file_names),num_statistics-1);
-% for strain = 1:length(blind_sim_file_names)
-%     for ss = 2:num_statistics
-%         sim_strain_vars(strain, ss-1) = var(expsim_dists(strain,:,ss));
-%     end
-% end
-%
-% figure;
-% if sum(sim_strain_vars)<=1
-%     sim_strain_vars(:) = sim_strain_vars(:).*1e10
-% end
-%
-% pie_data = zeros(strain,num_statistics-1);
-% for strain = 1:length(blind_sim_file_names)
-%     for ss = 1:num_statistics-1
-%         pie_data(strain,ss) = sum(expsim_dists(strain,:,ss+1));
-%     end
-%
-%     subplot(2,length(blind_sim_file_names)+1,strain)
-%     pie(pie_data(strain,:))
-%     title(blind_sim_file_names(strain), 'interpreter','none')
-%
-%     subplot(2,length(blind_sim_file_names)+1,strain+length(blind_sim_file_names)+1)
-%     pie(sim_strain_vars(strain,:))
-%     title('var in adjusted distances')
-% end
-%
-%
-% subplot(2,length(blind_sim_file_names)+1,strain+1)
-% if size(pie_data,1) == 1
-%     pie(pie_data)
-% else
-%     pie(sum(pie_data))
-% end
-% title('Average across strains')
-
 % We want to accept the best n% of simulations
-blind_predictions = cell(length(blind_sim_file_names), 3)
+test_params = {'revRateClusterEdge','vs', 'Ris', 'Rir'};
+hidden_params = load('blindSamples_nSim100_nParam4.mat');
+
+% For storing the raw predicted and real parameter values for the blind
+% simulations
+parameter_store = zeros(length(blind_sim_file_names), length(test_params),2);
+
+% For storing the log ratio of real to predicted parameters, along side the
+% confidence interval the real paramter falls into, based on the posterioir
+% distribution of the prediction
+predictions_to_real = zeros(length(blind_sim_file_names), length(test_params),2);
+
+figure;
 
 for blind_trial = 1:length(blind_sim_file_names)
-    
+    blind_trial
     % Set the cutoffs for taking the top n% of simulations
     n_cuts = [0.01];
-    test_params = {'vs', 'revRateClusterEdge', 'Rir', 'Ris'};
     
     chosen_params = zeros(floor(prod(size(expsim_dists))*max(n_cuts)/num_statistics),...
         length(test_params), length(n_cuts));
     
     % For each of these cutoffs, produce distributions of the parameters
     for cutoff = 1:length(n_cuts)
-        n = n_cuts(cutoff)
-        top_n = floor(size(expsim_dists,2))*n);
+        n = n_cuts(cutoff);
+        top_n = size(expsim_dists,2)*n;
         
         lin = reshape(expsim_dists(blind_trial,:,1).' ,1,numel(expsim_dists(blind_trial,:,1)));
         A = sort(lin);
@@ -211,11 +188,11 @@ for blind_trial = 1:length(blind_sim_file_names)
         B = (expsim_dists(blind_trial,:,1)<=A(top_n)).*expsim_dists(blind_trial,:,1);
         
         %best_sims = floor(find(B)/length(blind_sim_file_names));
-        best_sims = find(B)
+        best_sims = find(B);
         list_best = {};
         
         for sim = 1:length(best_sims)
-            list_best{end+1} = sim_file_names(best_sims(sim)+1);
+            list_best{end+1} = sim_file_names(best_sims(sim));
         end
         
         % Use the mat file to find the parameters for plotting, no need to reload
@@ -234,7 +211,6 @@ for blind_trial = 1:length(blind_sim_file_names)
  
     
     % Producing an estimate for the reference/blind-sim parameters
-    
     top_params = chosen_params(:,:,size(chosen_params,3));
     
     %Eliminate redundantrows, where all parameter values are zero
@@ -250,12 +226,12 @@ for blind_trial = 1:length(blind_sim_file_names)
     end
     
     % Report the closest single simulation match
-    list_best = list_best(sort_index)
+    list_best = list_best(sort_index);
     single_best_match = list_best{1};
-    single_best_match = single_best_match{1}
-    single_best_params = top_params(1,:)
+    single_best_match = single_best_match{1};
+    single_best_params = top_params(1,:);
     
-    pure_means = mean(top_params)
+    pure_means = mean(top_params);
     
     weighted_params = top_params;
     
@@ -265,25 +241,39 @@ for blind_trial = 1:length(blind_sim_file_names)
     
     weighted_means = sum(weighted_params)/sum(blind_sim_dists);
     
-    blind_predictions{blind_trial,1} = blind_sim_file_names{blind_trial};
-    blind_predictions{blind_trial,2} = weighted_means;
+    % For each parameter being fitted, get the log ratio and CI
+    
+    for model_parameter = 1:length(test_params);
+        predicted = weighted_means(model_parameter);
+        real_value = hidden_params.paramSamples{blind_trial,model_parameter};
+        difference = abs(predicted-real_value);
+        
+        % Store the raw parameter values
+        parameter_store(blind_trial, model_parameter,1) = predicted;
+        parameter_store(blind_trial, model_parameter,2) = real_value;
+        
+        
+        %Compare the real value to the predicted value with a log ratio
+        predictions_to_real(blind_trial, model_parameter,1) = ...
+            abs(log(predicted/real_value));
+       % Also report the associated confidence score
+       to_search = top_params(:,model_parameter);
+       to_search = to_search(to_search > (predicted-difference) & to_search < (predicted+difference));
+
+        
+       predictions_to_real(blind_trial, model_parameter,2) = ...
+           1 - ((length(to_search))/length(top_params));
+    end
 end
 
-% Then want to read in the real values from Linus and compare them
-secret_values = 0
-
-% Might need to move this up into the above loop, to have access to the
-% posterior's distribution / standard deviation.
-for blind_trial = 1:length(blind_sim_file_names)
+figure;
+for par = 1:length(test_params)
+    subplot(2,2,par)
+    scatter(parameter_store(:,par,1), parameter_store(:,par,2))
+    hold on
     
-    % Make this line underneath less terrible
-    blind_predictions{blind_trial,3} = secret_value(blind_trial);
-    
-    % Ratios = abs(predicted - real)/real
-    blind_predictions{blind_trial,4} = abs(blind_predictions{blind_trial,2}...
-        - blind_predictions{blind_trial,3})/blind_predictions{blind_trial,3};
-    
-    % Have to provide the error too
-    blind_predictions{blind_trial,5} = 
-    
-end 
+    refline(1,0)
+    xlabel('Predicted value')
+    ylabel('Real value')
+    title(test_params{par})
+end
