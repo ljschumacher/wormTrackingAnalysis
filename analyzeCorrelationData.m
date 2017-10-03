@@ -90,7 +90,7 @@ for strainCtr = 1:nStrains
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
         %% randomly sample frames to analyze
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
-        numFrames = round((lastFrame-firstFrame)/frameRate/3);
+        numFrames = round((lastFrame-firstFrame)/frameRate);
         framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
         %% filter worms
         if plotDiagnostics
@@ -173,7 +173,16 @@ for strainCtr = 1:nStrains
     pairdist = horzcat(pairdist{:});
     dxcorr = horzcat(dxcorr{:});
     vxcorr = horzcat(vxcorr{:});
-    % bin distance data
+    %% plot 2d histogram of speed and distance
+    speedHist2Fig = figure; hold on
+    h = histogram2(nNbrDist,speeds','DisplayStyle','tile','EdgeColor','none',...
+        'XBinLimits',[0 maxDist],'YBinLimits',[0 400],'BinWidth',[distBinWidth, distBinWidth/2]);
+    h.BinCounts = h.BinCounts./sum(h.BinCounts,2); % conditional normalisation
+    speedHist2Fig.Children.XTick = 0:500:maxDist;
+    speedHist2Fig.Children.Box = 'on';
+    ylabel(speedHist2Fig.Children,'speed (μm/s)')
+    xlabel(speedHist2Fig.Children,'distance to nearest neighbour (μm)')
+    %% bin distance data
     [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
         'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
     [pairDistcounts,pairDistBins,pairDistbinIdx]  = histcounts(pairdist,...
@@ -199,6 +208,13 @@ for strainCtr = 1:nStrains
     [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smooth(s_med),...
         [smooth(s_med - s_ci(:,1)), smooth(s_ci(:,2) - s_med)],...
         'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
+    % median line on 2d hist
+    plot(speedHist2Fig.Children,nNbrDistBins,smooth(s_med),'k:','LineWidth',2);
+        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistanceHist2D_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_jointraj'];
+    exportfig(speedHist2Fig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    %
     boundedline(pairDistBins,smooth(corr_o_med),[smooth(corr_o_med - corr_o_ci(:,1)), smooth(corr_o_ci(:,2) - corr_o_med)],...
         'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
     boundedline(pairDistBins,smooth(corr_v_med),[smooth(corr_v_med - corr_v_ci(:,1)), smooth(corr_v_ci(:,2) - corr_v_med)],...
