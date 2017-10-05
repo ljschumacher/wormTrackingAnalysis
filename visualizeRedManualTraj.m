@@ -16,12 +16,12 @@ marker = 'bodywall'; % 'bodywall'
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
-preExitDuration = 2; % only applied if colorSpeed is true: duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
+preExitDuration = 5; % only applied if colorSpeed is true: duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 colorDirection = false;
 colorSpeed = true;
-saveResults = true;
+saveResults = false;
 
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -45,15 +45,7 @@ for strainCtr = 1:length(strains)
         % load file list
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
-        % create empty cell arrays to hold individual file values, so they can be pooled for a given strain/density combination
-        for wormcatCtr = 1:length(wormcats)
-            headAngTotal.(wormcats{wormcatCtr}) = cell(numFiles,1);
-            headAngNorm.(wormcats{wormcatCtr}) = cell(numFiles,1);
-            headAngSpeed.(wormcats{wormcatCtr}) = cell(numFiles,1);
-            frameRunLengths.(wormcats{wormcatCtr}) = cell(numFiles,1);
-        end
-        
-        
+
         %% go through individual movies
         for fileCtr = 1:numFiles
             %% load data
@@ -90,12 +82,11 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % find worms that have just left a cluster vs lone worms
-%             if colorSpeed
-%                 % for colorSpeed, use a local function to turn on 2 seconds prior to cluster exit for leaveClusterLogInd
-%                 [leaveClusterLogInd, loneWormLogInd] = findLeaveClusterPlusWorms(filename,inClusterNeighbourNum,minNeighbrDist,preExitDuration,postExitDuration);
-%             else
-                [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
-%             end
+            [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
+            if colorSpeed
+                % for colorSpeed, turn on a few seconds prior to cluster exit for leaveClusterLogInd
+                [~,leaveClusterLogInd,~,~] = findClusterEntryExitX(filename,inClusterNeighbourNum,minNeighbrDist,preExitDuration,postExitDuration);
+            end
             
             %% get movement direction
             if colorDirection | colorSpeed
