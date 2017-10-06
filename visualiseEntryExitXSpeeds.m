@@ -38,9 +38,6 @@ for strainCtr = 1:length(strains)
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
         
-        meanEntrySpeedsFig = figure; hold on
-        meanExitSpeedsFig = figure; hold on
-        
         %% go through individual movies
         for fileCtr = 1:numFiles
             %% load data
@@ -50,9 +47,8 @@ for strainCtr = 1:length(strains)
             skelData = h5read(filename,'/skeleton'); % in pixels
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
-            midbodySpeedEntryTimeSeries = figure; hold on
-            midbodySpeedExitTimeSeries = figure; hold on
-            
+%             midbodySpeedEntryTimeSeries = figure; hold on
+%             midbodySpeedExitTimeSeries = figure; hold on
             
             %% calculate midbody signed speed (from reversalAnalysisBodyWall.m)
             midbodyIndcs = 19:33;
@@ -158,6 +154,10 @@ for strainCtr = 1:length(strains)
                     smoothEntrySpeeds(row,:) = smooth(entrySpeeds(row,:),3);
                 end
             end
+            % ignore signs of the speed
+            smoothEntrySpeeds = abs(smoothEntrySpeeds);
+            % set maximum speed
+            smoothEntrySpeeds(smoothEntrySpeeds>1500) = NaN;
 
             %% plot exit time course for midbody signed speed
             % get indices for cluster exit points
@@ -215,88 +215,114 @@ for strainCtr = 1:length(strains)
                     smoothExitSpeeds(row,:) = smooth(exitSpeeds(row,:),3);
                 end
             end
+            % ignore signs of the speed
+            smoothExitSpeeds = abs(smoothExitSpeeds);
+            % set maximum speed
+            smoothExitSpeeds(smoothExitSpeeds>1500) = NaN;
             
             %% save data for pooling
-            meanEntrySpeeds{fileCtr} = smoothEntrySpeeds;
-            meanExitSpeeds{fileCtr} = smoothExitSpeeds;
+            allEntrySpeeds{fileCtr} = entrySpeeds;
+            allExitSpeeds{fileCtr} = exitSpeeds;
+            allSmoothEntrySpeeds{fileCtr} = smoothEntrySpeeds;
+            allSmoothExitSpeeds{fileCtr} = smoothExitSpeeds;
             
             %% plot midbody speed as time series
-            %% entry plot
-            %
-            set(0,'CurrentFigure',midbodySpeedEntryTimeSeries)
-            if smoothSpeed
-                plot(timeSeries,smoothEntrySpeeds)
-            else
-                plot(timeSeries,entrySpeeds)
-            end
-            title(['Cluster Entry Speeds, ' filename(end-31:end-18)])
-            if smoothSpeed
-                figurename = (['figures/entryExitSpeeds/entrySpeedsSmoothed_' phase '_' filename(end-31:end-18)]);
-            else
-                figurename = (['figures/entryExitSpeeds/entrySpeeds_' phase '_' filename(end-31:end-18)]);
-            end
-            if saveResults
-                exportfig(midbodySpeedEntryTimeSeries,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
-            end
-        
-            %% exit plot
-            %
-            set(0,'CurrentFigure',midbodySpeedExitTimeSeries)
-            if smoothSpeed
-                plot(timeSeries,smoothExitSpeeds)
-            else
-                plot(timeSeries,exitSpeeds)
-            end
-            title(['Cluster Exit Speeds' filename(end-31:end-18)])
-            if smoothSpeed
-                figurename = (['figures/entryExitSpeeds/exitSpeedsSmoothed_' phase '_' filename(end-31:end-18)]);
-            else
-                figurename = (['figures/entryExitSpeeds/exitSpeeds_' phase '_' filename(end-31:end-18)]);
-            end
-            if saveResults
-                exportfig(midbodySpeedExitTimeSeries,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
-            end
+%             % entry plot
+%             set(0,'CurrentFigure',midbodySpeedEntryTimeSeries)
+%             if smoothSpeed
+%                 plot(timeSeries,smoothEntrySpeeds)
+%             else
+%                 plot(timeSeries,entrySpeeds)
+%             end
+%             title(['Cluster Entry Speeds, ' filename(end-31:end-18)])
+%             if smoothSpeed
+%                 figurename = (['figures/entryExitSpeeds/entrySpeedsSmoothed_' phase '_' filename(end-31:end-18)]);
+%             else
+%                 figurename = (['figures/entryExitSpeeds/entrySpeeds_' phase '_' filename(end-31:end-18)]);
+%             end
+%             if saveResults
+%                 exportfig(midbodySpeedEntryTimeSeries,[figurename '.eps'],exportOptions)
+%                 system(['epstopdf ' figurename '.eps']);
+%                 system(['rm ' figurename '.eps']);
+%             end
+%         
+%             % exit plot
+%             set(0,'CurrentFigure',midbodySpeedExitTimeSeries)
+%             if smoothSpeed
+%                 plot(timeSeries,smoothExitSpeeds)
+%             else
+%                 plot(timeSeries,exitSpeeds)
+%             end
+%             title(['Cluster Exit Speeds' filename(end-31:end-18)])
+%             if smoothSpeed
+%                 figurename = (['figures/entryExitSpeeds/exitSpeedsSmoothed_' phase '_' filename(end-31:end-18)]);
+%             else
+%                 figurename = (['figures/entryExitSpeeds/exitSpeeds_' phase '_' filename(end-31:end-18)]);
+%             end
+%             if saveResults
+%                 exportfig(midbodySpeedExitTimeSeries,[figurename '.eps'],exportOptions)
+%                 system(['epstopdf ' figurename '.eps']);
+%                 system(['rm ' figurename '.eps']);
+%             end
         end
-        %% mean speed plots
-        % mean entry plot
-        meanEntrySpeeds = vertcat(meanEntrySpeeds{:});
-        set(0,'CurrentFigure',meanEntrySpeedsFig)
-        plot(timeSeries,nanmean(meanEntrySpeeds,1))
+        
+        % pool data
+        allSmoothEntrySpeeds = vertcat(allSmoothEntrySpeeds{:});
+        allSmoothExitSpeeds = vertcat(allSmoothExitSpeeds{:});
+        
+        %% plotting and saving data
+        % mean entry speed plot
+        meanEntryExitSpeedsFig = figure; hold on
+        set(0,'CurrentFigure',meanEntryExitSpeedsFig)
+        plot(timeSeries,nanmean(allSmoothEntrySpeeds,1))
+        plot(timeSeries,nanmean(allSmoothExitSpeeds,1))
+        title(['mean cluster entry and exit speeds'])
+        xlabel('frames')
+        ylabel('speed(microns/s)')
+        legend('entry','exit')
+        if smoothSpeed
+            figurename = (['figures/entryExitSpeeds/entryExitSpeedsMeanSmoothed_' phase]);
+        else
+            figurename = (['figures/entryExitSpeeds/entryExitSpeedsMean_' phase]);
+        end
+        if saveResults
+            exportfig(meanEntryExitSpeedsFig,[figurename '.eps'],exportOptions)
+            system(['epstopdf ' figurename '.eps']);
+            system(['rm ' figurename '.eps']);
+        end
+        
+        % errorbar entry plot
+        figure;
+        shadedErrorBar(timeSeries,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
         title(['mean cluster entry speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
-        ylim([0 400])
-        if smoothSpeed
-            figurename = (['figures/entryExitSpeeds/entrySpeedsMeanSmoothed_' phase]);
-        else
-            figurename = (['figures/entryExitSpeeds/entrySpeedsMean_' phase]);
-        end
+        ylim([-100 700])
+        figurename = (['figures/entryExitSpeeds/entrySpeedsMeanErrorSmoothed_' phase]);
         if saveResults
-            exportfig(meanEntrySpeedsFig,[figurename '.eps'],exportOptions)
+            entryErrorBarFig = gcf;
+            exportfig(entryErrorBarFig,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
-        % mean exit plot
-        meanExitSpeeds = vertcat(meanExitSpeeds{:});
-        set(0,'CurrentFigure',meanExitSpeedsFig)
-        plot(timeSeries,nanmean(meanExitSpeeds,1))
+        
+        % errorbar exit plot
+        figure;
+        shadedErrorBar(timeSeries,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'r');
         title(['mean cluster exit speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
-        ylim([0 400])
-        if smoothSpeed
-            figurename = (['figures/entryExitSpeeds/exitSpeedsMeanSmoothed_' phase]);
-        else
-            figurename = (['figures/entryExitSpeeds/exitSpeedsMean_' phase]);
-        end
+        ylim([-100 700])
+        figurename = (['figures/entryExitSpeeds/exitSpeedsMeanErrorSmoothed_' phase]);
         if saveResults
-            exportfig(meanExitSpeedsFig,[figurename '.eps'],exportOptions)
+            exitErrorBarFig = gcf;
+            exportfig(exitErrorBarFig,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
+        
+        % save data
+        filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds.mat';
+        save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds')
     end
 end
