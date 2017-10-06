@@ -38,8 +38,8 @@ for strainCtr = 1:length(strains)
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
         
-        meanEntrySpeeds = figure; hold on
-        meanExitSpeeds = figure; hold on
+        meanEntrySpeedsFig = figure; hold on
+        meanExitSpeedsFig = figure; hold on
         
         %% go through individual movies
         for fileCtr = 1:numFiles
@@ -216,8 +216,12 @@ for strainCtr = 1:length(strains)
                 end
             end
             
+            %% save data for pooling
+            meanEntrySpeeds{fileCtr} = smoothEntrySpeeds;
+            meanExitSpeeds{fileCtr} = smoothExitSpeeds;
+            
             %% plot midbody speed as time series
-            %% entry plots
+            %% entry plot
             %
             set(0,'CurrentFigure',midbodySpeedEntryTimeSeries)
             if smoothSpeed
@@ -235,13 +239,6 @@ for strainCtr = 1:length(strains)
                 exportfig(midbodySpeedEntryTimeSeries,[figurename '.eps'],exportOptions)
                 system(['epstopdf ' figurename '.eps']);
                 system(['rm ' figurename '.eps']);
-            end
-            %
-            set(0,'CurrentFigure',meanEntrySpeeds)
-            if smoothSpeed
-                plot(timeSeries,nanmean(smoothEntrySpeeds,1))
-            else
-                plot(timeSeries,nanmean(entrySpeeds,1))
             end
         
             %% exit plot
@@ -263,41 +260,41 @@ for strainCtr = 1:length(strains)
                 system(['epstopdf ' figurename '.eps']);
                 system(['rm ' figurename '.eps']);
             end
-            %
-            set(0,'CurrentFigure',meanExitSpeeds)
-            if smoothSpeed
-                plot(timeSeries,nanmean(smoothExitSpeeds,1))
-            else
-                plot(timeSeries,nanmean(exitSpeeds,1))
-            end
         end
+        %% mean speed plots
         % mean entry plot
-        set(0,'CurrentFigure',meanEntrySpeeds)
+        meanEntrySpeeds = vertcat(meanEntrySpeeds{:});
+        set(0,'CurrentFigure',meanEntrySpeedsFig)
+        plot(timeSeries,nanmean(meanEntrySpeeds,1))
         title(['mean cluster entry speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
+        ylim([0 400])
         if smoothSpeed
             figurename = (['figures/entryExitSpeeds/entrySpeedsMeanSmoothed_' phase]);
         else
             figurename = (['figures/entryExitSpeeds/entrySpeedsMean_' phase]);
         end
         if saveResults
-            exportfig(meanEntrySpeeds,[figurename '.eps'],exportOptions)
+            exportfig(meanEntrySpeedsFig,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
         % mean exit plot
-        set(0,'CurrentFigure',meanExitSpeeds)
+        meanExitSpeeds = vertcat(meanExitSpeeds{:});
+        set(0,'CurrentFigure',meanExitSpeedsFig)
+        plot(timeSeries,nanmean(meanExitSpeeds,1))
         title(['mean cluster exit speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
+        ylim([0 400])
         if smoothSpeed
             figurename = (['figures/entryExitSpeeds/exitSpeedsMeanSmoothed_' phase]);
         else
             figurename = (['figures/entryExitSpeeds/exitSpeedsMean_' phase]);
         end
         if saveResults
-            exportfig(meanExitSpeeds,[figurename '.eps'],exportOptions)
+            exportfig(meanExitSpeedsFig,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
