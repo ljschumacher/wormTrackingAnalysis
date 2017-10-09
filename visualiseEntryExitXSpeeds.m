@@ -12,7 +12,7 @@ preExitDuration = 10; % only applied if colorSpeed is true: duration (in seconds
 postExitDuration = 10; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 minInOutClusterFrameNum = 5;
 smoothWindow = 5;
-saveResults = false;
+saveResults = true;
 enforceInClusterAfterEntryBeforeExit = true;
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
@@ -270,7 +270,7 @@ for strainCtr = 1:length(strains)
         allSmoothExitSpeeds = vertcat(allSmoothExitSpeeds{:});
         
         %% plotting and saving data
-        % mean entry speed plot
+        % mean entry and exit speed plot
         meanEntryExitSpeedsFig = figure; hold on
         set(0,'CurrentFigure',meanEntryExitSpeedsFig)
         plot(timeSeries,nanmean(allSmoothEntrySpeeds,1))
@@ -286,6 +286,43 @@ for strainCtr = 1:length(strains)
         end
         if saveResults
             exportfig(meanEntryExitSpeedsFig,[figurename '.eps'],exportOptions)
+            system(['epstopdf ' figurename '.eps']);
+            system(['rm ' figurename '.eps']);
+        end
+        
+        % mean entry and exit speed plot, separate pos and neg speed
+        meanEntryExitSpeeds = figure; 
+        allSmoothEntrySpeedsPos = allSmoothEntrySpeeds;
+        allSmoothEntrySpeedsPos(allSmoothEntrySpeeds<0)=NaN;
+        allSmoothEntrySpeedsNeg = allSmoothEntrySpeeds;
+        allSmoothEntrySpeedsNeg(allSmoothEntrySpeeds>0)=NaN;
+        allSmoothExitSpeedsPos = allSmoothExitSpeeds;
+        allSmoothExitSpeedsPos(allSmoothExitSpeeds<0)=NaN;
+        allSmoothExitSpeedsNeg = allSmoothExitSpeeds;
+        allSmoothExitSpeedsNeg(allSmoothExitSpeeds>0)=NaN;
+        subplot(2,1,1); hold on
+        plot(timeSeries,nanmean(allSmoothEntrySpeedsPos,1))
+        plot(timeSeries,nanmean(allSmoothExitSpeedsPos,1))
+        title(['mean positive cluster entry and exit speeds'])
+        xlabel('frames')
+        ylabel('speed(microns/s)')
+        ylim([50 150])
+        legend('entry','exit')
+        subplot(2,1,2); hold on
+        plot(timeSeries,nanmean(allSmoothEntrySpeedsNeg,1))
+        plot(timeSeries,nanmean(allSmoothExitSpeedsNeg,1))
+        title(['mean negative cluster entry and exit speeds'])
+        xlabel('frames')
+        ylabel('speed(microns/s)')
+        ylim([-150 -50])
+        legend('entry','exit')
+        if enforceInClusterAfterEntryBeforeExit
+            figurename = (['figures/entryExitSpeeds/entryExitSpeedsMeanSmoothedSigned_halfFiltered_' phase]);
+        else
+            figurename = (['figures/entryExitSpeeds/entryExitSpeedsMeanSmoothedSigned_' phase]);
+        end
+        if saveResults
+            exportfig(meanEntryExitSpeeds,[figurename '.eps'],exportOptions)
             system(['epstopdf ' figurename '.eps']);
             system(['rm ' figurename '.eps']);
         end
@@ -335,7 +372,7 @@ for strainCtr = 1:length(strains)
             else
                 filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds.mat';
             end
-            save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds')
+            save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries')
         end
     end
 end
