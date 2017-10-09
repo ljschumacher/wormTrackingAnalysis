@@ -11,9 +11,11 @@ wormnums = {'40'};% {'40'};
 preExitDuration = 10; % only applied if colorSpeed is true: duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 10; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 minInOutClusterFrameNum = 5;
+smoothWindow = 5;
+saveResults = false;
+enforceInClusterAfterEntryBeforeExit = true;
+
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-saveResults = true;
-enforceInClusterAfterEntryBeforeExit = false;
 
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -41,12 +43,15 @@ for strainCtr = 1:length(strains)
         %% go through individual movies
         for fileCtr = 1:numFiles
             %% load data
-            filename = filenames{fileCtr}
+            filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
             blobFeats = h5read(filename,'/blob_features');
             skelData = h5read(filename,'/skeleton'); % in pixels
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
+            
+            %% generate time series (x), setting time to be zero at the point of entry
+            timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate];
             
             %% calculate midbody signed speed (from reversalAnalysisBodyWall.m)
             midbodyIndcs = 19:33;
@@ -54,11 +59,11 @@ for strainCtr = 1:length(strains)
             midbody_x = mean(squeeze(skelData(1,midbodyIndcs,:)))*pixelsize;
             midbody_y = mean(squeeze(skelData(2,midbodyIndcs,:)))*pixelsize;
             % change in centroid position over time (issue of worm shifts?)
-            dmidbody_xdt = gradient(midbody_x)*frameRate; %%%%%%%%%%%
+            dmidbody_xdt = gradient(midbody_x)*frameRate;
             dmidbody_ydt = gradient(midbody_y)*frameRate;
             % midbody speed and velocity
             dFramedt = gradient(double(trajData.frame_number))';
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./dFramedt; %%%%%%%%%%%%
+            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./dFramedt;
             midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./dFramedt;
             % direction of segments pointing along midbody
             [~, dmidbody_yds] = gradient(squeeze(skelData(2,midbodyIndcs,:)),-1);
@@ -67,7 +72,7 @@ for strainCtr = 1:length(strains)
             midbodySpeedSigned = getSignedSpeed(midbodyVelocity,[mean(dmidbody_xds); mean(dmidbody_yds)]);
             % ignore first and last frames of each worm's track
             wormChangeIndcs = gradient(double(trajData.worm_index_manual))~=0;
-            midbodySpeedSigned(wormChangeIndcs)=NaN;
+            midbodySpeedSigned(wormChangeIndcs)=NaN;        
             
             %% filter worms by various criteria
             % filter red by manually joined traj
@@ -87,164 +92,166 @@ for strainCtr = 1:length(strains)
             [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
-            
-            %% get logical indices for worms that have entered or left a cluster
+            % get logical indices for worms that have entered or left a cluster
             min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
             num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
             trajData = h5read(filename,'/trajectories_data');
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
-            enterClusterPointLogInd = vertcat(false,~inClusterLogInd(1:end-1)&inClusterLogInd(2:end));
-            exitClusterPointLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
-            enterClusterPoints = find(enterClusterPointLogInd);
-            exitClusterPoints = find(exitClusterPointLogInd);
+            enterClusterStartLogInd = vertcat(false,~inClusterLogInd(1:end-1)&inClusterLogInd(2:end));
+            exitClusterStartLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
             
-            %% % generate time series (x), setting time to be zero at the point of entry
-            timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate];
-            
-            %% plot entry time course for midbody signed speed
-            % initialise
-            entrySpeeds = NaN(numel(enterClusterPoints),preExitDuration*frameRate +1+ postExitDuration*frameRate);
+            %% plot entry time course for midbody signed speed      
+            % get indices for cluster entry points
+            enterClusterPoint = find(enterClusterStartLogInd);  
+            entrySpeeds = NaN(numel(enterClusterPoint),preExitDuration*frameRate +1+ postExitDuration*frameRate);
             % loop through each entry
-            for entryCtr = 1:numel(enterClusterPoints)
-                thisEntryIdx = enterClusterPoints(entryCtr);
+            for entryCtr = 1:numel(enterClusterPoint)
+                thisEntryIdx = enterClusterPoint(entryCtr);
                 % get the worm index
                 wormIndex = trajData.worm_index_manual(thisEntryIdx);
                 % check that the same worm stays in cluster for minumum number of frames
                 if thisEntryIdx+minInOutClusterFrameNum <= length(trajData.frame_number) &&...
                         nnz(inClusterLogInd(thisEntryIdx:(thisEntryIdx+minInOutClusterFrameNum))) == 1+minInOutClusterFrameNum...
                         && nnz(trajData.worm_index_manual(thisEntryIdx:(thisEntryIdx+minInOutClusterFrameNum)) == wormIndex) == 1+minInOutClusterFrameNum
-                    % expand for a specified number of entries before entry point
+                    % expand for a specified number of entries before and after the entry point
                     thisEntryStartIdx = thisEntryIdx-preExitDuration*frameRate;
                     if thisEntryStartIdx <= 0
-                        beforeStartFrameNum = 1-thisEntryStartIdx; % take note of omitted frames for matrix alignment purposes
+                        beforeStartFrameNum = 1-thisEntryStartIdx; % take note of omitted frames for alignment purposes
                         thisEntryStartIdx = 1; % exclude entries below index 0
                     end
-                    % generate logical index for pre-entry (including entry point)
-                    thisEntryPreEntryLogInd =  false(1,length(midbodySpeedSigned));
-                    thisEntryPreEntryLogInd(thisEntryStartIdx:thisEntryIdx) = true;
-                    % get midbody signed speeds (y) for this part of the entry
-                    thisEntryPreEntrySpeeds = NaN(1,preExitDuration*frameRate +1);
-                    if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
-                        thisEntryPreEntrySpeeds((beforeStartFrameNum+1):end) = midbodySpeedSigned(thisEntryPreEntryLogInd);
-                        clear beforeStartFrameNum
-                    else
-                        thisEntryPreEntrySpeeds = midbodySpeedSigned(thisEntryPreEntryLogInd);
-                    end
-                    % expand for a specified number of entries after entry point
                     thisEntryEndIdx = thisEntryIdx + postExitDuration*frameRate;
                     if thisEntryEndIdx > length(trajData.frame_number)
                         afterEndFrameNum = thisEntryEndIdx - length(trajData.frame_number); % take note of omitted frames for alignment purposes
                         thisEntryEndIdx = length(trajData.frame_number); % exclude entries above highest index
                     end
-                    % generate logical index for post-entry (excluding entry point)
-                    thisEntryPostEntryLogInd = false(1,length(midbodySpeedSigned));
-                    thisEntryPostEntryLogInd((thisEntryIdx+1):thisEntryEndIdx) = true;
+                    % generate logical index for this entry
+                    thisEntryLogInd = false(1,length(midbodySpeedSigned));
+                    thisEntryLogInd(thisEntryStartIdx:thisEntryEndIdx) = true;
                     % get midbody signed speeds (y) for this entry
-                    if enforceInClusterAfterEntryBeforeExit
-                        midbodySpeedSigned(~inClusterLogInd) = NaN;
-                    end
-                    thisEntryPostEntrySpeeds = NaN(1,postExitDuration*frameRate);
-                    if exist('afterEndFrameNum','var')
-                        thisEntryPostEntrySpeeds(1:(end-afterEndFrameNum)) = midbodySpeedSigned(thisEntryPostEntryLogInd);
-                        clear afterEndFrameNum
+                    thisEntrySpeeds = NaN(1,size(entrySpeeds,2));
+                    if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                        thisEntrySpeeds(beforeStartFrameNum+1:end) = midbodySpeedSigned(thisEntryLogInd);
+                    elseif exist('afterEndFrameNum','var')
+                        thisEntrySpeeds(1:(end-afterEndFrameNum)) = midbodySpeedSigned(thisEntryLogInd);
                     else
-                        thisEntryPostEntrySpeeds = midbodySpeedSigned(thisEntryPostEntryLogInd);
+                        thisEntrySpeeds = midbodySpeedSigned(thisEntryLogInd);
                     end
-                    % concatenate pre- and post-entry speeds
-                    thisEntrySpeeds = [thisEntryPreEntrySpeeds thisEntryPostEntrySpeeds];
-                    assert(numel(thisEntrySpeeds) == preExitDuration*frameRate +1+ postExitDuration*frameRate,'frames missing for entry speed time series')
                     % exclude entries representing a different worm
-                    thisEntrySpeeds(trajData.worm_index_manual(thisEntryPreEntryLogInd) ~= wormIndex) = NaN;
-                    thisEntrySpeeds(trajData.worm_index_manual(thisEntryPostEntryLogInd) ~= wormIndex) = NaN;
+                    thisEntrySpeeds(trajData.worm_index_manual(thisEntryLogInd) ~= wormIndex) = NaN;
+                    % optional: excludes entries representing non-inCluster worms post-entry (inclusive of entry point)
+                    if enforceInClusterAfterEntryBeforeExit
+                        % create speed vector the same length as the full index
+                        thisEntrySpeedsFullLength = NaN(1,length(midbodySpeedSigned));
+                        if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                             thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx) = thisEntrySpeeds(beforeStartFrameNum+1:end);
+                        elseif exist('afterEndFrameNum','var') 
+                            thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx) = thisEntrySpeeds(1:(end-afterEndFrameNum));
+                        else
+                            thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx) = thisEntrySpeeds;
+                        end
+                        % generate logical index for post-entry indices
+                        thisEntryPostEntryLogInd = false(1,length(midbodySpeedSigned));
+                        thisEntryPostEntryLogInd(thisEntryIdx:thisEntryEndIdx) = true;
+                        % eliminate speeds for non-inCluster worms post-entry
+                        thisEntrySpeedsFullLength(thisEntryPostEntryLogInd & ~ inClusterLogInd') = NaN;
+                        % shorten full length speeds back to the window of interest
+                        if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                            thisEntrySpeeds(beforeStartFrameNum+1:end) = thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx);
+                        elseif exist('afterEndFrameNum','var') 
+                            thisEntrySpeeds(1:(end-afterEndFrameNum)) = thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx);
+                        else
+                            thisEntrySpeeds = thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx);
+                        end
+                    end
                     % add data to speed matrix
                     entrySpeeds(entryCtr,:) = thisEntrySpeeds;
                 end
+                % clear variables
+                clear beforeStartFrameNum
+                clear afterEndFrameNum
             end
-            % ignore signs of the speed
-            entrySpeeds = abs(entrySpeeds);
             % set maximum speed
             entrySpeeds(entrySpeeds>1500) = NaN;
             % smooth speeds
-            smoothEntrySpeeds = NaN(size(entrySpeeds));
-            for row = 1:size(entrySpeeds,1)
-                smoothEntrySpeeds(row,:) = smooth(entrySpeeds(row,:),3);
-            end
-            % ignore signs of the speed
-            smoothEntrySpeeds = abs(smoothEntrySpeeds);
+            smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
             smoothEntrySpeeds(smoothEntrySpeeds>1500) = NaN;
-            
+
             %% plot exit time course for midbody signed speed
-            % initialise
-            exitSpeeds = NaN(numel(exitClusterPoints),preExitDuration*frameRate +1+ postExitDuration*frameRate);
+            % get indices for cluster exit points
+            exitClusterPoint = find(exitClusterStartLogInd);
+            exitSpeeds = NaN(numel(exitClusterPoint),preExitDuration*frameRate +1+ postExitDuration*frameRate);
             % loop through each exit
-            for exitCtr = 1:numel(exitClusterPoints)
-                thisExitIdx = exitClusterPoints(exitCtr);
+            for exitCtr = 1:numel(exitClusterPoint)
+                thisExitIdx = exitClusterPoint(exitCtr);
                 % get the worm index
                 wormIndex = trajData.worm_index_manual(thisExitIdx);
                 % check that the same worm stays out of cluster for minumum number of frames
                 if thisExitIdx+minInOutClusterFrameNum <= length(trajData.frame_number) &&...
-                        nnz(inClusterLogInd(thisExitIdx:(thisExitIdx+minInOutClusterFrameNum))) == 0 ...
+                    nnz(inClusterLogInd(thisExitIdx:(thisExitIdx+minInOutClusterFrameNum))) == 0 ...
                         && nnz(trajData.worm_index_manual(thisExitIdx:(thisExitIdx+minInOutClusterFrameNum)) == wormIndex) == 1+minInOutClusterFrameNum
-                    % expand for a specified number of entries before the exit point (excluding exit point)
+                    % expand for a specified number of entries before and after the exit point
                     thisExitStartIdx = thisExitIdx-preExitDuration*frameRate;
                     if thisExitStartIdx <= 0
                         beforeStartFrameNum = 1-thisExitStartIdx; % take note of omitted frames for alignment purposes
                         thisExitStartIdx = 1; % exclude entries below index 0
                     end
-                    % generate logical index for this part of exit
-                    thisExitPreExitLogInd = false(1,length(midbodySpeedSigned));
-                    thisExitPreExitLogInd(thisExitStartIdx:(thisExitIdx-1)) = true;
-                    % get midbody signed speeds (y) for this exit
-                    if enforceInClusterAfterEntryBeforeExit
-                        midbodySpeedSigned(~inClusterLogInd) = NaN;
-                    end
-                    thisExitPreExitSpeeds = NaN(1,preExitDuration*frameRate);
-                    if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
-                        thisExitPreExitSpeeds(beforeStartFrameNum+1:end) = midbodySpeedSigned(thisExitPreExitLogInd);
-                        clear beforeStartFrameNum
-                    else
-                        thisExitPreExitSpeeds = midbodySpeedSigned(thisExitPreExitLogInd);
-                    end
-                    % expand for a specified number of entries after the exit point (including exit point)
                     thisExitEndIdx = thisExitIdx + postExitDuration*frameRate;
                     if thisExitEndIdx > length(trajData.frame_number)
                         afterEndFrameNum = thisExitEndIdx - length(trajData.frame_number); % take note of omitted frames for alignment purposes
                         thisExitEndIdx = length(trajData.frame_number); % exclude entries above highest index
                     end
-                    % generate logical index for this part of exit
-                    thisExitPostExitLogInd = false(1,length(midbodySpeedSigned));
-                    thisExitPostExitLogInd(thisExitIdx:thisExitEndIdx) = true;
+                    % generate logical index for this exit
+                    thisExitLogInd = false(1,length(midbodySpeedSigned));
+                    thisExitLogInd(thisExitStartIdx:thisExitEndIdx) = true;
                     % get midbody signed speeds (y) for this exit
-                    thisExitPostExitSpeeds = NaN(1,postExitDuration*frameRate+1);
-                    if  exist('afterEndFrameNum','var')
-                        thisExitPostExitSpeeds(1:(end-afterEndFrameNum)) = midbodySpeedSigned(thisExitPostExitLogInd);
-                        clear afterEndFrameNum
+                    thisExitSpeeds = NaN(1,size(exitSpeeds,2));
+                    if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                        thisExitSpeeds(beforeStartFrameNum+1:end) = midbodySpeedSigned(thisExitLogInd);
+                    elseif exist('afterEndFrameNum','var')
+                        thisExitSpeeds(1:(end-afterEndFrameNum)) = midbodySpeedSigned(thisExitLogInd);
                     else
-                        thisExitPostExitSpeeds = midbodySpeedSigned(thisExitPostExitLogInd);
+                        thisExitSpeeds = midbodySpeedSigned(thisExitLogInd);
                     end
-                    % concatenate pre- and post-exit speeds
-                    thisExitSpeeds = [thisExitPreExitSpeeds thisExitPostExitSpeeds];
-                    assert(numel(thisExitSpeeds) == preExitDuration*frameRate +1+ postExitDuration*frameRate,'frames missing for exit speed time series')
                     % exclude entries representing a different worm
-                    thisExitSpeeds(trajData.worm_index_manual(thisExitPreExitLogInd) ~= wormIndex) = NaN;
-                    thisExitSpeeds(trajData.worm_index_manual(thisExitPostExitLogInd) ~= wormIndex) = NaN;
+                    thisExitSpeeds(trajData.worm_index_manual(thisExitLogInd) ~= wormIndex) = NaN;
+                    % optional: excludes entries representing non-inCluster worms post-entry (inclusive of entry point)
+                    if enforceInClusterAfterEntryBeforeExit
+                        % create speed vector the same length as the full index
+                        thisExitSpeedsFullLength = NaN(1,length(midbodySpeedSigned));
+                        if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                            thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx) = thisExitSpeeds(beforeStartFrameNum+1:end);
+                        elseif exist('afterEndFrameNum','var')
+                            thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx) = thisExitSpeeds(1:(end-afterEndFrameNum));
+                        else
+                            thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx) = thisExitSpeeds;
+                        end
+                        % generate logical index for post-entry indices
+                        thisExitPreExitLogInd = false(1,length(midbodySpeedSigned));
+                        thisExitPreExitLogInd(thisExitStartIdx:(thisExitIdx-1)) = true;
+                        % eliminate speeds for non-inCluster worms post-entry
+                        thisExitSpeedsFullLength(thisExitPreExitLogInd & ~ inClusterLogInd') = NaN;
+                        % shorten full length speeds back to the window of interest
+                        if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                            thisExitSpeeds(beforeStartFrameNum+1:end) = thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx);
+                        elseif exist('afterEndFrameNum','var')
+                            thisExitSpeeds(1:(end-afterEndFrameNum)) = thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx);
+                        else
+                            thisExitSpeeds = thisExitSpeedsFullLength(thisExitStartIdx:thisExitEndIdx);
+                        end
+                    end
                     % add data to speed matrix
                     exitSpeeds(exitCtr,:) = thisExitSpeeds;
                 end
+                % clear variables
+                clear beforeStartFrameNum
+                clear afterEndFrameNum
             end
-            % ignore signs of the speed
-            exitSpeeds = abs(exitSpeeds);
             % set maximum speed
             exitSpeeds(exitSpeeds>1500) = NaN;
             % smooth speeds
-            smoothExitSpeeds = NaN(size(exitSpeeds));
-            for row = 1:size(exitSpeeds,1)
-                smoothExitSpeeds(row,:) = smooth(exitSpeeds(row,:),3);
-            end
-            % ignore signs of the speed
-            smoothExitSpeeds = abs(smoothExitSpeeds);
+            smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
             smoothExitSpeeds(smoothExitSpeeds>1500) = NaN;
             
@@ -253,7 +260,7 @@ for strainCtr = 1:length(strains)
             allExitSpeeds{fileCtr} = exitSpeeds;
             allSmoothEntrySpeeds{fileCtr} = smoothEntrySpeeds;
             allSmoothExitSpeeds{fileCtr} = smoothExitSpeeds;
-            
+
         end
         
         % pool data
@@ -289,7 +296,7 @@ for strainCtr = 1:length(strains)
         title(['mean cluster entry speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
-        ylim([-100 700])
+        ylim([-150 250])
         if enforceInClusterAfterEntryBeforeExit
             figurename = (['figures/entryExitSpeeds/entrySpeedsMeanErrorSmoothed_halfFiltered_' phase]);
         else
@@ -308,7 +315,7 @@ for strainCtr = 1:length(strains)
         title(['mean cluster exit speeds'])
         xlabel('frames')
         ylabel('speed(microns/s)')
-        ylim([-100 700])
+        ylim([-150 250])
         if enforceInClusterAfterEntryBeforeExit
             figurename = (['figures/entryExitSpeeds/exitSpeedsMeanErrorSmoothed_halfFiltered_' phase]);
         else
