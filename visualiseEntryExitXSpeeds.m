@@ -172,11 +172,11 @@ for strainCtr = 1:length(strains)
                 clear afterEndFrameNum
             end
             % set maximum speed
-            entrySpeeds(entrySpeeds>1500) = NaN;
+            entrySpeeds(abs(entrySpeeds)>1500) = NaN;
             % smooth speeds
             smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
-            smoothEntrySpeeds(smoothEntrySpeeds>1500) = NaN;
+            smoothEntrySpeeds(abs(smoothEntrySpeeds)>1500) = NaN;
 
             %% plot exit time course for midbody signed speed
             % get indices for cluster exit points
@@ -249,11 +249,11 @@ for strainCtr = 1:length(strains)
                 clear afterEndFrameNum
             end
             % set maximum speed
-            exitSpeeds(exitSpeeds>1500) = NaN;
+            exitSpeeds(abs(exitSpeeds)>1500) = NaN;
             % smooth speeds
             smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
-            smoothExitSpeeds(smoothExitSpeeds>1500) = NaN;
+            smoothExitSpeeds(abs(smoothExitSpeeds)>1500) = NaN;
             
             %% save data for pooling
             allEntrySpeeds{fileCtr} = entrySpeeds;
