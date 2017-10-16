@@ -49,6 +49,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 distBinWidth = 50; % in units of micrometers
 maxDist = 2000;
+maxSpeed = 1500;
 distBins = 0:distBinWidth:maxDist;
 dircorrxticks = 0:500:maxDist;
 load ~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt
