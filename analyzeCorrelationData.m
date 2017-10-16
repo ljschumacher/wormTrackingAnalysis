@@ -1,15 +1,17 @@
-function [] = analyzeCorrelationData(dataset,phase,wormnum,plotDiagnostics)
+function [] = analyzeCorrelationData(dataset,phase,wormnum,markerType,plotDiagnostics)
 % calculate speed vs neighbr distance, directional correlation, and
 % radial distribution functions
 % INPUTS
 % dataset: 1 or 2. To specify which dataset to run the script for.
 % phase: 'joining', 'fullMovie', or 'sweeping'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 % wormnum: '40', or 'HD'
+% markerType: 'pharynx', or 'bodywall'
 % plotDiagnostics: true (default) or false
 % OUTPUTS
 % none returned, but figures are exported
 % issues/to-do:
 % - seperate into individual functions for each statistic?
+% - calculate red-green correlations as well as red-red
 
 %% set other parameters
 exportOptions = struct('Format','eps2',...
@@ -27,12 +29,16 @@ iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
 % or one could use a bootstrapped confidence interval
 bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
 
-if nargin<4
+if nargin<5
     plotDiagnostics = false; % true or false
+    if nargin<4
+        markerType = 'pharynx';
+    end
 end
 
 if dataset ==1
     strains = {'npr1','N2'};%{'npr1','HA','N2'}
+    assert(~strcmp(markerType,'bodywall'),'Bodywall marker for dataset 1 not available')
 elseif dataset ==2
     strains = {'npr1','N2'};
 end
@@ -44,7 +50,17 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
-maxBlobSize = 1e4;
+if strcmp(markerType,'pharynx')
+    maxBlobSize = 1e4;
+    channelStr = 'g';
+elseif strcmp(markerType,'bodywall')
+    maxBlobSize = 2.5e5;
+    channelStr = 'r';
+    minSkelLength = 850;
+    maxSkelLength = 1500;
+else
+   error('unknown marker type specified, should be pharynx or bodywall')
+end
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 if plotDiagnostics, visitfreqFig = figure; hold on, end
 distBinWidth = 50; % in units of micrometers
@@ -65,12 +81,10 @@ for strainCtr = 1:nStrains
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
     elseif dataset == 2
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list.xlsx'],1,'A1:E15','basic');
     end
     numFiles = length(filenames);
-    if strcmp(wormnum,'40')
-        visitfreq = cell(numFiles,1);
-    end
+    if strcmp(wormnum,'40'), visitfreq = cell(numFiles,1); end
     speeds = cell(numFiles,1);
     dxcorr = cell(numFiles,1); % for calculating directional cross-correlation
     vxcorr = cell(numFiles,1); % for calculating velocity cross-correlation
@@ -80,32 +94,39 @@ for strainCtr = 1:nStrains
     gr =cell(numFiles,1);
     for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
+        %% load tracking data
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
         skelData = h5read(filename,'/skeleton');
+        % check formats
         assert(size(skelData,1)==2,['Wrong skeleton size for ' filename])
         assert(size(skelData,2)==2,['Wrong skeleton size for ' filename])
         assert(size(skelData,3)==length(trajData.frame_number),['Wrong number of skeleton frames for ' filename])
         assert(length(blobFeats.velocity_x)==length(trajData.frame_number)&&...
             length(blobFeats.signed_speed)==length(trajData.frame_number),['Wrong number of speed frames for ' filename])
-        if all(isnan(skelData(:)))
-            warning(['all skeleton are NaN for ' filename])
-        end
+        if all(isnan(skelData(:))), warning(['all skeleton are NaN for ' filename]),end
+        %% randomly sample which frames to analyze
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
-        %% randomly sample frames to analyze
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
         numFrames = round((lastFrame-firstFrame)/frameRate);
         framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
         %% filter worms
         if plotDiagnostics
-            visualizeIntensitySizeFilter(blobFeats,pixelsize,...
-                intensityThresholds(wormnum),maxBlobSize,...
+            visualizeIntensitySizeFilter(blobFeats,pixelsize,intensityThresholds(wormnum),maxBlobSize,...
                 [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
         end
-        trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
+        if strcmp(markerType,'pharynx')
+            % reset skeleton flag for pharynx data
+            trajData.has_skeleton = squeeze(~any(any(isnan(skelData))));
+        end
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds(wormnum),maxBlobSize)...
             &trajData.has_skeleton;
+        if strcmp(markerType,'bodywall')
+            % filter red data by skeleton length
+            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
+                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+        end
         % apply phase restriction
         phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         trajData.filtered(~phaseFrameLogInd)=false;
@@ -114,7 +135,8 @@ for strainCtr = 1:nStrains
             OverallArea = pi*(8300/2)^2;
         else
             OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
-                peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2
+                peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2;
+            disp(['overall background area estimated as ' num2str(OverallArea)])
         end
         speeds{fileCtr} = cell(numFrames,1);
         dxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
@@ -123,17 +145,28 @@ for strainCtr = 1:nStrains
         pairdist{fileCtr} = cell(numFrames,1);
         nNbrDist{fileCtr}= cell(numFrames,1);
         gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
+        if strcmp(markerType,'bodywall')
+                    [ ~, velocities_x, velocities_y, ~ ] = calculateSpeedsFromSkeleton(trajData,skelData,1:5,...
+                        pixelsize,frameRate,true,0);
+        end
         for frameCtr = 1:numFrames % one may be able to vectorise this
             frame = framesAnalyzed(frameCtr);
             [x ,y] = getWormPositions(trajData, frame, true);
             N = length(x);
             if N>1 % need at least two worms in frame
                 frameLogInd = trajData.frame_number==frame&trajData.filtered;
-                vx = double(blobFeats.velocity_x(frameLogInd));
-                vy = double(blobFeats.velocity_y(frameLogInd));
+                if strcmp(markerType,'pharynx')
+                    vx = double(blobFeats.velocity_x(frameLogInd));
+                    vy = double(blobFeats.velocity_y(frameLogInd));
+                    ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
+                    oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
+                elseif strcmp(markerType,'bodywall')
+                    vx = velocities_x(frameLogInd);
+                    vy = velocities_y(frameLogInd);
+                    ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,5,frameLogInd)));
+                    oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,5,frameLogInd)));
+                end
                 speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
-                ox = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
-                oy = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                 dxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(ox,oy,true,false); % directional correlation
                 vxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,false); % velocity correlation
                 pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
@@ -202,7 +235,8 @@ for strainCtr = 1:nStrains
     nNbrDistBins = double(nNbrDistBins(1:end-1) + diff(nNbrDistBins)/2);
     pairDistBins = double(pairDistBins(1:end-1) + diff(pairDistBins)/2);
     % ignore larger distance values and bins with only one element, as this will cause bootsci to fault
-    nNdistkeepIdcs = nNbrDistbinIdx>0&ismember(nNbrDistbinIdx,find(nNbrDistcounts>1));
+    nNdistkeepIdcs = nNbrDistbinIdx>0&ismember(nNbrDistbinIdx,find(nNbrDistcounts>1))...
+        &speeds'<=maxSpeed; % also ignore outlier speed values
     nNbrDistBins = nNbrDistBins(nNbrDistcounts>1);
     speeds = speeds(nNdistkeepIdcs);
     vncorr = vncorr(nNdistkeepIdcs);
