@@ -65,6 +65,9 @@ for strainCtr = 1:length(strains)
             exitSpeeds = NaN(totalExit,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
         end
         
+        % initialise counters
+        entryCtr = 1;
+        exitCtr = 1;
         %% go through individual movies
         for fileCtr = 1:numFiles
             %% load data
@@ -137,14 +140,11 @@ for strainCtr = 1:length(strains)
             %% case with manually labelled events
             if useManualEvents
                 % go through each annotated event
-                entryCtr = 0; % initialise counter
                 for eventCtr = 1:size(annotations,1)
                     % find entry events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
                     recordingNumber = recordingNumber(2:end); % remove the 'r' before the number
                     if contains(filename, recordingNumber) & strcmp(annotations{eventCtr,5},'enter')
-                        eventCtr
-                        entryCtr = entryCtr + 1
                         % collect information on worm index and entry frames
                         wormIndex = annotations{eventCtr,2};
                         thisEntryStartFrame = annotations{eventCtr,7}; % get the annotated entry start frame
@@ -194,6 +194,9 @@ for strainCtr = 1:length(strains)
                         clear afterEndFrameNum
                         % write event number to legend
                         entryLegend{entryCtr} = num2str(eventCtr);
+                        % update counter
+                        entryCtr = entryCtr +1;
+                        assert(entryCtr<=totalEntry);
                     end
                 end
                 
@@ -283,7 +286,6 @@ for strainCtr = 1:length(strains)
             %% case with manually labelled events
             if useManualEvents
                 % go through each annotated event
-                exitCtr = 1;
                 for eventCtr = 1:size(annotations,1)
                     % find exit events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
@@ -340,6 +342,7 @@ for strainCtr = 1:length(strains)
                         exitLegend{exitCtr} = num2str(eventCtr);
                         % update exit counter
                         exitCtr = exitCtr + 1;
+                        assert(exitCtr<=totalExit);
                     end
                 end
                 
