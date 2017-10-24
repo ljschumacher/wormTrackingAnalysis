@@ -91,8 +91,6 @@ for strainCtr = 1:nStrains
     vncorr = cell(numFiles,1); % for calculating velocity correlation with nearest neighbour position
     pairdist = cell(numFiles,1);
     nNbrDist= cell(numFiles,1);
-    nnNbrDist= cell(numFiles,1);
-    nnnNbrDist= cell(numFiles,1);
     numNbrs= cell(numFiles,1);
     gr =cell(numFiles,1);
     for fileCtr = 1:numFiles % can be parfor
@@ -150,8 +148,6 @@ for strainCtr = 1:nStrains
         vncorr{fileCtr} = cell(numFrames,1);
         pairdist{fileCtr} = cell(numFrames,1);
         nNbrDist{fileCtr}= cell(numFrames,1);
-        nnNbrDist{fileCtr}= cell(numFrames,1);
-        nnnNbrDist{fileCtr}= cell(numFrames,1);
         numNbrs{fileCtr}= cell(numFrames,1);
         gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
         if strcmp(markerType,'bodywall')
@@ -184,9 +180,11 @@ for strainCtr = 1:nStrains
                     ./(2*pi*distBins(2:end)*distBinWidth*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
                 D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                 [nNbrDist{fileCtr}{frameCtr}, nNbrIndx] = min(D + max(max(D))*eye(size(D)));
-                nnNbrDist{fileCtr}{frameCtr} = neighbr_dist(frameLogInd,2);
-                nnnNbrDist{fileCtr}{frameCtr} = neighbr_dist(frameLogInd,3);
-                numNbrs{fileCtr}{frameCtr} = num_close_neighbrs(frameLogInd);
+                %                 numNbrs{fileCtr}{frameCtr} = num_close_neighbrs(frameLogInd);
+                numNbrs{fileCtr}{frameCtr} = zeros(nnz(frameLogInd),8);
+                for n=1:8
+                    numNbrs{fileCtr}{frameCtr}(:,n) = sum(neighbr_dist(frameLogInd,:)<=n*250,2);
+                end
                 % calculate direction towards nearest neighbour for each worm
                 dx = double(x(nNbrIndx) - x); dy = double(y(nNbrIndx) - y);
                 vncorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(vx,vy,dx,dy,true,false);
@@ -203,8 +201,6 @@ for strainCtr = 1:nStrains
         vncorr{fileCtr} = vertcat(vncorr{fileCtr}{:});
         pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
         nNbrDist{fileCtr} = horzcat(nNbrDist{fileCtr}{:});
-        nnNbrDist{fileCtr} = vertcat(nnNbrDist{fileCtr}{:})';
-        nnnNbrDist{fileCtr} = vertcat(nnnNbrDist{fileCtr}{:})';
         numNbrs{fileCtr} = vertcat(numNbrs{fileCtr}{:})';
         %% heat map of sites visited - this only makes sense for 40 worm
         % dataset where we don't move the camera
@@ -227,51 +223,43 @@ for strainCtr = 1:nStrains
     end
     %% combine data from multiple files
     nNbrDist = horzcat(nNbrDist{:});
-    nnNbrDist = horzcat(nnNbrDist{:});
-    nnnNbrDist = horzcat(nnnNbrDist{:});
     numNbrs = horzcat(numNbrs{:});
     speeds = vertcat(speeds{:});
     pairdist = horzcat(pairdist{:});
     dxcorr = horzcat(dxcorr{:});
     vxcorr = horzcat(vxcorr{:});
     vncorr = vertcat(vncorr{:});
-    %% plot 2d histogram of speed and distance
-    speedHist2Fig = figure; hold on
-    h = histogram2(nNbrDist,speeds','DisplayStyle','tile','EdgeColor','none',...
-        'XBinLimits',[0 maxDist],'YBinLimits',[0 400],'BinWidth',[distBinWidth, distBinWidth/2]);
-    normfactor = sum(h.BinCounts,2);
-    normfactor(normfactor==0) = 1;
-    h.BinCounts = h.BinCounts./normfactor; % conditional normalisation
-    xlabel(speedHist2Fig.Children,'distance to nearest neighbour (μm)')
-    % nearest two nbrs
-    speedHist2FigNN = figure; hold on
-    h = histogram2(mean([nNbrDist; nnNbrDist],1),speeds','DisplayStyle','tile','EdgeColor','none',...
-        'XBinLimits',[0 maxDist],'YBinLimits',[0 400],'BinWidth',[distBinWidth, distBinWidth/2]);
-    normfactor = sum(h.BinCounts,2);
-    normfactor(normfactor==0) = 1;
-    h.BinCounts = h.BinCounts./normfactor; % conditional normalisation    xlabel(speedHist2FigNN.Children,'distance to nearest two neighbours (μm)')
-    % nearest three nbrs
-    speedHist2FigNNN = figure; hold on
-    h = histogram2(mean([nNbrDist; nnNbrDist; nnnNbrDist],1),speeds','DisplayStyle','tile','EdgeColor','none',...
-        'XBinLimits',[0 maxDist],'YBinLimits',[0 400],'BinWidth',[distBinWidth, distBinWidth/2]);
-    normfactor = sum(h.BinCounts,2);
-    normfactor(normfactor==0) = 1;
-    h.BinCounts = h.BinCounts./normfactor; % conditional normalisation    xlabel(speedHist2FigNNN.Children,'distance to nearest three neighbours (μm)')
-    % number of close nbrs
-    speedHist2FigNbrNum = figure; hold on
-    h = histogram2(numNbrs,speeds','DisplayStyle','tile','EdgeColor','none',...
-        'XBinEdges',-0.5:10.5,'YBinLimits',[0 400]);
-    normfactor = sum(h.BinCounts,2);
-    normfactor(normfactor==0) = 1;
-    h.BinCounts = h.BinCounts./normfactor; % conditional normalisation    xlabel(speedHist2FigNbrNum.Children,'number of neighbours within 500 μm')
-    speedHist2FigNbrNum.Children.Box = 'on';
-    ylabel(speedHist2FigNbrNum.Children,'speed (μm/s)')
-    colormap(speedHist2FigNbrNum,flipud(cmap_Blues))
-    xlim([-0.5 10.5])
-    figurename = ['figures/correlation/phaseSpecific/speedvsneighbrnumHist2D_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
-    exportfig(speedHist2FigNbrNum,[figurename '.eps'],exportOptions)
+    %% plot histograms of speed and distance
+    speedHistFig = figure; hold on
+    histogram(speeds(nNbrDist>=0&nNbrDist<500),'Normalization','probability','DisplayStyle','stairs','BinLimits',[0 600],'BinWidth',distBinWidth/4);
+    histogram(speeds(nNbrDist>=500&nNbrDist<2000),'Normalization','probability','DisplayStyle','stairs','BinLimits',[0 600],'BinWidth',distBinWidth/4);
+    histogram(speeds(nNbrDist>=2000),'Normalization','probability','DisplayStyle','stairs','BinLimits',[0 600],'BinWidth',distBinWidth/4);
+    xlabel(speedHistFig.Children,'speed (μm/s)')
+    speedHistFig.Children.Box = 'on';
+    ylabel(speedHistFig.Children,'P')
+    legend('x_{nn}<500','500<=x_{nn}<2000','x_{nn}>2000')
+    figurename = ['figures/correlation/phaseSpecific/speedHist_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
+    exportfig(speedHistFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
+    % number of close nbrs
+    for n=1:8
+        speedHist2FigNbrNum = figure;
+        h = histogram2(numNbrs(n,:),speeds','DisplayStyle','tile','EdgeColor','none',...
+            'XBinEdges',-0.5:10.5,'YBinLimits',[0 400]);
+        normfactor = sum(h.BinCounts,2);
+        normfactor(normfactor==0) = 1;
+        h.BinCounts = h.BinCounts./normfactor; % conditional normalisation    xlabel(speedHist2FigNbrNum.Children,'number of neighbours within 500 μm')
+        box on
+        ylabel(speedHist2FigNbrNum.Children,'speed (μm/s)')
+        xlabel(speedHist2FigNbrNum.Children,['# neighbours within' num2str(n*250) 'μm'])
+        colormap(speedHist2FigNbrNum,flipud(cmap_Blues))
+        xlim([-0.5 10.5])
+        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrnum' num2str(n*250) 'Hist2D_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
+        exportfig(speedHist2FigNbrNum,[figurename '.eps'],exportOptions)
+        system(['epstopdf ' figurename '.eps']);
+        system(['rm ' figurename '.eps']);
+    end
     %% bin distance data
     [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
         'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
@@ -300,26 +288,6 @@ for strainCtr = 1:nStrains
     [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smooth(s_med),...
         [smooth(s_med - s_ci(:,1)), smooth(s_ci(:,2) - s_med)],...
         'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
-    % median line on 2d hist
-    for fig = [speedHist2Fig, speedHist2FigNN, speedHist2FigNNN]
-        plot(fig.Children,nNbrDistBins,smooth(s_med),'k:','LineWidth',2);
-        fig.Children.XTick = 0:500:maxDist;
-        fig.Children.Box = 'on';
-        ylabel(fig.Children,'speed (μm/s)')
-        colormap(fig,flipud(cmap_Blues))
-    end
-    figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistanceHist2D_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
-    exportfig(speedHist2Fig,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
-    figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistanceHist2DNN_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
-    exportfig(speedHist2FigNN,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
-    figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistanceHist2DNNN_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType '_jointraj'];
-    exportfig(speedHist2FigNNN,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
     % correlations
     boundedline(pairDistBins,smooth(corr_o_med),[smooth(corr_o_med - corr_o_ci(:,1)), smooth(corr_o_ci(:,2) - corr_o_med)],...
         'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
