@@ -11,14 +11,16 @@ wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 10; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 smoothWindow = 9; % number of frames to smooth over
-saveResults = false;
+saveResults = true;
 
 useManualEvents = true; % manual events only available for joining phase
-if ~useManualEvents
+if useManualEvents
+    manualEventMaxDuration = 400; % max number of frames that contains the beginning and end of an annotated event
+    maxTrajPerGraph = 10;
+    
+else
     minInOutClusterFrameNum = 5; % unless using manually labelled events, then enter the min number of frames for in/out cluster status to be sustained for an event to be considered
     enforceInClusterAfterEntryBeforeExit = true;
-else
-    manualEventMaxDuration = 400; % max number of frames that contains the beginning and end of an annotated event
 end
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
@@ -34,7 +36,7 @@ exportOptions = struct('Format','eps2',...
     'Resolution',300,...
     'FontMode','fixed',...
     'FontSize',20,...
-    'LineWidth',1);
+    'LineWidth',3);
 
 %% go through strains, densities, movies
 for strainCtr = 1:length(strains)
@@ -47,7 +49,7 @@ for strainCtr = 1:length(strains)
         numFiles = length(filenames);
         if useManualEvents
             if strcmp(strains{strainCtr},'npr1')
-                [~,~,annotations] = xlsread(['/data2/shared/data/twoColour/MaskedVideos/entryExitEvents_' strains{strainCtr} '_' wormnum '_' phase '.xlsx'],1,'A2:I82','basic');
+                [~,~,annotations] = xlsread(['/data2/shared/data/twoColour/MaskedVideos/entryExitEvents_' strains{strainCtr} '_' wormnum '_' phase '.xlsx'],1,'A2:I80','basic');
             end
             % count the total number of entry and exit events
             totalEntry = 0;
@@ -55,6 +57,7 @@ for strainCtr = 1:length(strains)
             for eventCtr = 1:size(annotations,1)
                 if strcmp(annotations{eventCtr,5},'enter')
                     totalEntry = totalEntry + 1;
+                    entry(totalEntry) = eventCtr;
                 elseif strcmp(annotations{eventCtr,5},'exit')
                     totalExit = totalExit+1;
                 end
@@ -180,7 +183,8 @@ for strainCtr = 1:length(strains)
                         for frameCtr = 1:length(thisEntryXFrames)
                             frameNumber = thisEntryXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = trajData.filtered & ...
+                                trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisEntrySpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -196,7 +200,7 @@ for strainCtr = 1:length(strains)
                         entryLegend{entryCtr} = num2str(eventCtr);
                         % update counter
                         entryCtr = entryCtr +1;
-                        assert(entryCtr<=totalEntry);
+                        assert(entryCtr<=totalEntry+1);
                     end
                 end
                 
@@ -326,7 +330,8 @@ for strainCtr = 1:length(strains)
                         for frameCtr = 1:length(thisExitXFrames)
                             frameNumber = thisExitXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd =  trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = trajData.filtered &...
+                                trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisExitSpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -342,7 +347,7 @@ for strainCtr = 1:length(strains)
                         exitLegend{exitCtr} = num2str(eventCtr);
                         % update exit counter
                         exitCtr = exitCtr + 1;
-                        assert(exitCtr<=totalExit);
+                        assert(exitCtr<=totalExit+1);
                     end
                 end
                 
@@ -436,6 +441,8 @@ for strainCtr = 1:length(strains)
             
         end
         
+        assert(entryCtr == totalEntry+1 & exitCtr == totalExit+1)
+        
         if ~useManualEvents
             % pool data across all movies
             allEntrySpeeds = vertcat(allEntrySpeeds{:});
@@ -469,43 +476,61 @@ for strainCtr = 1:length(strains)
         if useManualEvents
             
             % entry speed plot depicting single trajectories
-            entrySpeedsFig = figure; hold on
-            set(0, 'CurrentFigure',entrySpeedsFig)
-            lineColors = distinguishable_colors(size(allSmoothEntrySpeeds,1));
-            for trajCtr = 1:size(allSmoothEntrySpeeds,1)
-                plot(timeSeries,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-            end
-            title('cluster entry speeds')
-            xlabel('frames')
-            ylabel('speed(microns/s)')
-            xlim([timeSeries(1) timeSeries(end)])
-            ylim([-500 500])
-            legend(entryLegend)
-            figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase]);
-            if saveResults
-                exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+            numGraphs = round(totalEntry/maxTrajPerGraph);
+            lineColors = distinguishable_colors(totalEntry);
+            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+                entrySpeedsFig = figure; hold on
+                set(0, 'CurrentFigure',entrySpeedsFig)
+                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+                if graphCtr*maxTrajPerGraph <= totalEntry
+                    endTrajIdx =  graphCtr*maxTrajPerGraph;
+                else
+                    endTrajIdx = totalEntry;
+                end
+                for trajCtr = startTrajIdx : endTrajIdx
+                    plot(timeSeries,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                end
+                title('cluster entry speeds')
+                xlabel('frames')
+                ylabel('speed(microns/s)')
+                xlim([timeSeries(1) timeSeries(end)])
+                ylim([-500 500])
+                legend(entryLegend{startTrajIdx:endTrajIdx})
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                if saveResults
+                    exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
+                    system(['epstopdf ' figurename '.eps']);
+                    system(['rm ' figurename '.eps']);
+                end
             end
             
             % exit speed plot depicting single trajectories
-            exitSpeedsFig = figure; hold on
-            set(0, 'CurrentFigure',exitSpeedsFig)
-            lineColors = distinguishable_colors(size(allSmoothExitSpeeds,1));
-            for trajCtr = 1:size(allSmoothExitSpeeds,1)
-                plot(timeSeries,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-            end
-            title('cluster exit speeds')
-            xlabel('frames')
-            ylabel('speed(microns/s)')
-            xlim([timeSeries(1) timeSeries(end)])
-            ylim([-500 500])
-            legend(exitLegend)
-            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase]);
-            if saveResults
-                exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+            numGraphs = round(totalExit/maxTrajPerGraph);
+            lineColors = distinguishable_colors(totalExit);
+            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+                exitSpeedsFig = figure; hold on
+                set(0, 'CurrentFigure',exitSpeedsFig)
+                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+                if graphCtr*maxTrajPerGraph <= totalExit
+                    endTrajIdx =  graphCtr*maxTrajPerGraph;
+                else
+                    endTrajIdx = totalExit;
+                end
+                for trajCtr = startTrajIdx:endTrajIdx
+                    plot(timeSeries,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                end
+                title('cluster exit speeds')
+                xlabel('frames')
+                ylabel('speed(microns/s)')
+                xlim([timeSeries(1) timeSeries(end)])
+                ylim([-500 500])
+                legend(exitLegend{startTrajIdx:endTrajIdx})
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                if saveResults
+                    exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
+                    system(['epstopdf ' figurename '.eps']);
+                    system(['rm ' figurename '.eps']);
+                end
             end
             
         else
