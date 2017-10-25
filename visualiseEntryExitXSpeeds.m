@@ -122,8 +122,8 @@ for strainCtr = 1:length(strains)
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThreshold,maxBlobSize_r);
             % filter red by skeleton length
-            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
-                &filterSkelLength(skelData,pixelsize,minSkelLength_r,maxSkelLength_r);
+            trajData.filtered = trajData.filtered...
+                & filterSkelLength(skelData,pixelsize,minSkelLength_r,maxSkelLength_r);
             % apply phase restriction
             [firstPhaseFrame, lastPhaseFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             phaseFrameLogInd = trajData.frame_number <= lastPhaseFrame & trajData.frame_number >= firstPhaseFrame;
@@ -184,8 +184,9 @@ for strainCtr = 1:length(strains)
                         for frameCtr = 1:length(thisEntryXFrames)
                             frameNumber = thisEntryXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd = trajData.filtered & ...
-                                trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                    %...& trajData.filtered
+                                    
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisEntrySpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -280,7 +281,6 @@ for strainCtr = 1:length(strains)
             
             % set maximum speed and remove 0 speed
             entrySpeeds(abs(entrySpeeds)>1500) = NaN;
-            entrySpeeds(entrySpeeds==0) = NaN;
             % smooth speeds
             smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
@@ -333,8 +333,8 @@ for strainCtr = 1:length(strains)
                         for frameCtr = 1:length(thisExitXFrames)
                             frameNumber = thisExitXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd = trajData.filtered &...
-                                trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                %...& trajData.filtered
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisExitSpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -428,7 +428,6 @@ for strainCtr = 1:length(strains)
             end
             % set maximum speed
             exitSpeeds(abs(exitSpeeds)>1500) = NaN;
-            exitSpeeds(exitSpeeds==0) = NaN;
             % smooth speeds
             smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
             % set maximum speed
