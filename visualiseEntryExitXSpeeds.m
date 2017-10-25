@@ -9,7 +9,7 @@ phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
-postExitDuration = 10; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
+postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 smoothWindow = 9; % number of frames to smooth over
 saveResults = true;
 
@@ -493,7 +493,7 @@ for strainCtr = 1:length(strains)
                 title('cluster entry speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([timeSeries(1) timeSeries(end)])
+                xlim([timeSeries(1)-20 abs(timeSeries(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
@@ -522,7 +522,7 @@ for strainCtr = 1:length(strains)
                 title('cluster exit speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([timeSeries(1) timeSeries(end)])
+                xlim([timeSeries(1)-20 abs(timeSeries(1)-20)])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx})
                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
