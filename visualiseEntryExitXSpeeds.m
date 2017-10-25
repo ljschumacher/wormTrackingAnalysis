@@ -524,7 +524,7 @@ for strainCtr = 1:length(strains)
                 ylabel('speed(microns/s)')
                 xlim([timeSeries(1)-20 abs(timeSeries(1)-20)])                
                 ylim([-500 500])
-                legend(exitLegend{startTrajIdx:endTrajIdx})
+                legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
                 if saveResults
                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
