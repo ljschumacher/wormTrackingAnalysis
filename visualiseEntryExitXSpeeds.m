@@ -83,7 +83,8 @@ for strainCtr = 1:length(strains)
             
             %% generate time series (x), setting time to be zero at the point of entry start
             if useManualEvents
-                timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration];
+                timeSeries.entry = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration];
+                timeSeries.exit = [-preExitDuration*frameRate-manualEventMaxDuration:postExitDuration*frameRate];
             else
                 timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate];
             end
@@ -317,14 +318,16 @@ for strainCtr = 1:length(strains)
                             thisExitXEndFrame = lastPhaseFrame; % exclude frames beyond the end of the specified phase
                         end
                         % get aligned list of frames for the event
+                        exitNumFrames = thisExitEndFrame - thisExitStartFrame;
+                        startFiller = manualEventMaxDuration - exitNumFrames ; % number of empty frames to add to the start of speed vector to keep alignment for end of exit
                         thisExitSpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         thisExitXFrames = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
-                            thisExitXFrames(beforeStartFrameNum+1:end) = thisExitXStartFrame:thisExitXEndFrame;
+                            thisExitXFrames(beforeStartFrameNum+startFiller+1:end) = thisExitXStartFrame:thisExitXEndFrame;
                         elseif exist('afterEndFrameNum','var')
-                            thisExitXFrames(1:(end-afterEndFrameNum)) = thisExitXStartFrame:thisExitXEndFrame;
+                            thisExitXFrames(startFiller+1:(end-afterEndFrameNum)) = thisExitXStartFrame:thisExitXEndFrame;
                         else
-                            thisExitXFrames = thisExitXStartFrame:thisExitXEndFrame;
+                            thisExitXFrames(startFiller+1:end) = thisExitXStartFrame:thisExitXEndFrame;
                         end
                         % go through each frame
                         for frameCtr = 1:length(thisExitXFrames)
@@ -488,12 +491,12 @@ for strainCtr = 1:length(strains)
                     endTrajIdx = totalEntry;
                 end
                 for trajCtr = startTrajIdx : endTrajIdx
-                    plot(timeSeries,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                    plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
                 end
                 title('cluster entry speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([timeSeries(1)-20 abs(timeSeries(1)-20)])
+                xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
@@ -517,12 +520,12 @@ for strainCtr = 1:length(strains)
                     endTrajIdx = totalExit;
                 end
                 for trajCtr = startTrajIdx:endTrajIdx
-                    plot(timeSeries,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                    plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
                 end
                 title('cluster exit speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([timeSeries(1)-20 abs(timeSeries(1)-20)])                
+                xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
