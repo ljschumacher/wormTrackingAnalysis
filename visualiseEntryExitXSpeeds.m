@@ -185,8 +185,6 @@ for strainCtr = 1:length(strains)
                             frameNumber = thisEntryXFrames(frameCtr);
                             if ~isnan(frameNumber)
                                 wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
-                                    %...& trajData.filtered
-                                    
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisEntrySpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -282,7 +280,11 @@ for strainCtr = 1:length(strains)
             % set maximum speed and remove 0 speed
             entrySpeeds(abs(entrySpeeds)>1500) = NaN;
             % smooth speeds
-            smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
+            if smoothWindow>3
+                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
+            else
+                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow);
+            end
             % set maximum speed
             smoothEntrySpeeds(abs(smoothEntrySpeeds)>1500) = NaN;
             
@@ -334,7 +336,6 @@ for strainCtr = 1:length(strains)
                             frameNumber = thisExitXFrames(frameCtr);
                             if ~isnan(frameNumber)
                                 wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
-                                %...& trajData.filtered
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisExitSpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
@@ -429,7 +430,11 @@ for strainCtr = 1:length(strains)
             % set maximum speed
             exitSpeeds(abs(exitSpeeds)>1500) = NaN;
             % smooth speeds
-            smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
+            if smoothWindow >3
+                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
+            else
+                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow);
+            end
             % set maximum speed
             smoothExitSpeeds(abs(smoothExitSpeeds)>1500) = NaN;
             
@@ -498,7 +503,7 @@ for strainCtr = 1:length(strains)
                 xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
-                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
                 if saveResults
                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
@@ -527,7 +532,7 @@ for strainCtr = 1:length(strains)
                 xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
                 if saveResults
                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
