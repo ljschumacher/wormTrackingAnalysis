@@ -10,19 +10,20 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
-smoothWindow = 9; % number of frames to smooth over
-saveResults = true;
+smoothWindow1 = 9; % number of frames to smooth over for initial midbody speed calculations
+smoothWindow2 = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
+saveResults = false;
 
 useManualEvents = true; % manual events only available for joining phase
 if useManualEvents
     manualEventMaxDuration = 400; % max number of frames that contains the beginning and end of an annotated event
-    maxTrajPerGraph = 10;
-    
+    maxTrajPerGraph = 10;  
 else
     minInOutClusterFrameNum = 5; % unless using manually labelled events, then enter the min number of frames for in/out cluster status to be sustained for an event to be considered
     enforceInClusterAfterEntryBeforeExit = true;
 end
 
+midbodyIndcs = 19:33;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -71,6 +72,7 @@ for strainCtr = 1:length(strains)
         % initialise counters
         entryCtr = 1;
         exitCtr = 1;
+        
         %% go through individual movies
         for fileCtr = 1:numFiles
             %% load data
@@ -81,7 +83,7 @@ for strainCtr = 1:length(strains)
             frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
             features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
             
-            %% generate time series (x), setting time to be zero at the point of entry start
+            %% generate time series (x), setting time to be zero at the point of entry start (when a worm begins to enter a cluster) or exit end (when a worm fully exits a cluster)
             if useManualEvents
                 timeSeries.entry = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration];
                 timeSeries.exit = [-preExitDuration*frameRate-manualEventMaxDuration:postExitDuration*frameRate];
@@ -89,26 +91,19 @@ for strainCtr = 1:length(strains)
                 timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate];
             end
             
-            %% calculate midbody signed speed (from reversalAnalysisBodyWall.m)
-            midbodyIndcs = 19:33;
-            % centroids of midbody skeleton
-            midbody_x = mean(squeeze(skelData(1,midbodyIndcs,:)))*pixelsize;
-            midbody_y = mean(squeeze(skelData(2,midbodyIndcs,:)))*pixelsize;
-            % change in centroid position over time (issue of worm shifts?)
-            dmidbody_xdt = gradient(midbody_x)*frameRate;
-            dmidbody_ydt = gradient(midbody_y)*frameRate;
-            % midbody speed and velocity
-            dFramedt = gradient(double(trajData.frame_number))';
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./dFramedt;
-            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./dFramedt;
-            % direction of segments pointing along midbody
-            [~, dmidbody_yds] = gradient(squeeze(skelData(2,midbodyIndcs,:)),-1);
-            [~, dmidbody_xds] = gradient(squeeze(skelData(1,midbodyIndcs,:)),-1);
-            % sign speed based on relative orientation of velocity to midbody
-            midbodySpeedSigned = getSignedSpeed(midbodyVelocity,[mean(dmidbody_xds); mean(dmidbody_yds)]);
-            % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData.worm_index_manual))~=0;
-            midbodySpeedSigned(wormChangeIndcs)=NaN;
+            if ~useManualEvents
+                
+                %% calculate midbody signed speed (from reversalAnalysisBodyWall.m)
+                [midbodySpeed,~,~,midbodySpeedSigned] = calculateSpeedsFromSkeleton(trajData,skelData,...
+                    midbodyIndcs,pixelsize,frameRate,false,smoothWindow1);
+                % ignore first and last frames of each worm's track
+                wormChangeIndcs = gradient(double(trajData.worm_index_manual))~=0;
+                midbodySpeedSigned(wormChangeIndcs)=NaN;
+            else
+                % load unsorted xy coords; sort later using worm index for interpolation
+                xcoords = squeeze(skelData(1,:,:)); 
+                ycoords = squeeze(skelData(2,:,:));
+            end
             
             %% filter worms by various criteria
             % filter red by manually joined traj
@@ -141,36 +136,47 @@ for strainCtr = 1:length(strains)
             
             %% obtain speed over time course for cluster entry events
             
-            %% case with manually labelled events
+            %% entry case with manually labelled events
             if useManualEvents
                 % go through each annotated event
                 for eventCtr = 1:size(annotations,1)
-                    % find entry events with matching recording file name to the file currently under consideration
+                    
+                    %% find entry events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
                     recordingNumber = recordingNumber(2:end); % remove the 'r' before the number
+                    
                     if contains(filename, recordingNumber) & strcmp(annotations{eventCtr,5},'enter')
-                        % collect information on worm index and entry frames
+                        %% collect information on worm index and entry frames
                         wormIndex = annotations{eventCtr,2};
-                        thisEntryStartFrame = annotations{eventCtr,7}; % get the annotated entry start frame
-                        thisEntryEndFrame= annotations{eventCtr,8}; % get the annotated entry finish frame
-                        if thisEntryEndFrame > lastPhaseFrame % trim hand annotation in case event end goes beyond phase end
+                        % get the annotated entry start frame
+                        thisEntryStartFrame = annotations{eventCtr,7}; 
+                         % get the annotated entry finish frame
+                        thisEntryEndFrame= annotations{eventCtr,8};
+                        % trim hand annotation in case event end goes beyond phase end
+                        if thisEntryEndFrame > lastPhaseFrame 
                             thisEntryEndFrame = lastPhaseFrame;
                         end
                         if thisEntryEndFrame-thisEntryStartFrame +1 > manualEventMaxDuration
                             warning('event duration exceeds allocated maximum duration, increase value for manualEventMaxDuration variable')
                         end
-                        % extend for a specified duration before and after the entry point
+                        
+                        %% extend for a specified duration before and after the entry point
                         thisEntryXStartFrame = thisEntryStartFrame - preExitDuration*frameRate;
                         if thisEntryXStartFrame <= firstPhaseFrame
-                            beforeStartFrameNum = firstPhaseFrame-thisEntryXStartFrame; % take note of omitted frames for alignment purposes
-                            thisEntryXStartFrame = firstPhaseFrame; % exclude frames before the start of the specified phase
+                            % take note of omitted frames for alignment purposes
+                            beforeStartFrameNum = firstPhaseFrame-thisEntryXStartFrame; 
+                             % exclude frames before the start of the specified phase
+                            thisEntryXStartFrame = firstPhaseFrame;
                         end
                         thisEntryXEndFrame = thisEntryEndFrame + postExitDuration*frameRate;
                         if  thisEntryXEndFrame > lastPhaseFrame
-                            afterEndFrameNum =  thisEntryXEndFrame -lastPhaseFrame; % take note of omitted frames for alignment purposes
-                            thisEntryXEndFrame = lastPhaseFrame; % exclude frames beyond the end of the specified phase
+                            % take note of omitted frames for alignment purposes
+                            afterEndFrameNum =  thisEntryXEndFrame -lastPhaseFrame; 
+                            % exclude frames beyond the end of the specified phase
+                            thisEntryXEndFrame = lastPhaseFrame; 
                         end
-                        % get aligned list of frames for the event
+                        
+                        %% get aligned list of frames for the event
                         thisEntrySpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         thisEntryXFrames = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
@@ -180,18 +186,64 @@ for strainCtr = 1:length(strains)
                         else
                             thisEntryXFrames = thisEntryXStartFrame:thisEntryXEndFrame;
                         end
-                        % go through each frame
+
+                        %% sort midbody speed and frames for the worm at consideration
+                        % get the indices for the worm of interest
+                        uniqueWormIdx = find(trajData.worm_index_manual == wormIndex); 
+                        % extract skeleton data for worm of interest
+                        xcoordsSorted = xcoords(:,uniqueWormIdx); 
+                        ycoordsSorted = ycoords(:,uniqueWormIdx);
+                        frameNumberSorted = trajData.frame_number(uniqueWormIdx);
+                        
+                        %% interpolate over NaN values for sorted xy coordinates
+                        for nodeCtr = 1:size(xcoords,1)
+                            xcoordsNode = xcoordsSorted(nodeCtr,:);
+                            ycoordsNode = ycoordsSorted(nodeCtr,:);
+                            xcoordsNode = naninterp(xcoordsNode); %naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp(ycoordsNode);
+                            xcoordsSorted(nodeCtr,:) = xcoordsNode;
+                            ycoordsSorted(nodeCtr,:) = ycoordsNode;
+                        end
+                        
+                        %% calculate midbodyspeed using sorted, interpolated xy coordinates
+                        % centroids of midbody skeleton
+                        x = mean(xcoordsSorted(midbodyIndcs,:))*pixelsize;
+                        y = mean(ycoordsSorted(midbodyIndcs,:))*pixelsize;
+                        % change in centroid position over time
+                        dxdt = gradient(x)*frameRate;
+                        dydt = gradient(y)*frameRate;
+                        % speed and velocity
+                        dFramedt = gradient(double(frameNumberSorted))';
+                        midbodySpeed = sqrt(dxdt.^2 + dydt.^2)./dFramedt;
+                        velocity_x = dxdt./dFramedt;
+                        velocity_y = dydt./dFramedt;
+                        % signed speed calculation
+                        % direction of segments pointing along midbody
+                        [~, dyds] = gradient(xcoordsSorted,-1);
+                        [~, dxds] = gradient(ycoordsSorted,-1);
+                        % sign speed based on relative orientation of velocity to body
+                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
+                        % ignore first and last frames of each worm's track
+                        wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
+                        midbodySpeedSigned(wormChangeIndcs)=NaN;
+                        if smoothWindow1>0
+                            % smooth speed to denoise
+                            midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
+                        end
+
+                        %% go through each frame
                         for frameCtr = 1:length(thisEntryXFrames)
                             frameNumber = thisEntryXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = frameNumberSorted == frameNumber;
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisEntrySpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
                                 end
                             end
                         end
-                        % write speeds
+                        
+                        %% write speeds
                         entrySpeeds(entryCtr,1:length(thisEntrySpeeds)) = thisEntrySpeeds;
                         % clear variables
                         clear beforeStartFrameNum
@@ -206,35 +258,46 @@ for strainCtr = 1:length(strains)
                 
                 %% without manual event annotation, we need to identify our own events
             else
-                % get indices for cluster entry points
+                
+                %% get indices for cluster entry points
                 enterClusterPoint = find(enterClusterStartLogInd);
                 entrySpeeds = NaN(numel(enterClusterPoint),preExitDuration*frameRate +1+ postExitDuration*frameRate);
                 % loop through each entry
                 for entryCtr = 1:numel(enterClusterPoint)
                     thisEntryIdx = enterClusterPoint(entryCtr);
-                    % get the worm index
+                    
+                    %% get the worm index
                     wormIndex = trajData.worm_index_manual(thisEntryIdx);
-                    % check that the same worm stays in cluster for minumum number of frames
+                    
+                    %% check that the same worm stays in cluster for minumum number of frames
                     if thisEntryIdx+minInOutClusterFrameNum <= length(trajData.frame_number) &&...
                             nnz(inClusterLogInd(thisEntryIdx:(thisEntryIdx+minInOutClusterFrameNum))) == 1+minInOutClusterFrameNum...
                             && nnz(trajData.worm_index_manual(thisEntryIdx:(thisEntryIdx+minInOutClusterFrameNum)) == wormIndex) == 1+minInOutClusterFrameNum
-                        % expand for a specified number of entries before and after the entry point
+                        
+                        %% expand for a specified number of entries before and after the entry point
                         thisEntryStartIdx = thisEntryIdx-preExitDuration*frameRate;
                         if thisEntryStartIdx <= 0
-                            beforeStartFrameNum = 1-thisEntryStartIdx; % take note of omitted frames for alignment purposes
-                            thisEntryStartIdx = 1; % exclude entries below index 0
+                            % take note of omitted frames for alignment purposes
+                            beforeStartFrameNum = 1-thisEntryStartIdx; 
+                            % exclude entries below index 0
+                            thisEntryStartIdx = 1; 
                         end
                         thisEntryEndIdx = thisEntryIdx + postExitDuration*frameRate;
                         if thisEntryEndIdx > length(trajData.frame_number)
-                            afterEndFrameNum = thisEntryEndIdx - length(trajData.frame_number); % take note of omitted frames for alignment purposes
-                            thisEntryEndIdx = length(trajData.frame_number); % exclude entries above highest index
+                             % take note of omitted frames for alignment purposes
+                            afterEndFrameNum = thisEntryEndIdx - length(trajData.frame_number);
+                            % exclude entries above highest index
+                            thisEntryEndIdx = length(trajData.frame_number); 
                         end
-                        % generate logical index for this entry
+                        
+                        %% generate logical index for this entry
                         thisEntryLogInd = false(1,length(midbodySpeedSigned));
                         thisEntryLogInd(thisEntryStartIdx:thisEntryEndIdx) = true;
-                        % get midbody signed speeds (y) for this entry
+                        
+                        %% get midbody signed speeds (y) for this entry
                         thisEntryXSpeeds = NaN(1,size(entrySpeeds,2));
-                        if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
+                        % this keeps the alignment of the entries in case they go below or above min/max index
+                        if exist('beforeStartFrameNum','var') 
                             thisEntryXSpeeds(beforeStartFrameNum+1:end) = midbodySpeedSigned(thisEntryLogInd);
                         elseif exist('afterEndFrameNum','var')
                             thisEntryXSpeeds(1:(end-afterEndFrameNum)) = midbodySpeedSigned(thisEntryLogInd);
@@ -268,7 +331,7 @@ for strainCtr = 1:length(strains)
                                 thisEntryXSpeeds = thisEntrySpeedsFullLength(thisEntryStartIdx:thisEntryEndIdx);
                             end
                         end
-                        % add data to speed matrix
+                        %% add data to speed matrix
                         entrySpeeds(entryCtr,:) = thisEntryXSpeeds;
                     end
                     % clear variables
@@ -280,25 +343,29 @@ for strainCtr = 1:length(strains)
             % set maximum speed and remove 0 speed
             entrySpeeds(abs(entrySpeeds)>1500) = NaN;
             % smooth speeds
-            if smoothWindow>3
-                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
+            if smoothWindow2==0
+                smoothEntrySpeeds = entrySpeeds;
+%             elseif smoothWindow2 >3
+%                 smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow2,'includenan');
             else
-                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow);
+                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow2);
             end
             % set maximum speed
             smoothEntrySpeeds(abs(smoothEntrySpeeds)>1500) = NaN;
             
             %% obtain speed over time course for cluster exit events
             
-            %% case with manually labelled events
+            %% exit cases with manually labelled events
             if useManualEvents
                 % go through each annotated event
                 for eventCtr = 1:size(annotations,1)
-                    % find exit events with matching recording file name to the file currently under consideration
+                    
+                    %% find exit events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
                     recordingNumber = recordingNumber(2:end); % remove the 'r' before the number
+                    
                     if contains(filename, recordingNumber) & strcmp(annotations{eventCtr,5},'exit')
-                        % collect information on worm index and exit frames
+                        %% collect information on worm index and exit frames
                         wormIndex = annotations{eventCtr,2};
                         thisExitStartFrame = annotations{eventCtr,7}; % get the annotated entry start frame
                         thisExitEndFrame= annotations{eventCtr,8}; % get the annotated entry finish frame
@@ -308,7 +375,8 @@ for strainCtr = 1:length(strains)
                         if thisExitEndFrame-thisExitStartFrame +1 > manualEventMaxDuration
                             warning('event duration exceeds allocated maximum duration, increase value for manualEventMaxDuration variable')
                         end
-                        % extend for a specified duration before and after the exit point
+                        
+                        %% extend for a specified duration before and after the exit point
                         thisExitXStartFrame = thisExitStartFrame - preExitDuration*frameRate;
                         if thisExitXStartFrame <= firstPhaseFrame
                             beforeStartFrameNum = firstPhaseFrame-thisExitXStartFrame; % take note of omitted frames for alignment purposes
@@ -319,7 +387,8 @@ for strainCtr = 1:length(strains)
                             afterEndFrameNum =  thisExitXEndFrame -lastPhaseFrame; % take note of omitted frames for alignment purposes
                             thisExitXEndFrame = lastPhaseFrame; % exclude frames beyond the end of the specified phase
                         end
-                        % get aligned list of frames for the event
+                        
+                        %% get aligned list of frames for the event
                         exitNumFrames = thisExitEndFrame - thisExitStartFrame;
                         startFiller = manualEventMaxDuration - exitNumFrames ; % number of empty frames to add to the start of speed vector to keep alignment for end of exit
                         thisExitSpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
@@ -331,18 +400,64 @@ for strainCtr = 1:length(strains)
                         else
                             thisExitXFrames(startFiller+1:end) = thisExitXStartFrame:thisExitXEndFrame;
                         end
-                        % go through each frame
+                        
+                        %% sort midbody speed and frames for the worm at consideration
+                        % get the indices for the worm of interest
+                        uniqueWormIdx = find(trajData.worm_index_manual == wormIndex);
+                        % extract skeleton data for worm of interest
+                        xcoordsSorted = xcoords(:,uniqueWormIdx);
+                        ycoordsSorted = ycoords(:,uniqueWormIdx);
+                        frameNumberSorted = trajData.frame_number(uniqueWormIdx);
+                        
+                        %% interpolate over NaN values for sorted xy coordinates
+                        for nodeCtr = 1:size(xcoords,1)
+                            xcoordsNode = xcoordsSorted(nodeCtr,:);
+                            ycoordsNode = ycoordsSorted(nodeCtr,:);
+                            xcoordsNode = naninterp(xcoordsNode); %naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp(ycoordsNode);
+                            xcoordsSorted(nodeCtr,:) = xcoordsNode;
+                            ycoordsSorted(nodeCtr,:) = ycoordsNode;
+                        end
+                        
+                        %% calculate midbodyspeed using sorted, interpolated xy coordinates
+                        % centroids of midbody skeleton
+                        x = mean(xcoordsSorted(midbodyIndcs,:))*pixelsize;
+                        y = mean(ycoordsSorted(midbodyIndcs,:))*pixelsize;
+                        % change in centroid position over time
+                        dxdt = gradient(x)*frameRate;
+                        dydt = gradient(y)*frameRate;
+                        % speed and velocity
+                        dFramedt = gradient(double(frameNumberSorted))';
+                        midbodySpeed = sqrt(dxdt.^2 + dydt.^2)./dFramedt;
+                        velocity_x = dxdt./dFramedt;
+                        velocity_y = dydt./dFramedt;
+                        % signed speed calculation
+                        % direction of segments pointing along midbody
+                        [~, dyds] = gradient(xcoordsSorted,-1);
+                        [~, dxds] = gradient(ycoordsSorted,-1);
+                        % sign speed based on relative orientation of velocity to body
+                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
+                        % ignore first and last frames of each worm's track
+                        wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
+                        midbodySpeedSigned(wormChangeIndcs)=NaN;
+                        if smoothWindow1>0
+                            % smooth speed to denoise
+                            midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
+                        end
+                        
+                        %% go through each frame
                         for frameCtr = 1:length(thisExitXFrames)
                             frameNumber = thisExitXFrames(frameCtr);
                             if ~isnan(frameNumber)
-                                wormFrameLogInd = trajData.worm_index_manual == wormIndex & trajData.frame_number == frameNumber;
+                                wormFrameLogInd = frameNumberSorted == frameNumber;
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisExitSpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
                                 end
                             end
                         end
-                        % write speeds
+                        
+                        %% write speeds
                         exitSpeeds(exitCtr,1:length(thisExitSpeeds)) = thisExitSpeeds;
                         % clear variables
                         clear beforeStartFrameNum
@@ -429,11 +544,13 @@ for strainCtr = 1:length(strains)
             end
             % set maximum speed
             exitSpeeds(abs(exitSpeeds)>1500) = NaN;
-            % smooth speeds
-            if smoothWindow >3
-                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
+            %smooth speeds
+            if smoothWindow2 ==0
+                smoothExitSpeeds = exitSpeeds;
+%             elseif smoothWindow2 >3
+%                 smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow2,'includenan');
             else
-                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow);
+                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow2);
             end
             % set maximum speed
             smoothExitSpeeds(abs(smoothExitSpeeds)>1500) = NaN;
@@ -450,18 +567,16 @@ for strainCtr = 1:length(strains)
         
         assert(entryCtr == totalEntry+1 & exitCtr == totalExit+1)
         
-        if ~useManualEvents
-            % pool data across all movies
-            allEntrySpeeds = vertcat(allEntrySpeeds{:});
-            allExitSpeeds = vertcat(allExitSpeeds{:});
-            allSmoothEntrySpeeds = vertcat(allSmoothEntrySpeeds{:});
-            allSmoothExitSpeeds = vertcat(allSmoothExitSpeeds{:});
-        else
+        if useManualEvents
             % rename variables
             allEntrySpeeds = entrySpeeds;
             allExitSpeeds = exitSpeeds;
             allSmoothEntrySpeeds = smoothEntrySpeeds;
             allSmoothExitSpeeds = smoothExitSpeeds;
+        else
+            % pool data across all movies
+            allEntrySpeeds = vertcat(allEntrySpeeds{:});
+            allExitSpeeds = vertcat(allExitSpeeds{:});
         end
         
         %% plotting and saving data
@@ -503,7 +618,7 @@ for strainCtr = 1:length(strains)
                 xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
-                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow1)]);
                 if saveResults
                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
@@ -532,7 +647,7 @@ for strainCtr = 1:length(strains)
                 xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow1)]);
                 if saveResults
                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);

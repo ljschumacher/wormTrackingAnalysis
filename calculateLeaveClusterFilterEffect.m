@@ -4,16 +4,24 @@ close all
 %% set parameters
 phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
 dataset = 2; % 1 or 2
+<<<<<<< HEAD
 marker = 'bodywall'; % 'pharynx' or 'bodywall'
+=======
+marker = 'pharynx'; % 'pharynx' or 'bodywall'
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+<<<<<<< HEAD
 saveResults = true;
 useManualTraj = true; % option to use manually joined trajectories; only can be true if using bodywall data
 if useManualTraj
     assert(strcmp(marker,'bodywall'),'useManualTraj must only be used in conjunction with bodywall marker')
 end
+=======
+saveResults = false;
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
 
 if dataset == 1
     intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
@@ -48,7 +56,11 @@ for strainCtr = 1:length(strains)
         leaveClusterFilterEffect = NaN(numFiles,6);
         
         %% go through individual movies
+<<<<<<< HEAD
         for fileCtr = 1:numFiles
+=======
+        for fileCtr = 2:numFiles
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -61,11 +73,14 @@ for strainCtr = 1:length(strains)
                 trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                     intensityThresholds_g(wormnum),maxBlobSize_g);
             elseif strcmp(marker, 'bodywall')
+<<<<<<< HEAD
                 % filter red by manually joined traj
                 if useManualTraj
                     features = h5read(strrep(filename,'skeletons','feat_manual'),'/features_timeseries');
                     trajData.filtered = ismember(trajData.worm_index_manual,int32(features.worm_index));
                 end
+=======
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
                 % filter red by blob size and intensity
                 if contains(filename,'55')||contains(filename,'54')
                     intensityThreshold = 80;
@@ -93,12 +108,16 @@ for strainCtr = 1:length(strains)
             leaveClusterFilterEffect(fileCtr,:) = findWormCategoryFilterEffect(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration,trajDataWormIndexJoined,trajDataFiltered);
         end
         if saveResults == true
+<<<<<<< HEAD
             if useManualTraj
                 trajFileName = 'manualTraj_';
             else
                 trajFileName = '';
             end
             save(['figures/turns/results/leaveClusterFilterEffect_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'leaveClusterFilterEffect')
+=======
+            save(['figures/turns/results/leaveClusterFilterEffect_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'leaveClusterFilterEffect')
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
         end
     end
 end

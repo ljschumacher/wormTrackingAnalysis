@@ -25,6 +25,7 @@ postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be
 minTrajDuration = 1; % duration (in seconds) of minimum traj length
 maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+useManualTraj = true;
 saveResults = true;
 saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
@@ -134,10 +135,15 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % restrict to only forward-moving worms (bodywall data doesn't currently have signed_speed field)
+<<<<<<< HEAD
             if ~strcmp(marker,'bodywall')
                 signedSpeedLogInd = blobFeats.signed_speed>=0;
                 trajData.filtered(~signedSpeedLogInd) = false;
             end
+=======
+            signedSpeedLogInd = blobFeats.signed_speed>=0;
+            trajData.filtered(~signedSpeedLogInd) = false;
+>>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
             % find worms that have just left a cluster vs lone worms
             [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             
@@ -327,6 +333,13 @@ for strainCtr = 1:length(strains)
             % save trajectories
             if saveResults
                 save(['figures/turns/results/headAngSampleTraj_' trajFileName featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
+            end
+        end
+        
+        if visualiseSampleTraj
+            % save trajectories
+            if saveResults
+                save(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
             end
         end
         

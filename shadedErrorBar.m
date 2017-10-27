@@ -50,7 +50,7 @@ function varargout=shadedErrorBar(x,y,errBar,lineProps,transparent)
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 % Error checking    
-narginchk(3,5)
+error(nargchk(3,5,nargin))
 
 
 %Process y using function handles if needed to make the error bar
@@ -151,7 +151,8 @@ H.edge(1)=plot(x,lE,'-','color',edgeColor);
 H.edge(2)=plot(x,uE,'-','color',edgeColor);
 
 %Now replace the line (this avoids having to bugger about with z coordinates)
-uistack(H.mainLine,'top')
+delete(H.mainLine)
+H.mainLine=plot(x,y,lineProps{:});
 
 
 if ~holdStatus, hold off, end
