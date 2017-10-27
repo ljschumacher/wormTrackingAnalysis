@@ -104,7 +104,7 @@ for strainCtr = 1:length(strains)
                 speedSigned(~phaseFrameLogInd) =NaN;
             end
             % smooth speed to denoise
-            speedSigned = smooth(speedSigned,3,'moving');
+            speedSigned = smoothdata(speedSigned,'movmean',3,'omitnan');
             % find reversals in signed speed
             [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
                 findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);

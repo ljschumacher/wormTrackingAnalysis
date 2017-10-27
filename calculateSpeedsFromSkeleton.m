@@ -15,13 +15,13 @@ function [ speed, velocity_x, velocity_y, speedSigned ] = calculateSpeedsFromSke
 x = mean(squeeze(skelData(1,skelIndcs,:)))*pixelsize;
 y = mean(squeeze(skelData(2,skelIndcs,:)))*pixelsize;
 % change in centroid position over time
-dxdt = gradient(x)*frameRate;
-dydt = gradient(y)*frameRate;
+dxdFrame = gradient(x)*frameRate;
+dydFrame = gradient(y)*frameRate;
 % speed and velocity
 dFramedt = gradient(double(trajData.frame_number))';
-speed = sqrt(dxdt.^2 + dydt.^2)./dFramedt;
-velocity_x = dxdt./dFramedt;
-velocity_y = dydt./dFramedt;
+speed = sqrt(dxdFrame.^2 + dydFrame.^2)./dFramedt;
+velocity_x = dxdFrame./dFramedt;
+velocity_y = dydFrame./dFramedt;
 % signed speed calculation
 % direction of segments pointing along midbody
 [~, dyds] = gradient(squeeze(skelData(2,skelIndcs,:)),-1);
@@ -39,7 +39,7 @@ speedSigned(~trajData.filtered) = NaN;
 end
 if smoothingWindowSize>0
 % smooth speed to denoise
-speedSigned = smooth(speedSigned,smoothingWindowSize,'moving');
+speedSigned = smoothdata(speedSigned,'movmean',smoothingWindowSize,'omitnan');
 end
 
 end
