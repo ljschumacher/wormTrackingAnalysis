@@ -10,12 +10,8 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
-<<<<<<< HEAD
-smoothWindow = 9; % number of frames to smooth over
-=======
 smoothWindow1 = 9; % number of frames to smooth over for initial midbody speed calculations
 smoothWindow2 = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
->>>>>>> 0d19a0cf6b8fce8c077af5387da268761088408b
 saveResults = false;
 
 useManualEvents = true; % manual events only available for joining phase
@@ -62,7 +58,6 @@ for strainCtr = 1:length(strains)
             for eventCtr = 1:size(annotations,1)
                 if strcmp(annotations{eventCtr,5},'enter')
                     totalEntry = totalEntry + 1;
-                    entry(totalEntry) = eventCtr;
                 elseif strcmp(annotations{eventCtr,5},'exit')
                     totalExit = totalExit+1;
                 end
@@ -166,6 +161,7 @@ for strainCtr = 1:length(strains)
                         
                         %% extend for a specified duration before and after the entry point
                         thisEntryXStartFrame = thisEntryStartFrame - preExitDuration*frameRate;
+                        % check that the extended start doesn't go beyond the phase of interest
                         if thisEntryXStartFrame <= firstPhaseFrame
                             % take note of omitted frames for alignment purposes
                             beforeStartFrameNum = firstPhaseFrame-thisEntryXStartFrame; 
@@ -173,6 +169,7 @@ for strainCtr = 1:length(strains)
                             thisEntryXStartFrame = firstPhaseFrame;
                         end
                         thisEntryXEndFrame = thisEntryEndFrame + postExitDuration*frameRate;
+                         % check that the extended start doesn't go beyond the phase of interest
                         if  thisEntryXEndFrame > lastPhaseFrame
                             % take note of omitted frames for alignment purposes
                             afterEndFrameNum =  thisEntryXEndFrame -lastPhaseFrame; 
@@ -186,7 +183,7 @@ for strainCtr = 1:length(strains)
                         if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
                             thisEntryXFrames(beforeStartFrameNum+1:end) = thisEntryXStartFrame:thisEntryXEndFrame;
                         elseif exist('afterEndFrameNum','var')
-                            thisEntryXFrames(1:(end-afterEndFrameNum)) = thisEntryXStartFrame:thisEntryXEndFrame;
+                            thisEntryXFrames(1:end-afterEndFrameNum) = thisEntryXStartFrame:thisEntryXEndFrame;
                         else
                             thisEntryXFrames = thisEntryXStartFrame:thisEntryXEndFrame;
                         end
@@ -201,10 +198,8 @@ for strainCtr = 1:length(strains)
                         
                         %% interpolate over NaN values for sorted xy coordinates
                         for nodeCtr = 1:size(xcoords,1)
-                            xcoordsNode = xcoordsSorted(nodeCtr,:);
-                            ycoordsNode = ycoordsSorted(nodeCtr,:);
-                            xcoordsNode = naninterp(xcoordsNode); %naninterp only works for vectors so go node by node
-                            ycoordsNode = naninterp(ycoordsNode);
+                            xcoordsNode = naninterp((xcoordsSorted(nodeCtr,:)); % naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp((ycoordsSorted(nodeCtr,:));
                             xcoordsSorted(nodeCtr,:) = xcoordsNode;
                             ycoordsSorted(nodeCtr,:) = ycoordsNode;
                         end
@@ -226,12 +221,9 @@ for strainCtr = 1:length(strains)
                         [~, dyds] = gradient(xcoordsSorted,-1);
                         [~, dxds] = gradient(ycoordsSorted,-1);
                         % sign speed based on relative orientation of velocity to body
-                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
-                        % ignore first and last frames of each worm's track
-                        wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
-                        midbodySpeedSigned(wormChangeIndcs)=NaN;
+                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);f
+                        % smooth speed to denoise
                         if smoothWindow1>0
-                            % smooth speed to denoise
                             midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
                         end
 
@@ -382,17 +374,19 @@ for strainCtr = 1:length(strains)
                         
                         %% extend for a specified duration before and after the exit point
                         thisExitXStartFrame = thisExitStartFrame - preExitDuration*frameRate;
+                        % check that the extended start doesn't go beyond the phase of interest
                         if thisExitXStartFrame <= firstPhaseFrame
                             beforeStartFrameNum = firstPhaseFrame-thisExitXStartFrame; % take note of omitted frames for alignment purposes
                             thisExitXStartFrame = firstPhaseFrame; % exclude frames before the start of the specified phase
                         end
                         thisExitXEndFrame = thisExitEndFrame + postExitDuration*frameRate;
+                        % check that the extended start doesn't go beyond the phase of interest
                         if  thisExitXEndFrame > lastPhaseFrame
                             afterEndFrameNum =  thisExitXEndFrame -lastPhaseFrame; % take note of omitted frames for alignment purposes
                             thisExitXEndFrame = lastPhaseFrame; % exclude frames beyond the end of the specified phase
                         end
                         
-                        %% get aligned list of frames for the event
+                        %% get aligned list of frames for the event (align speed vectors using the end of the exit event i.e. when a worm fully exits a cluster)
                         exitNumFrames = thisExitEndFrame - thisExitStartFrame;
                         startFiller = manualEventMaxDuration - exitNumFrames ; % number of empty frames to add to the start of speed vector to keep alignment for end of exit
                         thisExitSpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
@@ -415,10 +409,8 @@ for strainCtr = 1:length(strains)
                         
                         %% interpolate over NaN values for sorted xy coordinates
                         for nodeCtr = 1:size(xcoords,1)
-                            xcoordsNode = xcoordsSorted(nodeCtr,:);
-                            ycoordsNode = ycoordsSorted(nodeCtr,:);
-                            xcoordsNode = naninterp(xcoordsNode); %naninterp only works for vectors so go node by node
-                            ycoordsNode = naninterp(ycoordsNode);
+                            xcoordsNode = naninterp(xcoordsSorted(nodeCtr,:));%naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp(ycoordsSorted(nodeCtr,:));
                             xcoordsSorted(nodeCtr,:) = xcoordsNode;
                             ycoordsSorted(nodeCtr,:) = ycoordsNode;
                         end
@@ -441,11 +433,8 @@ for strainCtr = 1:length(strains)
                         [~, dxds] = gradient(ycoordsSorted,-1);
                         % sign speed based on relative orientation of velocity to body
                         midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
-                        % ignore first and last frames of each worm's track
-                        wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
-                        midbodySpeedSigned(wormChangeIndcs)=NaN;
+                        % smooth speed to denoise
                         if smoothWindow1>0
-                            % smooth speed to denoise
                             midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
                         end
                         
@@ -548,7 +537,7 @@ for strainCtr = 1:length(strains)
             end
             % set maximum speed
             exitSpeeds(abs(exitSpeeds)>1500) = NaN;
-            %smooth speeds
+            % smooth speeds
             if smoothWindow2 ==0
                 smoothExitSpeeds = exitSpeeds;
 %             elseif smoothWindow2 >3
@@ -572,7 +561,7 @@ for strainCtr = 1:length(strains)
         assert(entryCtr == totalEntry+1 & exitCtr == totalExit+1)
         
         if useManualEvents
-            % rename variables
+            % rename variables (so they are the same as the ~useManualEvents case)
             allEntrySpeeds = entrySpeeds;
             allExitSpeeds = exitSpeeds;
             allSmoothEntrySpeeds = smoothEntrySpeeds;
@@ -622,7 +611,7 @@ for strainCtr = 1:length(strains)
                 xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
-                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow1)]);
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
                 if saveResults
                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
@@ -651,7 +640,7 @@ for strainCtr = 1:length(strains)
                 xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow1)]);
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
                 if saveResults
                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
