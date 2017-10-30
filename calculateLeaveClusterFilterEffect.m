@@ -9,6 +9,7 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
+
 saveResults = true;
 useManualTraj = true; % option to use manually joined trajectories; only can be true if using bodywall data
 if useManualTraj
@@ -20,6 +21,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
+
 intensityThresholds_r = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_g = 1e4;
 maxBlobSize_r = 2.5e5;

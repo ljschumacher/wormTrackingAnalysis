@@ -11,9 +11,10 @@ function [ speed, velocity_x, velocity_y, speedSigned ] = calculateSpeedsFromSke
 % filter: true or false, whether to filter for discontinuous worms
 % smoothing: smoothing window size (set to 0 to disable smoothing)
 
+
 % centroids of midbody skeleton
-x = mean(squeeze(skelData(1,skelIndcs,:)))*pixelsize;
-y = mean(squeeze(skelData(2,skelIndcs,:)))*pixelsize;
+x = mean(xcoords(skelIndcs,:))*pixelsize;
+y = mean(ycoords(skelIndcs,:))*pixelsize;
 % change in centroid position over time
 dxdFrame = gradient(x)*frameRate;
 dydFrame = gradient(y)*frameRate;
