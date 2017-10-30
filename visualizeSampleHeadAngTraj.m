@@ -9,7 +9,11 @@ numSampleTraj = 200;
 saveResults = false;  %true or false.
 
 dataset = 2; %1 or 2.
+<<<<<<< HEAD
 marker = 'bodywall'; %'pharynx' or 'bodywall'.
+=======
+marker = 'pharynx'; %'pharynx' or 'bodywall'.
+>>>>>>> 472724817e77576ca8dda353e33047674896813b
 strains = {'npr1'}; % 'N2' or 'npr1'
 wormnum = '40';
 phase = 'joining'; %'fullMovie','joining', or 'sweeping'.
@@ -34,7 +38,11 @@ end
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     % load file
+<<<<<<< HEAD
     load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
+=======
+    load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])f
+>>>>>>> 472724817e77576ca8dda353e33047674896813b
     for rangeCtr = 1:size(headAngRanges,1)
         for wormcatCtr = 1:length(wormcats)
             samplePathFig = figure; hold on
