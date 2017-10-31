@@ -1,6 +1,8 @@
 clear
 close all
 
+%% to improve the script: limit how far to linearly interpolate within naninterp i.e. maybe specify maxinum interpolation window to be 9 or something and leave values NaN if no values nearby
+
 % Script plots midbody speed for worms entering or leaving a cluster using the manually joined red trajectories, with
 % the point of entry/exit aligned.
 
@@ -10,9 +12,8 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
-smoothWindow1 = 9; % number of frames to smooth over for initial midbody speed calculations
-smoothWindow2 = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
-saveResults = false;
+smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
+saveResults = true;
 
 useManualEvents = true; % manual events only available for joining phase
 if useManualEvents
@@ -94,7 +95,7 @@ for strainCtr = 1:length(strains)
                 
                 %% calculate midbody signed speed (from reversalAnalysisBodyWall.m)
                 [midbodySpeed,~,~,midbodySpeedSigned] = calculateSpeedsFromSkeleton(trajData,skelData,...
-                    midbodyIndcs,pixelsize,frameRate,false,smoothWindow1);
+                    midbodyIndcs,pixelsize,frameRate,false,smoothWindow);
                 % ignore first and last frames of each worm's track
                 wormChangeIndcs = gradient(double(trajData.worm_index_manual))~=0;
                 midbodySpeedSigned(wormChangeIndcs)=NaN;
@@ -198,8 +199,10 @@ for strainCtr = 1:length(strains)
                         
                         %% interpolate over NaN values for sorted xy coordinates
                         for nodeCtr = 1:size(xcoords,1)
-                            xcoordsNode = naninterp((xcoordsSorted(nodeCtr,:)); % naninterp only works for vectors so go node by node
-                            ycoordsNode = naninterp((ycoordsSorted(nodeCtr,:));
+                            xcoordsNode = xcoordsSorted(nodeCtr,:);
+                            ycoordsNode = ycoordsSorted(nodeCtr,:);
+                            xcoordsNode = naninterp(xcoordsNode); % naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp(ycoordsNode);
                             xcoordsSorted(nodeCtr,:) = xcoordsNode;
                             ycoordsSorted(nodeCtr,:) = ycoordsNode;
                         end
@@ -218,14 +221,10 @@ for strainCtr = 1:length(strains)
                         velocity_y = dydt./dFramedt;
                         % signed speed calculation
                         % direction of segments pointing along midbody
-                        [~, dyds] = gradient(xcoordsSorted,-1);
-                        [~, dxds] = gradient(ycoordsSorted,-1);
+                        [~, dxds] = gradient(xcoordsSorted(midbodyIndcs,:),-1);
+                        [~, dyds] = gradient(ycoordsSorted(midbodyIndcs,:),-1);
                         % sign speed based on relative orientation of velocity to body
-                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);f
-                        % smooth speed to denoise
-                        if smoothWindow1>0
-                            midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
-                        end
+                        midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
 
                         %% go through each frame
                         for frameCtr = 1:length(thisEntryXFrames)
@@ -339,12 +338,12 @@ for strainCtr = 1:length(strains)
             % set maximum speed and remove 0 speed
             entrySpeeds(abs(entrySpeeds)>1500) = NaN;
             % smooth speeds
-            if smoothWindow2==0
+            if smoothWindow==0
                 smoothEntrySpeeds = entrySpeeds;
-%             elseif smoothWindow2 >3
-%                 smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow2,'includenan');
+            elseif smoothWindow >3
+                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow,'includenan');
             else
-                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow2);
+                smoothEntrySpeeds = smoothdata(entrySpeeds,2,'movmean',smoothWindow);
             end
             % set maximum speed
             smoothEntrySpeeds(abs(smoothEntrySpeeds)>1500) = NaN;
@@ -409,8 +408,10 @@ for strainCtr = 1:length(strains)
                         
                         %% interpolate over NaN values for sorted xy coordinates
                         for nodeCtr = 1:size(xcoords,1)
-                            xcoordsNode = naninterp(xcoordsSorted(nodeCtr,:));%naninterp only works for vectors so go node by node
-                            ycoordsNode = naninterp(ycoordsSorted(nodeCtr,:));
+                            xcoordsNode = xcoordsSorted(nodeCtr,:);
+                            ycoordsNode = ycoordsSorted(nodeCtr,:);
+                            xcoordsNode = naninterp(xcoordsNode);%naninterp only works for vectors so go node by node
+                            ycoordsNode = naninterp(ycoordsNode);
                             xcoordsSorted(nodeCtr,:) = xcoordsNode;
                             ycoordsSorted(nodeCtr,:) = ycoordsNode;
                         end
@@ -429,14 +430,10 @@ for strainCtr = 1:length(strains)
                         velocity_y = dydt./dFramedt;
                         % signed speed calculation
                         % direction of segments pointing along midbody
-                        [~, dyds] = gradient(xcoordsSorted,-1);
-                        [~, dxds] = gradient(ycoordsSorted,-1);
+                        [~, dxds] = gradient(xcoordsSorted,-1);
+                        [~, dyds] = gradient(ycoordsSorted,-1);
                         % sign speed based on relative orientation of velocity to body
                         midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
-                        % smooth speed to denoise
-                        if smoothWindow1>0
-                            midbodySpeedSigned = smooth(midbodySpeedSigned,smoothWindow1,'moving');
-                        end
                         
                         %% go through each frame
                         for frameCtr = 1:length(thisExitXFrames)
@@ -538,12 +535,12 @@ for strainCtr = 1:length(strains)
             % set maximum speed
             exitSpeeds(abs(exitSpeeds)>1500) = NaN;
             % smooth speeds
-            if smoothWindow2 ==0
+            if smoothWindow ==0
                 smoothExitSpeeds = exitSpeeds;
-%             elseif smoothWindow2 >3
-%                 smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow2,'includenan');
+            elseif smoothWindow >3
+                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow,'includenan');
             else
-                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow2);
+                smoothExitSpeeds = smoothdata(exitSpeeds,2,'movmean',smoothWindow);
             end
             % set maximum speed
             smoothExitSpeeds(abs(smoothExitSpeeds)>1500) = NaN;
@@ -558,7 +555,6 @@ for strainCtr = 1:length(strains)
             
         end
         
-        assert(entryCtr == totalEntry+1 & exitCtr == totalExit+1)
         
         if useManualEvents
             % rename variables (so they are the same as the ~useManualEvents case)
@@ -611,7 +607,7 @@ for strainCtr = 1:length(strains)
                 xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
-                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
                 if saveResults
                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
@@ -640,7 +636,7 @@ for strainCtr = 1:length(strains)
                 xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)]);
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
                 if saveResults
                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
                     system(['epstopdf ' figurename '.eps']);
