@@ -12,7 +12,7 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
-smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
+smoothWindow = 0; % number of frames to smooth over for later trajectory-specific midbody speed calculations
 saveResults = true;
 
 useManualEvents = true; % manual events only available for joining phase
