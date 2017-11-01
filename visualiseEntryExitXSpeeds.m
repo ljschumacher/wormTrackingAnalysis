@@ -719,6 +719,7 @@ for strainCtr = 1:length(strains)
             shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
             title('cluster entry')
             xlim([-preExitDuration postExitDuration])
+            xticks(linspace(-preExitDuration,postExitDuration,9))
             ylim([0 350])
             xlabel('time(s)')
             ylabel('speed (microns/s)')
@@ -728,7 +729,8 @@ for strainCtr = 1:length(strains)
             subplot(1,2,2); hold on
             shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'r');
             title('cluster exit')
-            xlim([-20 20])
+            xlim([-preExitDuration postExitDuration])
+            xticks(linspace(-preExitDuration,postExitDuration,9))
             ylim([0 350])
             xlabel('time(s)')
             ylabel('speed (microns/s)')
