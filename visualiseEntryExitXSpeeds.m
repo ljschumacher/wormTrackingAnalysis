@@ -1,7 +1,8 @@
 clear
 close all
 
-%% to improve the script: limit how far to linearly interpolate within naninterp i.e. maybe specify maxinum interpolation window to be 9 or something and leave values NaN if no values nearby
+%% to improve the script: limit how far to linearly interpolate within naninterp i.e. maybe specify maxinum interpolation window to be 9 or something and leave values NaN if no values nearby;
+%% also turn analysis needs debugging
 
 % Script plots midbody speed for worms entering or leaving a cluster using the manually joined red trajectories, with
 % the point of entry/exit aligned.
@@ -12,8 +13,8 @@ strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
-smoothWindow = 0; % number of frames to smooth over for later trajectory-specific midbody speed calculations
-saveResults = true;
+smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
+saveResults = false;
 
 useManualEvents = true; % manual events only available for joining phase
 if useManualEvents
@@ -67,6 +68,12 @@ for strainCtr = 1:length(strains)
             frameRate = 9; % should be the case for most if not all files..
             entrySpeeds = NaN(totalEntry,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration); % assuming no more than 400 frames for the actual entry/exit event
             exitSpeeds = NaN(totalExit,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
+            headAngTotal.entry = NaN(1,totalEntry);
+            headAngTotal.exit = NaN(1,totalExit);
+            headAngNorm.entry = NaN(1,totalEntry);
+            headAngNorm.exit = NaN(1,totalExit);
+%             headAngSpeed.entry = NaN(1,totalEntry);
+%             headAngSpeed.exit = NaN(1,totalExit); 
         end
         
         % initialise counters
@@ -85,10 +92,10 @@ for strainCtr = 1:length(strains)
             
             %% generate time series (x), setting time to be zero at the point of entry start (when a worm begins to enter a cluster) or exit end (when a worm fully exits a cluster)
             if useManualEvents
-                timeSeries.entry = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration];
-                timeSeries.exit = [-preExitDuration*frameRate-manualEventMaxDuration:postExitDuration*frameRate];
+                timeSeries.entry = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration]/frameRate;
+                timeSeries.exit = [-preExitDuration*frameRate-manualEventMaxDuration:postExitDuration*frameRate]/frameRate;
             else
-                timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate];
+                timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate]/frameRate;
             end
             
             if ~useManualEvents
@@ -181,6 +188,7 @@ for strainCtr = 1:length(strains)
                         %% get aligned list of frames for the event
                         thisEntrySpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         thisEntryXFrames = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
+                        thisEntryHeadSpeedLogInd = false(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
                             thisEntryXFrames(beforeStartFrameNum+1:end) = thisEntryXStartFrame:thisEntryXEndFrame;
                         elseif exist('afterEndFrameNum','var')
@@ -226,7 +234,7 @@ for strainCtr = 1:length(strains)
                         % sign speed based on relative orientation of velocity to body
                         midbodySpeedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
 
-                        %% go through each frame
+                        %% go through each frame to obtain speed
                         for frameCtr = 1:length(thisEntryXFrames)
                             frameNumber = thisEntryXFrames(frameCtr);
                             if ~isnan(frameNumber)
@@ -234,6 +242,7 @@ for strainCtr = 1:length(strains)
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisEntrySpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
+                                    thisEntryHeadSpeedLogInd(frameCtr) = true;
                                 end
                             end
                         end
@@ -245,9 +254,34 @@ for strainCtr = 1:length(strains)
                         clear afterEndFrameNum
                         % write event number to legend
                         entryLegend{entryCtr} = num2str(eventCtr);
-                        % update counter
+                        
+                        %% calculate head angles
+                         % only interested in the time points before entry point
+                        thisEntryHeadSpeedLogInd(preExitDuration*frameRate+2:end) = false;
+                        xcoordsSorted = xcoordsSorted(:,thisEntryHeadSpeedLogInd)';
+                        ycoordsSorted = ycoordsSorted(:,thisEntryHeadSpeedLogInd)';
+                        % calculate head angle changes per frame
+                        [headAngleDiff, framesElapsed] = getHeadAngleDiff(xcoordsSorted,ycoordsSorted, 'bodywall', true, frameRate);
+                        % calculate total head turn over full trajectory
+                        headAngTotal.entry(entryCtr) = abs(nansum(headAngleDiff));
+                        % normalise head turn over path length
+                        xcoordsSorted = nanmean(xcoordsSorted,2);
+                        ycoordsSorted = nanmean(ycoordsSorted,2);
+                        xdiff = xcoordsSorted(2:end) - xcoordsSorted(1:end-1);
+                        ydiff = ycoordsSorted(2:end) - ycoordsSorted(1:end-1);
+                        pathLength = sum(sqrt(xdiff.^2+ydiff.^2)); % calculate path length
+                        headAngNorm.entry(entryCtr) = headAngTotal.entry(entryCtr)/pathLength;
+                        % calculate head angular speed
+                        % headAngSpeed.entry(entryCtr) = headAngTotal.entry(entryCtr)/framesElapsed*frameRate;
+                        headAngSpeed.entry{entryCtr} = headAngleDiff*frameRate;
+                        % save xy coordinates
+                        sortedxcoords.entry{entryCtr} = xcoordsSorted;
+                        sortedycoords.entry{entryCtr} = ycoordsSorted;
+                        
+                        %% update counter
                         entryCtr = entryCtr +1;
                         assert(entryCtr<=totalEntry+1);
+                        
                     end
                 end
                 
@@ -390,6 +424,7 @@ for strainCtr = 1:length(strains)
                         startFiller = manualEventMaxDuration - exitNumFrames ; % number of empty frames to add to the start of speed vector to keep alignment for end of exit
                         thisExitSpeeds = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         thisExitXFrames = NaN(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
+                        thisExitHeadSpeedLogInd = false(1,frameRate*(preExitDuration+postExitDuration)+1+manualEventMaxDuration);
                         if exist('beforeStartFrameNum','var') % this keeps the alignment of the entries in case they go below or above min/max index
                             thisExitXFrames(beforeStartFrameNum+startFiller+1:end) = thisExitXStartFrame:thisExitXEndFrame;
                         elseif exist('afterEndFrameNum','var')
@@ -443,6 +478,7 @@ for strainCtr = 1:length(strains)
                                 if nnz(wormFrameLogInd)~=0
                                     assert(nnz(wormFrameLogInd) ==1);
                                     thisExitSpeeds(frameCtr) = midbodySpeedSigned(wormFrameLogInd);
+                                    thisExitHeadSpeedLogInd(frameCtr) = true;
                                 end
                             end
                         end
@@ -454,7 +490,31 @@ for strainCtr = 1:length(strains)
                         clear afterEndFrameNum
                         % write event number to legend
                         exitLegend{exitCtr} = num2str(eventCtr);
-                        % update exit counter
+                        
+                        %% calculate head angles
+                        % only interested in the time points after exit point
+                        thisExitHeadSpeedLogInd(1:end-postExitDuration*frameRate-1) = false;
+                        xcoordsSorted = xcoordsSorted(:,thisExitHeadSpeedLogInd)';
+                        ycoordsSorted = ycoordsSorted(:,thisExitHeadSpeedLogInd)';
+                        % calculate head angle changes per frame
+                        [headAngleDiff, framesElapsed] = getHeadAngleDiff(xcoordsSorted,ycoordsSorted, 'bodywall', true, frameRate);
+                        % calculate total head turn over full trajectory
+                        headAngTotal.exit(exitCtr) = abs(nansum(headAngleDiff));
+                        % normalise head turn over path length
+                        xcoordsSorted = nanmean(xcoordsSorted,2);
+                        ycoordsSorted = nanmean(ycoordsSorted,2);
+                        xdiff = xcoordsSorted(2:end) - xcoordsSorted(1:end-1);
+                        ydiff = ycoordsSorted(2:end) - ycoordsSorted(1:end-1);
+                        pathLength = sum(sqrt(xdiff.^2+ydiff.^2)); % calculate path length
+                        headAngNorm.exit(exitCtr) = headAngTotal.exit(exitCtr)/pathLength;
+                        % calculate head angular speed
+                        %headAngSpeed.exit(exitCtr) = headAngTotal.exit(exitCtr)/framesElapsed*frameRate;
+                        headAngSpeed.exit{exitCtr} = headAngleDiff*frameRate;
+                        % save xy coordinates
+                        sortedxcoords.exit{exitCtr} = xcoordsSorted;
+                        sortedycoords.exit{exitCtr} = ycoordsSorted;
+                        
+                        %% update exit counter
                         exitCtr = exitCtr + 1;
                         assert(exitCtr<=totalExit+1);
                     end
@@ -571,18 +631,21 @@ for strainCtr = 1:length(strains)
         %% plotting and saving data
         
         % save data
-        if useManualEvents
-            filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds_manualEvent.mat';
-        else
-            if saveResults
+        if saveResults
+            if useManualEvents
+                filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds_manualEvent.mat';
+                save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries',...
+                    'headAngTotal','headAngNorm','headAngSpeed','sortedxcoords','sortedycoords')
+            else
                 if enforceInClusterAfterEntryBeforeExit
                     filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds_halfFiltered.mat';
                 else
                     filename = './figures/entryExitSpeeds/allSmoothEntryExitSpeeds.mat';
                 end
+                save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries')
             end
         end
-        save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries')
+        
         
         if useManualEvents
             
@@ -601,10 +664,11 @@ for strainCtr = 1:length(strains)
                 for trajCtr = startTrajIdx : endTrajIdx
                     plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
                 end
+                vline(0,'k')
                 title('cluster entry speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([timeSeries.entry(1)-20 abs(timeSeries.entry(1)-20)])
+                xlim([-preExitDuration postExitDuration])
                 ylim([-500 500])
                 legend(entryLegend{startTrajIdx:endTrajIdx})
                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
@@ -630,10 +694,11 @@ for strainCtr = 1:length(strains)
                 for trajCtr = startTrajIdx:endTrajIdx
                     plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
                 end
+                vline(0,'k')
                 title('cluster exit speeds')
                 xlabel('frames')
                 ylabel('speed(microns/s)')
-                xlim([-(timeSeries.exit(end)+20) timeSeries.exit(end)+20])                
+                xlim([-preExitDuration postExitDuration])
                 ylim([-500 500])
                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
@@ -644,6 +709,86 @@ for strainCtr = 1:length(strains)
                 end
             end
             
+            % average entry and exit speeds plot (of absolute value)
+            figure;
+            % take absolute value
+            allSmoothEntrySpeeds = abs(allSmoothEntrySpeeds);
+            allSmoothExitSpeeds = abs(allSmoothExitSpeeds);
+            % entry
+            subplot(1,2,1); hold on
+            shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
+            title('cluster entry')
+            xlim([-preExitDuration postExitDuration])
+            ylim([0 350])
+            xlabel('time(s)')
+            ylabel('speed (microns/s)')
+            legend(['n=' num2str(totalEntry)])
+            vline(0,'k')
+            % exit
+            subplot(1,2,2); hold on
+            shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'r');
+            title('cluster exit')
+            xlim([-20 20])
+            ylim([0 350])
+            xlabel('time(s)')
+            ylabel('speed (microns/s)')
+            legend(['n=' num2str(totalExit)])
+            vline(0,'k')
+            %
+            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_avgGraph_smoothWindow' num2str(smoothWindow)]);
+            if saveResults
+                avgEntryExitSpeedFig = gcf;
+                exportfig(avgEntryExitSpeedFig,[figurename '.eps'],exportOptions)
+                system(['epstopdf ' figurename '.eps']);
+                system(['rm ' figurename '.eps']);
+            end
+            
+            % entry and exit head angular speed plots
+            headAngFig = figure; 
+            %
+            subplot(2,2,1);
+            histogram(headAngTotal.entry,'BinWidth',pi/4,'Normalization','count')
+            title([strains{strainCtr} ' entry'],'FontWeight','normal')
+            xlabel('Total head angle change (radian)')
+            ylabel('Count')
+            xlim([0 7])
+            ylim([0 20])
+            %
+            subplot(2,2,2);
+            headAngSpeedEntry = vertcat(headAngSpeed.entry{:});
+            histogram(headAngSpeedEntry,'BinWidth',pi/4,'Normalization','count')
+            title([strains{strainCtr} ' entry'],'FontWeight','normal')
+            xlabel('Head angular speed (radian/s)')
+            ylabel('Count')
+            xlim([0 7])
+            %ylim([0 30])
+            %
+            subplot(2,2,3);
+            histogram(headAngTotal.exit,'BinWidth',pi/4,'Normalization','count')
+            title([strains{strainCtr} ' exit'],'FontWeight','normal')
+            xlabel('Total head angle change (radian)')
+            ylabel('Count')
+            xlim([0 7])
+            ylim([0 20])
+            %
+            subplot(2,2,4);
+            headAngSpeedExit = vertcat(headAngSpeed.exit{:});
+            histogram(headAngSpeedExit,'BinWidth',pi/4,'Normalization','count')
+            title([strains{strainCtr} ' exit'],'FontWeight','normal')
+            xlabel('Head angular speed (radian/s)')
+            ylabel('Count')
+            xlim([0 7])
+            %ylim([0 30])
+            %
+            set(headAngFig,'PaperUnits','centimeters')
+            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase ' headAngles']);
+            if saveResults
+                exportfig(headAngFig,[figurename '.eps'],exportOptions)
+                system(['epstopdf ' figurename '.eps']);
+                system(['rm ' figurename '.eps']);
+            end
+            
+            % not using manually annotated traj
         else
             % mean entry and exit speed plot
             meanEntryExitSpeedsFig = figure; hold on
@@ -703,6 +848,7 @@ for strainCtr = 1:length(strains)
             end
             
             % errorbar entry plot
+            
             figure;
             shadedErrorBar(timeSeries,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
             title(['mean cluster entry speeds'])
