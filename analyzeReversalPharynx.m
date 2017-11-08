@@ -61,6 +61,7 @@ for strainCtr = 1:length(strains)
     timeToFwd_revCluster_censored = cell(numFiles,1);
     for fileCtr = 1:numFiles % can be parfor
         filename_g = filenames_g{fileCtr};
+        shortFileName = filename_g(end-31:end-5);
         trajData_g = h5read(filename_g,'/trajectories_data');
         blobFeats_g = h5read(filename_g,'/blob_features');
         skelData_g = h5read(filename_g,'/skeleton');
@@ -92,19 +93,26 @@ for strainCtr = 1:length(strains)
         if any(phaseFrameLogInd)
             % sign speed based on relative orientation of velocity to midbody
             speedSigned = blobFeats_g.signed_speed*pixelsize*frameRate;
+            numFramesTotal = length(speedSigned);
+            disp([shortFileName ' has ' num2str(nnz(isnan(speedSigned))) '/' num2str(numFramesTotal) ' speeds = NaN'])
             % ignore first and last frames of each worm's track
+            assert(all(trajData_g.worm_index_joined(2:end)>=trajData_g.worm_index_joined(1:end-1)),'worm indices are not sorted in monotonically increasing order')
             wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
+            disp([shortFileName ' has ' num2str(nnz(wormChangeIndcs)) '/' num2str(numFramesTotal) ' speeds excluded due to change in worm index'])
             speedSigned(wormChangeIndcs)=NaN;
-            % ignore frames with bad skeletonization
+            % ignore frames without skeletonization
+            disp([shortFileName ' has ' num2str(nnz(~trajData_g.has_skeleton)) '/' num2str(numFramesTotal) ' speeds excluded due to missing skeletonization'])
             speedSigned(~trajData_g.has_skeleton)=NaN;
             % ignore skeletons otherwise filtered out
+            disp([shortFileName ' has ' num2str(nnz(~trajData_g.filtered)) '/' num2str(numFramesTotal) ' speeds excluded due to other filtering'])
             speedSigned(~trajData_g.filtered) = NaN;
+            disp([shortFileName ' now has ' num2str(nnz(isnan(speedSigned))) '/' num2str(numFramesTotal) ' speeds = NaN'])
+            % smooth speed to denoise
+            speedSigned = smoothdata(speedSigned,'movmean',round(frameRate/2),'omitnan');
             % ignore frames outside of specified phase
             if ~strcmp(phase,'fullMovie')
                 speedSigned(~phaseFrameLogInd) =NaN;
             end
-            % smooth speed to denoise
-            speedSigned = smoothdata(speedSigned,'movmean',3,'omitnan');
             % find reversals in signed speed
             [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
                 findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
