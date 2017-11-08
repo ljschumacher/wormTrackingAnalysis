@@ -32,6 +32,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
+useJoinedTraj = true;
 maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;% in microns
 minPathLength = 50; % minimum path length of reversals to be included
@@ -50,6 +51,11 @@ for strainCtr = 1:length(strains)
     elseif dataset ==2
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
     end
+    if ~useJoinedTraj
+        filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
+            '/end/home/lschumac/databackup/data/twoColour/ResultsUnjoinedTrajectories/');
+    end    
+    %% intialize variables
     numFiles = length(filenames);
     reversalfreq_lone = NaN(numFiles,1);
     reversalfreq_leaveCluster = NaN(numFiles,1);
@@ -61,6 +67,7 @@ for strainCtr = 1:length(strains)
     interrevT_lone_censored = cell(numFiles,1);
     timeToRev_leaveCluster_censored = cell(numFiles,1);
     timeToFwd_revCluster_censored = cell(numFiles,1);
+    %% loop through files and load data
     for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
         shortFileName = filename(end-31:end-5);
@@ -78,7 +85,7 @@ for strainCtr = 1:length(strains)
         trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
         % check worm-indices are monotonically increasing
         assert(~any(diff(trajData.worm_index_joined)<0),['worm indices are not sorted as expected for ' filename])
-        %% calculate stats
+        %% find worm cluster status and relevant experimental phase
         if ~strcmp(wormnum,'1W')
             % find leave cluster and lone worms
             [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
@@ -91,7 +98,7 @@ for strainCtr = 1:length(strains)
             loneWormLogInd = true(size(trajData.frame_number));
             leaveClusterLogInd = false(size(trajData.frame_number));
         end
-        %% load signed speed from blobFeats
+        %% calculate stats
         if any(phaseFrameLogInd)
             %% sign speed based on relative orientation of velocity to midbody
             speedSigned = blobFeats.signed_speed*pixelsize*frameRate;
@@ -140,6 +147,7 @@ for strainCtr = 1:length(strains)
             [ timeToFwdRevCluster, timeToFwd_revCluster_censored{fileCtr}, revClusterStartInd ] = ...
                 filterReversalsByEvent(fwdStartInd, leaveClusterLogInd&speedSigned<0, trajData.worm_index_joined,postExitDuration*frameRate);
             disp([num2str(100*mean(timeToFwd_revCluster_censored{fileCtr}),2) '% of forwards after rev-leaving a cluster are censored' newline])
+            %% store reversal statistics for this file
             % subtracting revDuration will more accurately reflect the
             % interreversal time
             interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
@@ -171,7 +179,7 @@ for strainCtr = 1:length(strains)
             end
         end
     end
-    %pool data from all files
+    %% pool data from all files
     interrevT_lone = vertcat(interrevT_lone{:});
     timeToRev_leaveCluster = vertcat(timeToRev_leaveCluster{:});
     timeToFwd_revCluster = vertcat(timeToFwd_revCluster{:});
@@ -200,7 +208,8 @@ for strainCtr = 1:length(strains)
         legend(revInterTimeFig.Children,'single worms')
     end
     figurename = ['figures/reversals/phaseSpecific/reversalintertime_pharynx_'...
-        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)  '_jointraj' '_censored'];
+        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_censored'];
+    if useJoinedTraj, figurename = [figurename '_jointraj']; end
     exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
@@ -219,7 +228,8 @@ for strainCtr = 1:length(strains)
     revFreqFig.Children.YLim(1) = 0;
     revFreqFig.Children.YLim(2) = 1;
     figurename = ['figures/reversals/phaseSpecific/reversalfrequency_pharynx_'...
-        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'];
+        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)];
+    if useJoinedTraj, figurename = [figurename '_jointraj']; end
     exportfig(revFreqFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
@@ -234,7 +244,8 @@ for strainCtr = 1:length(strains)
     revDensityFig.Children.XLabel.String = '# nbrs within 500\mu m';
     revDensityFig.Children.YLabel.String = 'reversals (1/s)';
     figurename = ['figures/reversals/phaseSpecific/reversalfrequency_density_pharynx_'...
-        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'];
+        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)];
+    if useJoinedTraj, figurename = [figurename '_jointraj']; end
     exportfig(revDensityFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
