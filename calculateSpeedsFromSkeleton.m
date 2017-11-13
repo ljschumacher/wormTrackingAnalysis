@@ -1,4 +1,5 @@
-function [ speed, velocity_x, velocity_y, speedSigned ] = calculateSpeedsFromSkeleton(trajData,skelData,skelIndcs,...
+function [ speed, velocity_x, velocity_y, speedSigned, acceleration_x, acceleration_y ] =...
+    calculateSpeedsFromSkeleton(trajData,skelData,skelIndcs,...
     pixelsize,frameRate,filter,smoothingWindowSize)
 %% calculate midbody speeds from skeletons
 % INPUTS
@@ -22,6 +23,9 @@ dFramedt = gradient(double(trajData.frame_number))';
 speed = sqrt(dxdFrame.^2 + dydFrame.^2)./dFramedt;
 velocity_x = dxdFrame./dFramedt;
 velocity_y = dydFrame./dFramedt;
+% acceleration - change in velocity
+acceleration_x = gradient(velocity_x)./dFramedt;
+acceleration_y = gradient(velocity_y)./dFramedt;
 % signed speed calculation
 % direction of segments pointing along midbody
 [~, dyds] = gradient(squeeze(skelData(2,skelIndcs,:)),-1);
