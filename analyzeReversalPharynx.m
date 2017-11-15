@@ -32,7 +32,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
-useJoinedTraj = true;
+useJoinedTraj = true
 maxBlobSize_g = 1e4;
 minNeighbrDist = 2000;% in microns
 minPathLength = 50; % minimum path length of reversals to be included
@@ -164,8 +164,8 @@ for strainCtr = 1:length(strains)
             % count how many leave-cluster trajs end in reversals (are not
             % censored), and divide by the total time until reversals (or
             % trajectories end)
-            reversalfreq_leaveCluster(fileCtr) = nnz(timeToRev_leaveCluster_censored{fileCtr})/sum(timeToRev_leaveCluster{fileCtr});
-            reversalfreq_revCluster(fileCtr) = nnz(timeToFwd_revCluster_censored{fileCtr})/sum(timeToFwd_revCluster{fileCtr});
+            reversalfreq_leaveCluster(fileCtr) = nnz(~timeToRev_leaveCluster_censored{fileCtr})/sum(timeToRev_leaveCluster{fileCtr});
+            reversalfreq_revCluster(fileCtr) = nnz(~timeToFwd_revCluster_censored{fileCtr})/sum(timeToFwd_revCluster{fileCtr});
             %% sort reversal frequencies by estimated desnity
             num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
             % count the number of nbrs at the start of cluster leaving
@@ -174,8 +174,8 @@ for strainCtr = 1:length(strains)
                 % find which leave-cluster events had this number of
                 % neighbours while in cluster
                 theseLeaveInds = preLeaveClusterNbrNums==nbrNum;
-                reversalfreq_leaveCluster_density(fileCtr,nbrNum) = ...
-                    nnz(timeToRev_leaveCluster_censored{fileCtr}(theseLeaveInds))/sum(timeToRev_leaveCluster{fileCtr}(theseLeaveInds));
+                reversalfreq_leaveCluster_density(fileCtr,nbrNum - min(nbrNumValues) + 1) = ...
+                    nnz(~timeToRev_leaveCluster_censored{fileCtr}(theseLeaveInds))/sum(timeToRev_leaveCluster{fileCtr}(theseLeaveInds));
             end
         end
     end
@@ -213,11 +213,15 @@ for strainCtr = 1:length(strains)
     exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
-    
     % reversal frequency from counts
     set(0,'CurrentFigure',revFreqFig)
-    notBoxPlot([reversalfreq_lone,reversalfreq_leaveCluster,reversalfreq_revCluster],...
-        [-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
+    numSubSamples = 100;
+    sampleSizeFraction = 0.05;
+%     notBoxPlot([reversalfreq_lone,reversalfreq_leaveCluster,reversalfreq_revCluster],...
+%         [-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
+    violinplot([subsampleRevFreq(~interrevT_lone_censored,interrevT_lone,numSubSamples,round(sampleSizeFraction*length(interrevT_lone))),...
+        subsampleRevFreq(~timeToRev_leaveCluster_censored,timeToRev_leaveCluster,numSubSamples,round(sampleSizeFraction*length(timeToRev_leaveCluster))),...
+        subsampleRevFreq(~timeToFwd_revCluster_censored,timeToFwd_revCluster,numSubSamples,round(sampleSizeFraction*length(timeToFwd_revCluster)))]);
     title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
     set(revFreqFig,'PaperUnits','centimeters')
     if ~strcmp(wormnum,'1W')
@@ -239,8 +243,7 @@ for strainCtr = 1:length(strains)
     notBoxPlot(reversalfreq_leaveCluster_density,'markMedian',true,'jitter',0.2)
     title(revDensityFig.Children,strains{strainCtr},'FontWeight','normal');
     set(revDensityFig,'PaperUnits','centimeters')
-    revDensityFig.Children.XLim(1) = nbrNumValues(1) - 0.5;
-    revDensityFig.Children.XLim(2) = nbrNumValues(end) + 0.5;
+    revDensityFig.Children.XTickLabel = num2str(nbrNumValues');
     revDensityFig.Children.XLabel.String = '# nbrs within 500\mu m';
     revDensityFig.Children.YLabel.String = 'reversals (1/s)';
     figurename = ['figures/reversals/phaseSpecific/reversalfrequency_density_pharynx_'...
@@ -249,5 +252,16 @@ for strainCtr = 1:length(strains)
     exportfig(revDensityFig,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
+end
 
 end
+
+function subsamples = subsampleRevFreq(reversalEvents,timeToReversals,numSubSamples,subSampleSize)
+    freqsample = @(x,y) nnz(x)/nansum(y);
+    subsamples = NaN(numSubSamples,1);
+    for subSampleCtr = 1:numSubSamples
+        [sampleReversalEvents, sampleIdcs] = datasample(reversalEvents,subSampleSize,'Replace',false);
+        subsamples(subSampleCtr) = freqsample(sampleReversalEvents,timeToReversals(sampleIdcs));
+    end
+end
+    
