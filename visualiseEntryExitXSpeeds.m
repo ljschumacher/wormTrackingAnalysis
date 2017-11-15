@@ -153,7 +153,7 @@ for strainCtr = 1:length(strains)
             %% entry case with manually labelled events
             if useManualEvents
                 % go through each annotated event
-                for eventCtr = 5:7 % 1:size(annotations,1)
+                for eventCtr = 1:size(annotations,1)
                     
                     %% find entry events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
@@ -407,7 +407,7 @@ for strainCtr = 1:length(strains)
             if useManualEvents
                 
                 % go through each annotated event
-                for eventCtr = 5:7 % 1:size(annotations,1)
+                for eventCtr = 1:size(annotations,1)
                     
                     %% find exit events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
@@ -540,25 +540,25 @@ for strainCtr = 1:length(strains)
                         % write event number to legend
                         exitLegend{exitCtr} = num2str(eventCtr);
                         
-                        %% calculate head angles
-
-                        % calculate head angle changes per frame
-                        [headAngleDiff, framesElapsed] = getHeadAngleDiff(xcoordsSorted,ycoordsSorted, 'bodywall', true, frameRate);
-                        % calculate total head turn over full trajectory
-                        headAngTotal.exit(exitCtr) = abs(nansum(headAngleDiff));
-                        % normalise head turn over path length
-                        xcoordsSorted = nanmean(xcoordsSorted,2);
-                        ycoordsSorted = nanmean(ycoordsSorted,2);
-                        xdiff = xcoordsSorted(2:end) - xcoordsSorted(1:end-1);
-                        ydiff = ycoordsSorted(2:end) - ycoordsSorted(1:end-1);
-                        pathLength = sum(sqrt(xdiff.^2+ydiff.^2)); % calculate path length
-                        headAngNorm.exit(exitCtr) = headAngTotal.exit(exitCtr)/pathLength;
-                        % calculate head angular speed
-                        %headAngSpeed.exit(exitCtr) = headAngTotal.exit(exitCtr)/framesElapsed*frameRate;
-                        headAngSpeed.exit{exitCtr} = headAngleDiff*frameRate;
-                        % save xy coordinates
-                        sortedxcoords.exit{exitCtr} = xcoordsSorted;
-                        sortedycoords.exit{exitCtr} = ycoordsSorted;
+%                         %% calculate head angles
+% 
+%                         % calculate head angle changes per frame
+%                         [headAngleDiff, framesElapsed] = getHeadAngleDiff(xcoordsSorted,ycoordsSorted, 'bodywall', true, frameRate);
+%                         % calculate total head turn over full trajectory
+%                         headAngTotal.exit(exitCtr) = abs(nansum(headAngleDiff));
+%                         % normalise head turn over path length
+%                         xcoordsSorted = nanmean(xcoordsSorted,2);
+%                         ycoordsSorted = nanmean(ycoordsSorted,2);
+%                         xdiff = xcoordsSorted(2:end) - xcoordsSorted(1:end-1);
+%                         ydiff = ycoordsSorted(2:end) - ycoordsSorted(1:end-1);
+%                         pathLength = sum(sqrt(xdiff.^2+ydiff.^2)); % calculate path length
+%                         headAngNorm.exit(exitCtr) = headAngTotal.exit(exitCtr)/pathLength;
+%                         % calculate head angular speed
+%                         %headAngSpeed.exit(exitCtr) = headAngTotal.exit(exitCtr)/framesElapsed*frameRate;
+%                         headAngSpeed.exit{exitCtr} = headAngleDiff*frameRate;
+%                         % save xy coordinates
+%                         sortedxcoords.exit{exitCtr} = xcoordsSorted;
+%                         sortedycoords.exit{exitCtr} = ycoordsSorted;
                         
                         %% update exit counter
                         exitCtr = exitCtr + 1;
@@ -695,65 +695,65 @@ for strainCtr = 1:length(strains)
         
         if useManualEvents
             
-%             % entry speed plot depicting single trajectories
-%             numGraphs = round(totalEntry/maxTrajPerGraph);
-%             lineColors = distinguishable_colors(totalEntry);
-%             for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
-%                 entrySpeedsFig = figure; hold on
-%                 set(0, 'CurrentFigure',entrySpeedsFig)
-%                 startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
-%                 if graphCtr*maxTrajPerGraph <= totalEntry
-%                     endTrajIdx =  graphCtr*maxTrajPerGraph;
-%                 else
-%                     endTrajIdx = totalEntry;
-%                 end
-%                 for trajCtr = startTrajIdx : endTrajIdx
-%                     plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-%                 end
-%                 vline(0,'k')
-%                 title('cluster entry speeds')
-%                 xlabel('frames')
-%                 ylabel('speed(microns/s)')
-%                 xlim([-preExitDuration postExitDuration])
-%                 ylim([-500 500])
-%                 legend(entryLegend{startTrajIdx:endTrajIdx})
-%                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
-%                 if saveResults
-%                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
-%                     system(['epstopdf ' figurename '.eps']);
-%                     system(['rm ' figurename '.eps']);
-%                 end
-%             end
-%             
-%             % exit speed plot depicting single trajectories
-%             numGraphs = round(totalExit/maxTrajPerGraph);
-%             lineColors = distinguishable_colors(totalExit);
-%             for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
-%                 exitSpeedsFig = figure; hold on
-%                 set(0, 'CurrentFigure',exitSpeedsFig)
-%                 startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
-%                 if graphCtr*maxTrajPerGraph <= totalExit
-%                     endTrajIdx =  graphCtr*maxTrajPerGraph;
-%                 else
-%                     endTrajIdx = totalExit;
-%                 end
-%                 for trajCtr = startTrajIdx:endTrajIdx
-%                     plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-%                 end
-%                 vline(0,'k')
-%                 title('cluster exit speeds')
-%                 xlabel('frames')
-%                 ylabel('speed(microns/s)')
-%                 xlim([-preExitDuration postExitDuration])
-%                 ylim([-500 500])
-%                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-%                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
-%                 if saveResults
-%                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
-%                     system(['epstopdf ' figurename '.eps']);
-%                     system(['rm ' figurename '.eps']);
-%                 end
-%             end
+            % entry speed plot depicting single trajectories
+            numGraphs = round(totalEntry/maxTrajPerGraph);
+            lineColors = distinguishable_colors(totalEntry);
+            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+                entrySpeedsFig = figure; hold on
+                set(0, 'CurrentFigure',entrySpeedsFig)
+                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+                if graphCtr*maxTrajPerGraph <= totalEntry
+                    endTrajIdx =  graphCtr*maxTrajPerGraph;
+                else
+                    endTrajIdx = totalEntry;
+                end
+                for trajCtr = startTrajIdx : endTrajIdx
+                    plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                end
+                vline(0,'k')
+                title('cluster entry speeds')
+                xlabel('time(s)')
+                ylabel('speed(microns/s)')
+                xlim([-preExitDuration postExitDuration])
+                ylim([-500 500])
+                legend(entryLegend{startTrajIdx:endTrajIdx})
+                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
+                if saveResults
+                    exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
+                    system(['epstopdf ' figurename '.eps']);
+                    system(['rm ' figurename '.eps']);
+                end
+            end
+            
+            % exit speed plot depicting single trajectories
+            numGraphs = round(totalExit/maxTrajPerGraph);
+            lineColors = distinguishable_colors(totalExit);
+            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+                exitSpeedsFig = figure; hold on
+                set(0, 'CurrentFigure',exitSpeedsFig)
+                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+                if graphCtr*maxTrajPerGraph <= totalExit
+                    endTrajIdx =  graphCtr*maxTrajPerGraph;
+                else
+                    endTrajIdx = totalExit;
+                end
+                for trajCtr = startTrajIdx:endTrajIdx
+                    plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+                end
+                vline(0,'k')
+                title('cluster exit speeds')
+                xlabel('time(s)')
+                ylabel('speed(microns/s)')
+                xlim([-preExitDuration postExitDuration])
+                ylim([-500 500])
+                legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
+                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
+                if saveResults
+                    exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
+                    system(['epstopdf ' figurename '.eps']);
+                    system(['rm ' figurename '.eps']);
+                end
+            end
 %             
 %             % average entry and exit speeds plot (of absolute value)
 %             figure;
@@ -800,51 +800,51 @@ for strainCtr = 1:length(strains)
 %                 system(['rm ' figurename '.eps']);
 %             end
             
-            % entry and exit head angular speed plots
-            headAngFig = figure; 
-            %
-            subplot(2,2,1);
-            histogram(headAngTotal.entry,'BinWidth',pi/4,'Normalization','count')
-            title([strains{strainCtr} ' entry'],'FontWeight','normal')
-            xlabel('Total head angle change (radian)')
-            ylabel('Count')
-            xlim([0 7])
-            ylim([0 10])
-            %
-            subplot(2,2,2);
-            headAngSpeedEntry = vertcat(headAngSpeed.entry{:});
-            histogram(headAngSpeedEntry,'BinWidth',pi/4,'Normalization','count')
-            title([strains{strainCtr} ' entry'],'FontWeight','normal')
-            xlabel('Head angular speed (radian/s)')
-            ylabel('Count')
-            xlim([0 7])
-            ylim([0 2500])
-            %
-            subplot(2,2,3);
-            histogram(headAngTotal.exit,'BinWidth',pi/4,'Normalization','count')
-            title([strains{strainCtr} ' exit'],'FontWeight','normal')
-            xlabel('Total head angle change (radian)')
-            ylabel('Count')
-            xlim([0 7])
-            ylim([0 10])
-            %
-            subplot(2,2,4);
-            headAngSpeedExit = vertcat(headAngSpeed.exit{:});
-            histogram(headAngSpeedExit,'BinWidth',pi/4,'Normalization','count')
-            title([strains{strainCtr} ' exit'],'FontWeight','normal')
-            xlabel('Head angular speed (radian/s)')
-            ylabel('Count')
-            xlim([0 7])
-            ylim([0 2500])
-            %
-            set(headAngFig,'PaperUnits','centimeters')
-            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase ' headAngles']);
-            if saveResults
-                exportfig(headAngFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
-            end
-            
+%             % entry and exit head angular speed plots
+%             headAngFig = figure; 
+%             %
+%             subplot(2,2,1);
+%             histogram(headAngTotal.entry,'BinWidth',pi/4,'Normalization','count')
+%             title([strains{strainCtr} ' entry'],'FontWeight','normal')
+%             xlabel('Total head angle change (radian)')
+%             ylabel('Count')
+%             xlim([0 7])
+%             ylim([0 10])
+%             %
+%             subplot(2,2,2);
+%             headAngSpeedEntry = vertcat(headAngSpeed.entry{:});
+%             histogram(headAngSpeedEntry,'BinWidth',pi/4,'Normalization','count')
+%             title([strains{strainCtr} ' entry'],'FontWeight','normal')
+%             xlabel('Head angular speed (radian/s)')
+%             ylabel('Count')
+%             xlim([0 7])
+%             ylim([0 2500])
+%             %
+%             subplot(2,2,3);
+%             histogram(headAngTotal.exit,'BinWidth',pi/4,'Normalization','count')
+%             title([strains{strainCtr} ' exit'],'FontWeight','normal')
+%             xlabel('Total head angle change (radian)')
+%             ylabel('Count')
+%             xlim([0 7])
+%             ylim([0 10])
+%             %
+%             subplot(2,2,4);
+%             headAngSpeedExit = vertcat(headAngSpeed.exit{:});
+%             histogram(headAngSpeedExit,'BinWidth',pi/4,'Normalization','count')
+%             title([strains{strainCtr} ' exit'],'FontWeight','normal')
+%             xlabel('Head angular speed (radian/s)')
+%             ylabel('Count')
+%             xlim([0 7])
+%             ylim([0 2500])
+%             %
+%             set(headAngFig,'PaperUnits','centimeters')
+%             figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase ' headAngles']);
+%             if saveResults
+%                 exportfig(headAngFig,[figurename '.eps'],exportOptions)
+%                 system(['epstopdf ' figurename '.eps']);
+%                 system(['rm ' figurename '.eps']);
+%             end
+%             
 %             % not using manually annotated traj
 %         else
 %             % mean entry and exit speed plot

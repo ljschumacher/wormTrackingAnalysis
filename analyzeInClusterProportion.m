@@ -9,19 +9,22 @@ exportOptions = struct('Format','eps2',...
     'Width',10,...
     'Resolution',300,...
     'FontMode','fixed',...
-    'FontSize',12,...
-    'LineWidth',1);
+    'FontSize',15,...
+    'LineWidth',3);
 
 %% set parameters
-dataset = 1;  % '1' or '2'. To specify which dataset to run the script for.
-phase = 'sweeping'; % 'fullMovie', 'joining', or 'sweeping'.
+dataset = 2;  % '1' or '2'. To specify which dataset to run the script for.
+phase = 'fullMovie'; % 'fullMovie', 'joining', or 'sweeping'.
 binSeconds = 30; % create bins measured in seconds - only applied to full movie analysis
 if dataset ==1
-    strains = {'N2','npr1'}; %{'npr1','HA','N2'}
+    strains = {'npr1','N2'}; %{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'N2','npr1'}; %{'npr1','N2'}
+    strains = {'npr1','N2'}; %{'npr1','N2'}
 end
 wormnums = {'40'};%{'40','HD'};
+saveResults = true;
+
+
 if dataset == 1
     intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
 elseif dataset ==2
@@ -45,8 +48,7 @@ for strainCtr = 1:length(strains)
             [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
         end
         numFiles = length(filenames);
-        inClusterProportionFig = figure; hold on
-        loneWormProportionFig = figure; hold on
+        
         for fileCtr = 1:numFiles
             filename = filenames{fileCtr};
             trajData = h5read(filename,'/trajectories_data');
@@ -56,7 +58,7 @@ for strainCtr = 1:length(strains)
             trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
                 intensityThresholds(wormnum),maxBlobSize);
             % filter by in-cluster/lone status
-            [~, loneWormLogInd, inClusterLogInd,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist)
+            [~, loneWormLogInd, inClusterLogInd,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist);
             inClusterLogInd(~trajData.filtered)=false;
             loneWormLogInd(~trajData.filtered)=false;
             % filter by worm category
@@ -81,40 +83,31 @@ for strainCtr = 1:length(strains)
             [loneWormPerSecond,~]=histcounts(loneWormInFrame,binEdges);
             % plot in-cluster/lone worms as percentage of total worms
             % across the movie
-            percentInCluster = smooth(inClusterPerSecond./totalObjPerSecond*100,'moving');
-            percentLoneWorm = smooth(loneWormPerSecond./totalObjPerSecond*100,'moving');
-            set(0,'CurrentFigure',inClusterProportionFig)
-            plot(percentInCluster)
-            set(0,'CurrentFigure',loneWormProportionFig)
-            plot(percentLoneWorm)
+            percentInCluster.(strains{strainCtr}){fileCtr} = smoothdata(inClusterPerSecond./totalObjPerSecond*100);
+            percentLoneWorm.(strains{strainCtr}){fileCtr} = smoothdata(loneWormPerSecond./totalObjPerSecond*100);
         end
-        %format plot and export
-        set(0,'CurrentFigure',inClusterProportionFig)
+        
+        % pool data across movie, plot and save
+        percentInCluster.(strains{strainCtr}) = vertcat(percentInCluster.(strains{strainCtr}){:});
+        percentLoneWorm.(strains{strainCtr}) = vertcat(percentLoneWorm.(strains{strainCtr}){:});
+        xtime = ([1:118]/2);
+        shadedErrorBar(xtime,median(percentInCluster.(strains{strainCtr}),1),std(percentInCluster.(strains{strainCtr}),1),'k');
         title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
-        xlabel('time')
-        if strcmp(phase,'fullMovie')
-            xlim([0 (3600/binSeconds)]) % set x axis for 1 hour
-        end
-        ylabel('percentage')
+        xlabel('time(min)')
+        ylabel('percentage in cluster')
+        xlim([0 60])
         ylim([0 100])
-        set(inClusterProportionFig,'PaperUnits','centimeters')
-        figurename = ['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset)];
-        exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        %
-        set(0,'CurrentFigure',loneWormProportionFig)
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_loneWorms'],'FontWeight','normal')
-        xlabel('time')
-        if strcmp(phase, 'fullMovie')
-            xlim([0 (3600/binSeconds)]) % set x axis for 1 hour
+        figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
+        inClusterProportionFig  = gcf;
+        if saveResults
+            exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
         end
-        ylabel('percentage')
-        ylim([0 50])
-        set(loneWormProportionFig,'PaperUnits','centimeters')
-        figurename = ['figures/inClusterProportion/loneWormsProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset)];
-        exportfig(loneWormProportionFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
     end
+end
+
+
+% save data
+if saveResults
+    filename = ['./figures/inClusterProportion/inClusterProportion_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '.mat'];
+    save(filename,'percentInCluster','percentLoneWorm')
 end
