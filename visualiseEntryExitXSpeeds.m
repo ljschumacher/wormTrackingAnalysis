@@ -146,7 +146,7 @@ for strainCtr = 1:length(strains)
             %% entry case with manually labelled events
             if useManualEvents
                 % go through each annotated event
-                for eventCtr = 1:size(annotations,1)
+                for eventCtr = 5:7 % 1:size(annotations,1)
                     
                     %% find entry events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
@@ -387,7 +387,7 @@ for strainCtr = 1:length(strains)
             %% exit cases with manually labelled events
             if useManualEvents
                 % go through each annotated event
-                for eventCtr = 1:size(annotations,1)
+                for eventCtr = 5:7 % 1:size(annotations,1)
                     
                     %% find exit events with matching recording file name to the file currently under consideration
                     recordingNumber = annotations{eventCtr,1};
