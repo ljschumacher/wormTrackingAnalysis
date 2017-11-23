@@ -14,7 +14,7 @@ wormnums = {'40'};% {'40'};
 preExitDuration = 20; % duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
-saveResults = false;
+saveResults = true;
 alignExitWithStart = false;
 
 useManualEvents = true; % manual events only available for joining phase
@@ -693,74 +693,74 @@ for strainCtr = 1:length(strains)
         
         if useManualEvents
             
-            % entry speed plot depicting single trajectories
-            numGraphs = round(totalEntry/maxTrajPerGraph);
-            lineColors = distinguishable_colors(totalEntry);
-            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
-                entrySpeedsFig = figure; hold on
-                set(0, 'CurrentFigure',entrySpeedsFig)
-                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
-                if graphCtr*maxTrajPerGraph <= totalEntry
-                    endTrajIdx =  graphCtr*maxTrajPerGraph;
-                else
-                    endTrajIdx = totalEntry;
-                end
-                for trajCtr = startTrajIdx : endTrajIdx
-                    plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-                end
-                vline(0,'k')
-                title('cluster entry speeds')
-                xlabel('time(s)')
-                ylabel('speed(microns/s)')
-                xlim([-preExitDuration postExitDuration])
-                ylim([-500 500])
-                legend(entryLegend{startTrajIdx:endTrajIdx})
-                figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
-                if saveResults
-                    exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
-                    system(['epstopdf ' figurename '.eps']);
-                    system(['rm ' figurename '.eps']);
-                end
-            end
-            
-            % exit speed plot depicting single trajectories
-            numGraphs = round(totalExit/maxTrajPerGraph);
-            lineColors = distinguishable_colors(totalExit);
-            for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
-                exitSpeedsFig = figure; hold on
-                set(0, 'CurrentFigure',exitSpeedsFig)
-                startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
-                if graphCtr*maxTrajPerGraph <= totalExit
-                    endTrajIdx =  graphCtr*maxTrajPerGraph;
-                else
-                    endTrajIdx = totalExit;
-                end
-                for trajCtr = startTrajIdx:endTrajIdx
-                    plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
-                end
-                vline(0,'k')
-                title('cluster exit speeds')
-                xlabel('time(s)')
-                ylabel('speed(microns/s)')
-                xlim([-preExitDuration postExitDuration])
-                ylim([-500 500])
-                legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
-                figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
-                if saveResults
-                    exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
-                    system(['epstopdf ' figurename '.eps']);
-                    system(['rm ' figurename '.eps']);
-                end
-            end
-            
+%             % entry speed plot depicting single trajectories
+%             numGraphs = round(totalEntry/maxTrajPerGraph);
+%             lineColors = distinguishable_colors(totalEntry);
+%             for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+%                 entrySpeedsFig = figure; hold on
+%                 set(0, 'CurrentFigure',entrySpeedsFig)
+%                 startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+%                 if graphCtr*maxTrajPerGraph <= totalEntry
+%                     endTrajIdx =  graphCtr*maxTrajPerGraph;
+%                 else
+%                     endTrajIdx = totalEntry;
+%                 end
+%                 for trajCtr = startTrajIdx : endTrajIdx
+%                     plot(timeSeries.entry,allSmoothEntrySpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+%                 end
+%                 vline(0,'k')
+%                 title('cluster entry speeds')
+%                 xlabel('time(s)')
+%                 ylabel('speed(microns/s)')
+%                 xlim([-preExitDuration postExitDuration])
+%                 ylim([-500 500])
+%                 legend(entryLegend{startTrajIdx:endTrajIdx})
+%                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr)  '_smoothWindow' num2str(smoothWindow)]);
+%                 if saveResults
+%                     exportfig(entrySpeedsFig,[figurename '.eps'],exportOptions)
+%                     system(['epstopdf ' figurename '.eps']);
+%                     system(['rm ' figurename '.eps']);
+%                 end
+%             end
+%             
+%             % exit speed plot depicting single trajectories
+%             numGraphs = round(totalExit/maxTrajPerGraph);
+%             lineColors = distinguishable_colors(totalExit);
+%             for graphCtr = 1:numGraphs % go through each graph (each with specified max num of traj plotted)
+%                 exitSpeedsFig = figure; hold on
+%                 set(0, 'CurrentFigure',exitSpeedsFig)
+%                 startTrajIdx = 1+(graphCtr-1)*maxTrajPerGraph;
+%                 if graphCtr*maxTrajPerGraph <= totalExit
+%                     endTrajIdx =  graphCtr*maxTrajPerGraph;
+%                 else
+%                     endTrajIdx = totalExit;
+%                 end
+%                 for trajCtr = startTrajIdx:endTrajIdx
+%                     plot(timeSeries.exit,allSmoothExitSpeeds(trajCtr,:),'color',lineColors(trajCtr,:))
+%                 end
+%                 vline(0,'k')
+%                 title('cluster exit speeds')
+%                 xlabel('time(s)')
+%                 ylabel('speed(microns/s)')
+%                 xlim([-preExitDuration postExitDuration])
+%                 ylim([-500 500])
+%                 legend(exitLegend{startTrajIdx:endTrajIdx},'Location','Northwest')
+%                 figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_graph' num2str(graphCtr) '_smoothWindow' num2str(smoothWindow)]);
+%                 if saveResults
+%                     exportfig(exitSpeedsFig,[figurename '.eps'],exportOptions)
+%                     system(['epstopdf ' figurename '.eps']);
+%                     system(['rm ' figurename '.eps']);
+%                 end
+%             end
+%             
             % average entry and exit speeds plot (of absolute value)
             figure;
             % take absolute value
             allSmoothEntrySpeeds = abs(allSmoothEntrySpeeds);
             allSmoothExitSpeeds = abs(allSmoothExitSpeeds);
-            % entry
+            % entry subplot
             subplot(1,2,1); hold on
-            shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
+            shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'c');
             title('cluster entry')
             xlim([-preExitDuration postExitDuration])
             xticks(linspace(-preExitDuration,postExitDuration,9))
@@ -769,15 +769,15 @@ for strainCtr = 1:length(strains)
             ylabel('speed (microns/s)')
             legend(['n=' num2str(totalEntry)])
             vline(0,'k')
-            % exit
+            % exit subplot
             subplot(1,2,2); hold on
-            shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'r');
+            shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'m');
             title('cluster exit')
             xlim([-preExitDuration postExitDuration])
             xticks(linspace(-preExitDuration,postExitDuration,9))
             ylim([0 350])
             xlabel('time(s)')
-            ylabel('speed (microns/s)')
+            ylabel('speed (\mum/s)')
             legend(['n=' num2str(totalExit)])
             vline(0,'k')
             if ~alignExitWithStart
@@ -785,7 +785,7 @@ for strainCtr = 1:length(strains)
                 vline(-exitDuration,'g') % draw a reference exit start line based on median exit duration before worms fully exiting cluster
             end
             %
-            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_avgGraph_smoothWindow' num2str(smoothWindow)]);
+            figurename = (['figures/entryExitSpeeds/entryExitSpeedsManualEvents_' strain '_' phase '_avgGraph_smoothWindow' num2str(smoothWindow)]);
             if alignExitWithStart
                 figurename = ([figurename '_alignWithStart']);
             else
@@ -798,6 +798,53 @@ for strainCtr = 1:length(strains)
                 system(['rm ' figurename '.eps']);
             end
             
+            % entry stand-alone plot
+            figure;
+            shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'b');
+            title('cluster entry')
+            xlim([-preExitDuration postExitDuration])
+            xticks(linspace(-preExitDuration,postExitDuration,9))
+            ylim([0 350])
+            xlabel('time(s)')
+            ylabel('speed (\mum/s)')
+            legend(['n=' num2str(totalEntry)])
+            vline(0,'k')
+            figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_avgEntryGraph_smoothWindow' num2str(smoothWindow)]);
+            if saveResults
+                avgEntrySpeedFig = gcf;
+                exportfig(avgEntrySpeedFig,[figurename '.eps'],exportOptions)
+                system(['epstopdf ' figurename '.eps']);
+                system(['rm ' figurename '.eps']);
+            end
+            
+            % exit stand-alone plot
+            figure;
+            shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'b');
+            title('cluster exit')
+            xlim([-preExitDuration postExitDuration])
+            xticks(linspace(-preExitDuration,postExitDuration,9))
+            ylim([0 350])
+            xlabel('time(s)')
+            ylabel('speed (\mum/s)')
+            legend(['n=' num2str(totalExit)])
+            vline(0,'k')
+            if ~alignExitWithStart
+                exitDuration = median(exitDurations);
+                vline(-exitDuration,'g') % draw a reference exit start line based on median exit duration before worms fully exiting cluster
+            end
+            figurename = (['figures/entryExitSpeeds/exitSpeedsManualEvents_' strain '_' phase '_avgExitGraph_smoothWindow' num2str(smoothWindow)]);
+            if alignExitWithStart
+                figurename = ([figurename '_alignWithStart']);
+            else
+                figurename = ([figurename '_alignWithEnd']);
+            end
+            if saveResults
+                avgExitSpeedFig = gcf;
+                exportfig(avgExitSpeedFig,[figurename '.eps'],exportOptions)
+                system(['epstopdf ' figurename '.eps']);
+                system(['rm ' figurename '.eps']);
+            end
+%             
 %             % entry and exit head angular speed plots
 %             headAngFig = figure; 
 %             %
