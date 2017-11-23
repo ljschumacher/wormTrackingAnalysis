@@ -22,7 +22,7 @@ elseif dataset ==2
     strains = {'npr1','N2'}; %{'npr1','N2'}
 end
 wormnums = {'40'};%{'40','HD'};
-saveResults = true;
+saveResults = false;
 
 
 if dataset == 1
@@ -89,24 +89,29 @@ for strainCtr = 1:length(strains)
         
         % pool data across movie, plot and save
         percentInCluster.(strains{strainCtr}) = vertcat(percentInCluster.(strains{strainCtr}){:});
+        percentInCluster.(strains{strainCtr})(:,1:2) = 0;
         percentLoneWorm.(strains{strainCtr}) = vertcat(percentLoneWorm.(strains{strainCtr}){:});
-%         xtime = ([1:118]/2);
-%         shadedErrorBar(xtime,median(percentInCluster.(strains{strainCtr}),1),std(percentInCluster.(strains{strainCtr}),1),'k');
-%         title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
-%         xlabel('time(min)')
-%         ylabel('percentage in cluster')
-%         xlim([0 60])
-%         ylim([0 100])
-%         figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
-%         inClusterProportionFig  = gcf;
-%         if saveResults
-%             exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
-%         end
+        percentLoneWorm.(strains{strainCtr})(:,1:2) = 0;
+        xtime = ([1:118]/2);
+        shadedErrorBar(xtime,median(percentInCluster.(strains{strainCtr}),1),std(percentInCluster.(strains{strainCtr}),1),'k');
+        title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
+        xlabel('time(min)')
+        ylabel('percentage in cluster')
+        xlim([0 60])
+        ylim([0 100])
+        figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
+        inClusterProportionFig  = gcf;
+        if saveResults
+            exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
+            system(['epstopdf ' figurename '.eps']);
+            system(['rm ' figurename '.eps']);
+        end
     end
 end
 
+% create plot with both strains on
 xtime = ([1:118]/2);
-figure; hold on
+figure;
 pH(1) = shadedErrorBar(xtime,percentInCluster.(strains{1}),{@mean,@std},'lineprops','-b','transparent',1);
 pH(2) = shadedErrorBar(xtime,percentInCluster.(strains{2}),{@mean,@std},'lineprops','-r','transparent',1);
 legend([pH(1).mainLine, pH(2).mainLine],strains{1},strains{2});
@@ -114,13 +119,13 @@ xlabel('time(min)')
 ylabel('percentage in cluster')
 xlim([0 60])
 ylim([0 100])
-figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
+figurename = (['figures/inClusterProportion/inClusterProportion_bothStrains_' wormnums{numCtr} '_'  phase '_data' num2str(dataset) '_pool']);
 inClusterProportionFig  = gcf;
 if saveResults
     exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
 end
-
-
 
 % save data
 if saveResults
