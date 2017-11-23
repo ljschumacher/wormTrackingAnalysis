@@ -258,12 +258,12 @@ for strainCtr = 1:length(strains)
                         end
                         % remove 0 values and rename xy coordinate variable
                         if exist('xcoordsSortedWorm','var')
-                        xcoordsSortedWorm(xcoordsSortedWorm==0)=[];
-                        ycoordsSortedWorm(ycoordsSortedWorm==0)=[];
-                        xcoordsSorted = reshape(xcoordsSortedWorm,49,[])';
-                        ycoordsSorted = reshape(ycoordsSortedWorm,49,[])';
-                        clear xcoordsSortedWorm
-                        clear ycoordsSortedWorm
+                            xcoordsSortedWorm(xcoordsSortedWorm==0)=[];
+                            ycoordsSortedWorm(ycoordsSortedWorm==0)=[];
+                            xcoordsSorted = reshape(xcoordsSortedWorm,49,[])';
+                            ycoordsSorted = reshape(ycoordsSortedWorm,49,[])';
+                            clear xcoordsSortedWorm
+                            clear ycoordsSortedWorm
                         else
                             warning(['ignore data for entryCtr = ' num2str(entryCtr)])
                         end

@@ -90,20 +90,36 @@ for strainCtr = 1:length(strains)
         % pool data across movie, plot and save
         percentInCluster.(strains{strainCtr}) = vertcat(percentInCluster.(strains{strainCtr}){:});
         percentLoneWorm.(strains{strainCtr}) = vertcat(percentLoneWorm.(strains{strainCtr}){:});
-        xtime = ([1:118]/2);
-        shadedErrorBar(xtime,median(percentInCluster.(strains{strainCtr}),1),std(percentInCluster.(strains{strainCtr}),1),'k');
-        title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
-        xlabel('time(min)')
-        ylabel('percentage in cluster')
-        xlim([0 60])
-        ylim([0 100])
-        figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
-        inClusterProportionFig  = gcf;
-        if saveResults
-            exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
-        end
+%         xtime = ([1:118]/2);
+%         shadedErrorBar(xtime,median(percentInCluster.(strains{strainCtr}),1),std(percentInCluster.(strains{strainCtr}),1),'k');
+%         title([strains{strainCtr} '\_' wormnums{numCtr} '\_inCluster'],'FontWeight','normal')
+%         xlabel('time(min)')
+%         ylabel('percentage in cluster')
+%         xlim([0 60])
+%         ylim([0 100])
+%         figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
+%         inClusterProportionFig  = gcf;
+%         if saveResults
+%             exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
+%         end
     end
 end
+
+xtime = ([1:118]/2);
+figure; hold on
+pH(1) = shadedErrorBar(xtime,percentInCluster.(strains{1}),{@mean,@std},'lineprops','-b','transparent',1);
+pH(2) = shadedErrorBar(xtime,percentInCluster.(strains{2}),{@mean,@std},'lineprops','-r','transparent',1);
+legend([pH(1).mainLine, pH(2).mainLine],strains{1},strains{2});
+xlabel('time(min)')
+ylabel('percentage in cluster')
+xlim([0 60])
+ylim([0 100])
+figurename = (['figures/inClusterProportion/inClusterProportion_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_data' num2str(dataset) '_pool']);
+inClusterProportionFig  = gcf;
+if saveResults
+    exportfig(inClusterProportionFig,[figurename '.eps'],exportOptions)
+end
+
 
 
 % save data
