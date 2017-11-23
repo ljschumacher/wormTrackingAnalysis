@@ -9,7 +9,7 @@ exportOptions = struct('Format','eps2',...
     'Width',10,...
     'Resolution',300,...
     'FontMode','fixed',...
-    'FontSize',15,...
+    'FontSize',10,...
     'LineWidth',3);
 
 %% set parameters
@@ -111,9 +111,9 @@ end
 
 % create plot with both strains on
 xtime = ([1:118]/2);
-figure;
-pH(1) = shadedErrorBar(xtime,percentInCluster.(strains{1}),{@mean,@std},'lineprops','-b','transparent',1);
-pH(2) = shadedErrorBar(xtime,percentInCluster.(strains{2}),{@mean,@std},'lineprops','-r','transparent',1);
+figure; hold on
+pH(1) = shadedErrorBar(xtime,percentInCluster.(strains{1}),{@mean,@std},'-b',1);
+pH(2) = shadedErrorBar(xtime,percentInCluster.(strains{2}),{@mean,@std},'-r',1);
 legend([pH(1).mainLine, pH(2).mainLine],strains{1},strains{2});
 xlabel('time(min)')
 ylabel('percentage in cluster')
