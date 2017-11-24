@@ -1,3 +1,6 @@
+clear
+close all
+
 % script takes hdf5 masked movies, reads them frame by frame, and overlay the two
 % channels to generate new frame and avi movie.
 
@@ -9,56 +12,39 @@ manualEventMaxDuration = 400; % max number of frames that contains the beginning
 midbodyIndcs = 19:33;
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
-
-exportOptions = struct('Format','EPS2',...
-    'Color','rgb',...
-    'Width',10,...
-    'Resolution',300,...
-    'FontMode','fixed',...
-    'FontSize',20,...
-    'LineWidth',3);
+events2Plot = [45]; % specify the list of event numbers here to make movie for
 
 %% load manual annotation files
 
 % entry exit event annotations
-[~,~,annotations] = xlsread(['/data2/shared/data/twoColour/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I80','basic');
+[~,~,annotations] = xlsread(['datalists/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I80','basic');
 % frames for movie phase of interest, for extract joining phase limits
 [phaseFrames,filenames,~] = xlsread(['datalists/npr1_40_r_list.xlsx'],1,'A1:E15','basic');
-
-% trim annotations down to those of just entry and exit events (i.e. ignore "roaming past" cases etc.)
-entryExitEventLogInd = false(1,size(annotations,1));
-for eventCtr = 1:size(annotations,1)
-    if strcmp(annotations{eventCtr,5},'enter') | strcmp(annotations{eventCtr,5},'exit')
-        entryExitEventLogInd(eventCtr) = true;
-    end
-end
-annotations = annotations(entryExitEventLogInd,:);
 recordingNumbers = annotations(:,1);
 
 %% loop through each entry and exit event
 
 % generate timeSeries (x) for speed plot
-timeSeries = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration]/frameRate;
+timeSeries.enter = [-preExitDuration*frameRate:postExitDuration*frameRate+manualEventMaxDuration]/frameRate;
+timeSeries.exit = [-preExitDuration*frameRate:manualEventMaxDuration+postExitDuration*frameRate]/frameRate;
 
-for eventCtr = 1%:length(recordingNumbers)
+for plotCtr =  1:length(events2Plot)
     
     %% get annotation info and find files
     
+    eventCtr = events2Plot(plotCtr);
     % get movie number
     recordingNumber = recordingNumbers{eventCtr};
     recordingNumber = recordingNumber(2:end); % to remove the 'r' character at the start
     
-    firstPhaseFrame = 0;
-    lastPhaseFrame = 32399;
-    
-%     % get joining phase frames for this movie
-%     for fileCtr = 1:length(filenames)
-%         filename = filenames(fileCtr);
-%         if ~isempty(strfind(filename{1},recordingNumber))
-%             firstPhaseFrame = phaseFrames(fileCtr,1);
-%             lastPhaseFrame = phaseFrames(fileCtr,2);
-%         end
-%     end
+    % get joining phase frames for this movie
+    for fileCtr = 1:length(filenames)
+        filename = filenames(fileCtr);
+        if ~isempty(strfind(filename{1},recordingNumber))
+            firstPhaseFrame = phaseFrames(fileCtr,1);
+            lastPhaseFrame = phaseFrames(fileCtr,2);
+        end
+    end
     
     % get worm index, plus start and end frame numbers
     wormIndex = annotations{eventCtr,2};
@@ -158,7 +144,7 @@ for eventCtr = 1%:length(recordingNumbers)
     thisEventSpeeds(thisEventSpeeds>1500) = NaN;
     
     % smooth speeds
-    thisEventSpeeds = smoothdata(thisEventSpeeds,2,'movmean',smoothWindow); %%%% check syntax
+    thisEventSpeeds = smoothdata(thisEventSpeeds,2,'movmean',smoothWindow);
     
     % clear variables
     clear beforeStartFrameNum
@@ -167,7 +153,7 @@ for eventCtr = 1%:length(recordingNumbers)
     %% create output file
     
     % name the new file
-    newfilename = ['recording' recordingNumber 'rggraph_f' num2str(startFrame) '-f' num2str(endFrame) '.avi'];
+    newfilename = ['/data2/shared/data/twoColour/entryExitExerptsWithSpeedGraph/recording' recordingNumber 'rggraph_f' num2str(startFrame) '-f' num2str(endFrame) '.avi'];
     
     % allow offset to align misaligned channels
     xOffset = 25;
@@ -185,7 +171,7 @@ for eventCtr = 1%:length(recordingNumbers)
     open(vid_rg)
     
     % loop through each frame
-    for frameCtr = 1:length(thisEventFrames)
+    for frameCtr = 1:(preExitDuration+postExitDuration)*frameRate+1
         frameNumber = thisEventFrames(frameCtr);
         % load the frame (frames are greyscale, equally distributed in all RGB channels)
         frame_g = h5read(filename_MaskedVideo_g, '/mask', [1, 1, frameNumber], [dims_g(1), dims_g(2), 1]);
@@ -198,22 +184,34 @@ for eventCtr = 1%:length(recordingNumbers)
         % make new overlay frame
         frame_rg = cat(3,frame_r(:,:,1),frame_g(:,:,1),frame_g(:,:,1));
         
-        %%%%%%%%%% overlay frame_rg with speed graph somehow...%%%%%%%%%%%%
-        
-        
+        % plot overlay image 
+        image(frame_rg);
+        axis off 
+        % create inset axes
+        inset = axes('Position',[0.2,0.2,0.2,0.2]); 
+        hold on
         % plot speed graph 
-        speedFig = figure; hold on 
-        plot(timeSeries,thisEventSpeeds,'r')
-        plot(timeSeries(frameCtr),thisEventSpeeds(frameCtr),'bo')
+        plot(inset,timeSeries.(annotations{eventCtr,5}),thisEventSpeeds,'r')
+        plot(inset,timeSeries.(annotations{eventCtr,5})(frameCtr),thisEventSpeeds(frameCtr),'bo')
         vline(0,'k')
-        title(['event ' num2str(eventCtr)])
-        xlabel('time(s)')
-        ylabel('speed(microns/s)')
+        if strcmp(annotations{eventCtr,5},'enter')
+            xlabel(['time from entry (s)'],'Color','c')
+        elseif strcmp(annotations{eventCtr,5},'exit')
+            xlabel(['time from exit (s)'],'Color','c')
+        end
+        ylabel('speed(\mum/s)','Color','c')
+        ax = gca;
+        ax.XColor = 'c';
+        ax.YColor = 'c';
         xlim([-preExitDuration postExitDuration])
         ylim([0 450])
         
-        % write new frame to video
-        writeVideo(vid_rg, frame_rg)
+        % write the combined frame to video
+        set(gcf,'units','normalized','outerposition',[0 0 size(frame_rg,1)/size(frame_rg,2) 1]) % maximize figure whilst perserving aspect ratio
+        %set(gcf,'units','pixels','Position',[0 0 1185 1000])
+        combined = getframe(gcf);
+        writeVideo(vid_rg, combined.cdata)
+        close(gcf)
     end
     
     close(vid_rg)
