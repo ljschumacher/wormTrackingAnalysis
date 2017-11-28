@@ -206,10 +206,11 @@ for plotCtr =  1:length(events2Plot)
         xlim([-preExitDuration postExitDuration])
         ylim([0 450])
         
-        % write the combined frame to video
-        set(gcf,'units','normalized','outerposition',[0 0 size(frame_rg,1)/size(frame_rg,2) 1]) % maximize figure whilst perserving aspect ratio
-        %set(gcf,'units','pixels','Position',[0 0 1185 1000])
+        % maximize figure whilst perserving aspect ratio
+        set(gcf,'units','normalized','outerposition',[0 0 size(frame_rg,1)/size(frame_rg,2) 1])
+        % get combined frame with both image and graph
         combined = getframe(gcf);
+        % write the combined frame to video
         writeVideo(vid_rg, combined.cdata)
         close(gcf)
     end
