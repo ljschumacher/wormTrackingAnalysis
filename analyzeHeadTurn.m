@@ -25,10 +25,14 @@ postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be
 minTrajDuration = 1; % duration (in seconds) of minimum traj length
 maxTrajDuration = 5;  % duration (in seconds) of maximum traj length % may set to 1.5 to truncate loneWorm traj to match those of leaveCluster traj length
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-useManualTraj = true;
 saveResults = true;
 saveAllTraj = true;
 visualiseSampleTraj = true; % true or false
+useManualTraj = true; % option to use manually joined trajectories; only can be true if using bodywall data
+if useManualTraj
+    assert(strcmp(marker,'bodywall'),'useManualTraj must only be used in conjunction with bodywall marker')
+end
+
 
 if visualiseSampleTraj == true
     featureToSample = 'headAngTotal'; % 'headAngTotal','headAngNorm', or 'headAngSpeed'
@@ -130,8 +134,10 @@ for strainCtr = 1:length(strains)
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % restrict to only forward-moving worms (bodywall data doesn't currently have signed_speed field)
-            signedSpeedLogInd = blobFeats.signed_speed>=0;
-            trajData.filtered(~signedSpeedLogInd) = false;
+            if ~strcmp(marker,'bodywall')
+                signedSpeedLogInd = blobFeats.signed_speed>=0;
+                trajData.filtered(~signedSpeedLogInd) = false;
+            end
             % find worms that have just left a cluster vs lone worms
             [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             
@@ -143,8 +149,11 @@ for strainCtr = 1:length(strains)
                 worm_xcoords = worm_xcoords(:,1:8); % restrict to head nodes only (8 out of 49 nodes)
                 worm_ycoords = worm_ycoords(:,1:8);
             end
-            uniqueWorms = unique(trajData.worm_index_joined);
-            
+            if useManualTraj
+                uniqueWorms = unique(features.worm_index);
+            else
+                uniqueWorms = unique(trajData.worm_index_joined(trajData.filtered));
+            end
             % initialise
             for wormcatCtr = 1:length(wormcats)
                 % assume each worm has up to 100 leave cluster traj. Checks for this later and warns if not enough
@@ -157,7 +166,11 @@ for strainCtr = 1:length(strains)
             
             % loop through each worm path
             for wormCtr = 1:numel(uniqueWorms)
-                wormLogInd = trajData.worm_index_joined==uniqueWorms(wormCtr) & trajData.filtered;
+                if useManualTraj
+                    wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr) & trajData.filtered;
+                else
+                    wormLogInd = trajData.worm_index_joined==uniqueWorms(wormCtr) & trajData.filtered;
+                end
                 for wormcatCtr = 1:length(wormcats)
                     wormCatLogInd = wormLogInd & eval([wormcats{wormcatCtr} 'LogInd']);
                     wormFrames = trajData.frame_number(wormCatLogInd)';
@@ -290,18 +303,31 @@ for strainCtr = 1:length(strains)
             end
         end
         
-        %% plot data, format, and export
+        %% save files, plot data, format, and export
         % save head angle values
+        if useManualTraj
+            trajFileName = 'manualTraj_';
+        else
+            trajFileName = '';
+        end
+            
         if saveResults
-            save(['figures/turns/results/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngTotal')
-            save(['figures/turns/results/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngNorm')
-            save(['figures/turns/results/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSpeed')
-            save(['figures/turns/results/frameRunLengths_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'frameRunLengths')
+            save(['figures/turns/results/headAngTotal_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngTotal')
+            save(['figures/turns/results/headAngNorm_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngNorm')
+            save(['figures/turns/results/headAngSpeed_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSpeed')
+            save(['figures/turns/results/frameRunLengths_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'frameRunLengths')
         end
         
         if saveAllTraj
-            save(['figures/turns/results/allTrajxcoords_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajxcoords')
-            save(['figures/turns/results/allTrajycoords_'  strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajycoords')
+            save(['figures/turns/results/allTrajxcoords_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajxcoords')
+            save(['figures/turns/results/allTrajycoords_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'allTrajycoords')
+        end
+        
+        if visualiseSampleTraj
+            % save trajectories
+            if saveResults
+                save(['figures/turns/results/headAngSampleTraj_' trajFileName featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'],'headAngSampleTraj')
+            end
         end
         
         if visualiseSampleTraj
@@ -314,7 +340,7 @@ for strainCtr = 1:length(strains)
         % plot total head angle change
         headAngTotalFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
-            histogram(headAngTotalPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+            histogram(headAngTotalPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs','BinWidth',0.5)
             Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngTotalPool.(wormcats{wormcatCtr}),2)));
         end
         legend(Legend)
@@ -324,7 +350,7 @@ for strainCtr = 1:length(strains)
         xlim([0 7])
         %ylim([0 2])
         set(headAngTotalFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngTotal_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
+        figurename = ['figures/turns/headAngTotal_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
             exportfig(headAngTotalFig,[figurename '.eps'],exportOptions)
@@ -349,7 +375,7 @@ for strainCtr = 1:length(strains)
         end
         %ylim([0 2])
         set(headAngNormFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngNorm_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
+        figurename = ['figures/turns/headAngNorm_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
             exportfig(headAngNormFig,[figurename '.eps'],exportOptions)
@@ -360,7 +386,7 @@ for strainCtr = 1:length(strains)
         % plot head angle speed
         headAngSpeedFig = figure; hold on
         for wormcatCtr = 1:length(wormcats)
-            histogram(headAngSpeedPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs')
+            histogram(headAngSpeedPool.(wormcats{wormcatCtr}),'Normalization','pdf','DisplayStyle','stairs','BinWidth',0.5)
             Legend{wormcatCtr} = strcat(wormcats{wormcatCtr}, ',n=', num2str(size(headAngSpeedPool.(wormcats{wormcatCtr}),2)));
         end
         legend(Legend)
@@ -370,7 +396,7 @@ for strainCtr = 1:length(strains)
         xlim([0 7])
         %ylim([0 2])
         set(headAngSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngSpeed_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
+        figurename = ['figures/turns/headAngSpeed_' trajFileName strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker];
         if saveResults
             load('exportOptions.mat')
             exportfig(headAngSpeedFig,[figurename '.eps'],exportOptions)
