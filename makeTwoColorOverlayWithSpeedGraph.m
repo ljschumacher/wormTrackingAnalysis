@@ -204,7 +204,7 @@ for plotCtr =  1:length(events2Plot)
         ax.XColor = 'c';
         ax.YColor = 'c';
         xlim([-preExitDuration postExitDuration])
-        ylim([0 450]) 
+        ylim([0 450])
         % maximize figure whilst perserving aspect ratio
         set(gcf,'units','normalized','outerposition',[0 0 size(frame_rg,1)/size(frame_rg,2) 1])
         % get combined frame with both image and graph

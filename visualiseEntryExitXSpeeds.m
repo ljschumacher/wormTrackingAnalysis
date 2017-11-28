@@ -541,7 +541,6 @@ for strainCtr = 1:length(strains)
                         clear afterEndFrameNum
                         % write event number to legend
                         exitLegend{exitCtr} = num2str(eventCtr);
-                        
 
                         %% calculate head angles
                         % calculate head angle changes per frame
@@ -692,7 +691,7 @@ for strainCtr = 1:length(strains)
                 end
                 save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries')
             end
-        end 
+        end
         
         if useManualEvents
             
