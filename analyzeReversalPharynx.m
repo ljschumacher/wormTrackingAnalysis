@@ -20,180 +20,363 @@ exportOptions = struct('Format','eps2',...
     'FontMode','fixed',...
     'FontSize',12,...
     'LineWidth',1);
+load ~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt
 
 %% set parameters
 if dataset ==1
-    strains = {'npr1','N2'}; %{'npr1','HA','N2'}
+    strains = {'N2','npr1'}; %{'npr1','HA','N2'}
 elseif dataset ==2
-    strains = {'npr1','N2'}; %{'npr1','N2'}
+    strains = {'N2','npr1'}; %{'npr1','N2'}
 end
 if dataset == 1
     intensityThresholds_g = containers.Map({'40','HD','1W'},{50, 40, 100});
 elseif dataset ==2
     intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
+useJoinedTraj = true
 maxBlobSize_g = 1e4;
-minNeighbrDist = 2000;% in microns
 minPathLength = 50; % minimum path length of reversals to be included
-inClusterNeighbourNum = 3;
-postExitDuration = 10; % set the duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
+knnbrNumValues =4:7; % which numbers of knnbrs to consider for checking density dependence
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
+speedBinLimits = containers.Map({'npr1','N2'},{400, 300});
+densityBinLimits = containers.Map({'npr1','N2'},{10, 5});
+nStrains = length(strains);
+plotColors = flipud(lines(nStrains));
+lineHandles = NaN(nStrains,1);
+densityBinWidth = 0.25;
 %% go through strains, densities, movies
-for strainCtr = 1:length(strains)
-    revFreqFig = figure; hold on
-    revInterTimeFig = figure; hold on
+for strainCtr = 1:nStrains
+    strain = strains{strainCtr};
     %% load data
     if dataset ==1
-        [phaseFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
     elseif dataset ==2
-        [phaseFrames,filenames_g,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
     end
-    numFiles = length(filenames_g);
-    reversalfreq_lone = NaN(numFiles,1);
-    reversalfreq_leaveCluster = NaN(numFiles,1);
-    reversalfreq_revCluster = NaN(numFiles,1);
-    interrevT_lone = cell(numFiles,1);
-    timeToRev_leaveCluster = cell(numFiles,1);
-    timeToFwd_revCluster = cell(numFiles,1);
-    interrevT_lone_censored = cell(numFiles,1);
-    timeToRev_leaveCluster_censored = cell(numFiles,1);
-    timeToFwd_revCluster_censored = cell(numFiles,1);
+    if ~useJoinedTraj
+        filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
+            '/end/home/lschumac/databackup/data/twoColour/ResultsUnjoinedTrajectories/');
+    end
+    %% intialize variables
+    numFiles = length(filenames);
+    knndensity = cell(numFiles,1);
+    knndensityChange = cell(numFiles,1);
+    knndensityAtRev = cell(numFiles,1);
+    knndensityAtFwd = cell(numFiles,1);
+    knndensityChangeAtRev = cell(numFiles,1);
+    knndensityChangeAtFwd = cell(numFiles,1);
+    signedSpeeds = cell(numFiles,1);
+    %% loop through files and load data
     for fileCtr = 1:numFiles % can be parfor
-        filename_g = filenames_g{fileCtr};
-        trajData_g = h5read(filename_g,'/trajectories_data');
-        blobFeats_g = h5read(filename_g,'/blob_features');
-        skelData_g = h5read(filename_g,'/skeleton');
-        assert(size(skelData_g,1)==2&&size(skelData_g,2)==2,['unexpected skeleton size for ' filename_g]);
-        frameRate = double(h5readatt(filename_g,'/plate_worms','expected_fps'));
+        filename = filenames{fileCtr};
+        shortFileName = filename(end-31:end-5);
+        trajData = h5read(filename,'/trajectories_data');
+        blobFeats = h5read(filename,'/blob_features');
+        skelData = h5read(filename,'/skeleton');
+        assert(size(skelData,1)==2&&size(skelData,2)==2,['unexpected skeleton size for ' filename]);
+        frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
         if frameRate == 0
-            warning(['frame rate is zero for ' filename_g])
+            warning(['frame rate is zero for ' filename])
         end
         % filter by blob size and intensity
-        trajData_g.filtered = filterIntensityAndSize(blobFeats_g,pixelsize,...
+        trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds_g(wormnum),maxBlobSize_g);
-        trajData_g.has_skeleton = squeeze(~any(any(isnan(skelData_g)))); % reset skeleton flag for pharynx data
+        trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
         % check worm-indices are monotonically increasing
-        assert(~any(diff(trajData_g.worm_index_joined)<0),['worm indices are not sorted as expected for ' filename_g])
-        %% calculate stats
+        assert(~any(diff(trajData.worm_index_joined)<0),['worm indices are not sorted as expected for ' filename])
+        %% get relevant experimental phase
         if ~strcmp(wormnum,'1W')
-            % find leave cluster and lone worms
-            [leaveClusterLogInd, loneWormLogInd,~,~] = findWormCategory(filename_g,inClusterNeighbourNum,minNeighbrDist,postExitDuration);
             % apply phase restriction
             [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
-            phaseFrameLogInd = trajData_g.frame_number < lastFrame & trajData_g.frame_number > firstFrame;
-            loneWormLogInd(~phaseFrameLogInd) = false;
-            leaveClusterLogInd(~phaseFrameLogInd) = false;
+            phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         else
-            loneWormLogInd = true(size(trajData_g.frame_number));
-            leaveClusterLogInd = false(size(trajData_g.frame_number));
+            phaseFrameLogInd = true(size(trajData.frame_number));
         end
-        %% load signed speed from blobFeats
+        %% calculate stats
         if any(phaseFrameLogInd)
-            % sign speed based on relative orientation of velocity to midbody
-            speedSigned = blobFeats_g.signed_speed*pixelsize*frameRate;
+            %% sign speed based on relative orientation of velocity to midbody
+            signedSpeedThisFile = blobFeats.signed_speed*pixelsize*frameRate;
+            numFramesTotal = length(signedSpeedThisFile);
+            disp([shortFileName ' has ' num2str(100*nnz(isnan(signedSpeedThisFile))/numFramesTotal,2) '% of speeds = NaN'])
             % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData_g.worm_index_joined))~=0;
-            speedSigned(wormChangeIndcs)=NaN;
-            % ignore frames with bad skeletonization
-            speedSigned(~trajData_g.has_skeleton)=NaN;
+            assert(all(trajData.worm_index_joined(2:end)>=trajData.worm_index_joined(1:end-1)),'worm indices are not sorted in monotonically increasing order')
+            wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
+            disp(['excluding ' num2str(100*nnz(wormChangeIndcs)/numFramesTotal,2) '% of speeds due to change in worm index'])
+            signedSpeedThisFile(wormChangeIndcs)=NaN;
+            % ignore frames without skeletonization
+            disp(['excluding ' num2str(100*nnz(~trajData.has_skeleton)/numFramesTotal,2) '% of speeds due to missing skeletonization'])
+            signedSpeedThisFile(~trajData.has_skeleton)=NaN;
             % ignore skeletons otherwise filtered out
-            speedSigned(~trajData_g.filtered) = NaN;
+            disp(['excluding ' num2str(100*nnz(~trajData.filtered)/numFramesTotal,2) '% of speeds due to other filtering'])
+            signedSpeedThisFile(~trajData.filtered) = NaN;
+            disp([shortFileName ' now has ' num2str(100*nnz(isnan(signedSpeedThisFile))/numFramesTotal) '% of speeds = NaN'])
+            % smooth speed to denoise
+            signedSpeedThisFile = smoothdata(signedSpeedThisFile,'movmean',round(frameRate/2),'omitnan');
             % ignore frames outside of specified phase
             if ~strcmp(phase,'fullMovie')
-                speedSigned(~phaseFrameLogInd) =NaN;
+                signedSpeedThisFile(~phaseFrameLogInd) =NaN;
             end
-            % smooth speed to denoise
-            speedSigned = smoothdata(speedSigned,'movmean',3,'omitnan');
-            % find reversals in signed speed
+            nonNanFramesLogInd = ~isnan(signedSpeedThisFile);
+            signedSpeeds{fileCtr} = signedSpeedThisFile(nonNanFramesLogInd);
+            %% find reversals in signed speed
             [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] = ...
-                findReversals(speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
-%             [fwdStartInd, ~, ~, ~, ~] = ...
-%                 findReversals(-speedSigned,trajData_g.worm_index_joined,minPathLength,frameRate);
-            fwdStartInd = find(speedSigned(1:end-1)<0&speedSigned(2:end)>0);
+                findReversals(signedSpeedThisFile,trajData.worm_index_joined,minPathLength,frameRate);
+            [fwdStartInd, ~, ~, ~, ~] = ...
+                findReversals(-signedSpeedThisFile,trajData.worm_index_joined,minPathLength,frameRate);
+%             fwdStartInd = find(signedSpeedThisFile(1:end-1)<0&signedSpeedThisFile(2:end)>0);
+            disp([num2str(100*mean(incompleteInterRev),2) '% of tracks are lost between reversals'])
+            disp([num2str(100*mean(untrackedRevEnds),2) '% of tracks are lost during reversals'])
             % if we subtract rev duration from interrevtime (below), we
             % need to set all reversals with untracked ends as incomplete interrevs
             incompleteInterRev = incompleteInterRev|untrackedRevEnds;
-            % detect cluster status of reversals and associated features
-            [ loneReversalsLogInd, interRevTimesLone, revDurationLone, interrevT_lone_censored{fileCtr} ] = ...
-                filterReversalsByClusterStatus(revStartInd, loneWormLogInd,...
-                interRevTime, revDuration, incompleteInterRev);
-            % filter reversals after leaving cluster
-            [ timeToRevLeaveCluster, timeToRev_leaveCluster_censored{fileCtr} ] = ...
-                filterReversalsByEvent(revStartInd, leaveClusterLogInd, trajData_g.worm_index_joined,postExitDuration*frameRate);
-            % filter reversals after reversing out of cluster
-            [ timeToFwdRevCluster, timeToFwd_revCluster_censored{fileCtr} ] = ...
-                filterReversalsByEvent(fwdStartInd, leaveClusterLogInd&speedSigned<0, trajData_g.worm_index_joined,postExitDuration*frameRate);
-            % subtracting revDuration will more accurately reflect the
-            % interreversal time
-            interrevT_lone{fileCtr} = (interRevTimesLone - revDurationLone)/frameRate;
-            % ignore negative interRevTimes, as this (most likely) means
-            % that the track was lost during a reversal
-            interrevT_lone{fileCtr}(interrevT_lone{fileCtr}<0) = NaN;
-            if ~strcmp(wormnum,'1W')
-                timeToRev_leaveCluster{fileCtr} = timeToRevLeaveCluster/frameRate;
-                timeToFwd_revCluster{fileCtr} = timeToFwdRevCluster/frameRate;
+            disp([num2str(100*mean(incompleteInterRev),2) '% of reversals are thus not fully tracked' newline])
+            %% estimate density based on k-nearest neighbours
+            neighbr_dist = h5read(filename,'/neighbr_distances')/1000;% convert to mm
+            knndensityThisFile = zeros(numFramesTotal,10);
+            for k = 1:10
+                knndensityThisFile(:,k) = k./(pi*neighbr_dist(:,k).^2);
             end
-            % counting reversal events
-            reversalfreq_lone(fileCtr) = countReversalFrequency(loneReversalsLogInd,...
-                frameRate, speedSigned, loneWormLogInd );
-            % count how many leave-cluster trajs end in reversals (are not
-            % censored), and divide by the total time until reversals (or
-            % trajectories end)
-            reversalfreq_leaveCluster(fileCtr) = nnz(timeToRev_leaveCluster_censored{fileCtr})/sum(timeToRev_leaveCluster{fileCtr});
-            reversalfreq_revCluster(fileCtr) = nnz(timeToFwd_revCluster_censored{fileCtr})/sum(timeToFwd_revCluster{fileCtr});
+            knndensity{fileCtr} = knndensityThisFile(nonNanFramesLogInd,:);            
+            %% store reversal statistics for this file
+            % densities at reversal
+            knndensityAtRev{fileCtr} = knndensityThisFile(revStartInd,:);
+            knndensityAtFwd{fileCtr} = knndensityThisFile(fwdStartInd,:);
+                        %% estimate change in density
+            % ignore frames where worm index changes before gradient calc
+            knndensityThisFile(wormChangeIndcs) = NaN;
+            % smooth density for 1s
+            knndensityThisFile = smoothdata(knndensityThisFile,1,'movmean',round(frameRate),'omitnan');
+            knndensityChangeThisFile = gradient(knndensityThisFile')'*frameRate; % change per second
+            knndensityChange{fileCtr} = knndensityChangeThisFile(nonNanFramesLogInd,:);
+            knndensityChangeAtRev{fileCtr} = knndensityChangeThisFile(revStartInd,:);
+            knndensityChangeAtFwd{fileCtr} = knndensityChangeThisFile(fwdStartInd,:);
         end
     end
-    %pool data from all files
-    interrevT_lone = vertcat(interrevT_lone{:});
-    timeToRev_leaveCluster = vertcat(timeToRev_leaveCluster{:});
-    timeToFwd_revCluster = vertcat(timeToFwd_revCluster{:});
-    interrevT_lone_censored = vertcat(interrevT_lone_censored{:});
-    timeToRev_leaveCluster_censored = vertcat(timeToRev_leaveCluster_censored{:});
-    timeToFwd_revCluster_censored = vertcat(timeToFwd_revCluster_censored{:});
-    %% plot data, format and export figures
-    % inter-reversal time
-    set(0,'CurrentFigure',revInterTimeFig)
-    ecdf(interrevT_lone,'Bounds','on','function','survivor','censoring',interrevT_lone_censored)
-    hold on
-    if ~strcmp(wormnum,'1W')
-        ecdf(timeToRev_leaveCluster,'Bounds','on','function','survivor','censoring',timeToRev_leaveCluster_censored)
-        ecdf(timeToFwd_revCluster,'Bounds','on','function','survivor','censoring',timeToFwd_revCluster_censored)
+    %% pool data from all files
+    knndensity = vertcat(knndensity{:});
+    knndensityChange = vertcat(knndensityChange{:});
+    knndensityAtRev = vertcat(knndensityAtRev{:});
+    knndensityAtFwd = vertcat(knndensityAtFwd{:});
+    knndensityChangeAtRev = vertcat(knndensityChangeAtRev{:});
+    knndensityChangeAtFwd = vertcat(knndensityChangeAtFwd{:});
+    signedSpeeds = vertcat(signedSpeeds{:});
+    densityFig = figure; hold on
+    speedAbsHist2Dfig = figure; hold on
+    colormap(speedAbsHist2Dfig,flipud(cmap_Blues))
+    speedSignedHist2Dfig = figure; hold on
+    colormap(speedSignedHist2Dfig,flipud(cmap_Blues))
+    for k = knnbrNumValues
+        % initialize figures
+        if strainCtr==1
+            revFig(k) = figure; hold on
+            fwdFig(k) = figure; hold on
+            revfwdFig(k) = figure; hold on
+%             revFig2(k) = figure; hold on
+%             fwdFig2(k) = figure; hold on
+%             revfwdFig2(k) = figure; hold on
+        end
+        %% plot "convergence" of knn density estimate
+        histogram(densityFig.Children, knndensity(:,k),'Normalization','Probability','DisplayStyle','stairs','BinLimits',[0 20])
+        %% plot histogram of speeds vs density
+        % for signed speed
+        h = histogram2(speedSignedHist2Dfig.Children,knndensity(:,k),signedSpeeds,...
+            'DisplayStyle','tile','YBinLimits',[-1 1].*speedBinLimits(strain),...
+            'XBinLimits',[0 densityBinLimits(strain)],'EdgeColor','none','Normalization','Probability');
+        normfactor = sum(h.BinCounts,2); % for conditional normalisation
+        normfactor(normfactor==0) = 1;
+        h.BinCounts = h.BinCounts./normfactor; % conditional normalisation 
+        colormap(flipud(cmap_Blues))
+        xlabel(speedSignedHist2Dfig.Children,['\rho_' num2str(k) ' (worms/mm^2)'])
+        ylabel(speedSignedHist2Dfig.Children,'signed speed (\mum/s)')
+        figurename = ['figures/reversals/phaseSpecific/speedsigned-density_knn' num2str(k) ...
+            '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+        formatAndExportFigure(speedSignedHist2Dfig,figurename,useJoinedTraj,exportOptions)
+        % for absolute speed
+        h = histogram2(speedAbsHist2Dfig.Children,knndensity(:,k),abs(signedSpeeds),...
+            'DisplayStyle','tile','YBinLimits',[0 speedBinLimits(strain)],...
+            'XBinLimits',[0 densityBinLimits(strain)],'EdgeColor','none','Normalization','Probability');
+        normfactor = sum(h.BinCounts,2); % for conditional normalisation
+        normfactor(normfactor==0) = 1;
+        h.BinCounts = h.BinCounts./normfactor; % conditional normalisation
+        xlabel(speedAbsHist2Dfig.Children,['\rho_' num2str(k) ' (worms/mm^2)'])
+        ylabel(speedAbsHist2Dfig.Children,'speed (\mum/s)')
+        figurename = ['figures/reversals/phaseSpecific/speedabs-density_knn' num2str(k) ...
+            '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+        formatAndExportFigure(speedAbsHist2Dfig,figurename,useJoinedTraj,exportOptions)
+        % plot individual histograms for first few density bins
+        if k==6
+            speedAbsHistFig = figure; hold on
+            nDensityBins = 10;
+            speedAbsHistFig.Children.ColorOrder = flipud(cool(nDensityBins));
+            for binCtr = 1:nDensityBins
+                thisBinLogInd = knndensity(:,k)>=h.XBinEdges(binCtr)&knndensity(:,k)<h.XBinEdges(binCtr+1);
+                [thisbincounts, thisbinedges] = histcounts(abs(signedSpeeds(thisBinLogInd)),...
+                    'BinWidth',round(2*h.BinWidth(2)),'Normalization','Probability');
+                plot(speedAbsHistFig.Children,thisbinedges(1:end-1)+round(h.BinWidth(2)),thisbincounts);
+            end
+            speedAbsHistFig.Children.Box = 'on';
+            speedAbsHistFig.Children.XLim(2) = 600;
+            xlabel(speedAbsHistFig.Children,'speed (\mum/s)')
+            ylabel(speedAbsHistFig.Children,'P')
+            figurename = ['figures/reversals/phaseSpecific/speedabs-density_1D_knn' num2str(k) ...
+                '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+            formatAndExportFigure(speedAbsHistFig,figurename,useJoinedTraj,exportOptions)
+        end
+        %% plot increase in reversal frequency vs density
+        [~, densitybins] = histcounts(knndensityAtRev(:,k),'BinWidth',densityBinWidth,'BinLimits',[0 densityBinLimits('npr1')]);
+        % subsample to estimate variability
+        numSubSamples = 100;
+        sampleSizeFraction = 0.05;
+        revRateSubsamples = subsampleRevFreq(knndensityAtRev(:,k),knndensity(:,k),...
+            densitybins,signedSpeeds,frameRate,numSubSamples,sampleSizeFraction);
+        plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
+        revRates = mean(revRateSubsamples);
+        revRateErr = std(revRateSubsamples);
+        boundedline(plotbins,revRates,[revRateErr; revRateErr]',revFig(k).Children,'-','cmap',plotColors(strainCtr,:))        
+        if strainCtr==nStrains
+            xlabel(revFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
+            ylabel(revFig(k).Children,'relative reversal rate')
+            revFig(k).Children.YLim = [0 3];
+            revFig(k).Children.Box = 'on';
+            figurename = ['figures/reversals/phaseSpecific/reversals-density_knn' num2str(k) ...
+                '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+            formatAndExportFigure(revFig(k),figurename,useJoinedTraj,exportOptions)
+        end
+        %% plot increase in fwd frequency vs density
+        [~, densitybins] = histcounts(knndensityAtFwd(:,k),'BinWidth',densityBinWidth,'BinLimits',[0 densityBinLimits('npr1')]);
+        % subsample to estimate variability
+        numSubSamples = 100;
+        sampleSizeFraction = 0.05;
+        fwdRateSubsamples = subsampleRevFreq(knndensityAtFwd(:,k),knndensity(:,k),...
+            densitybins,-signedSpeeds,frameRate,numSubSamples,sampleSizeFraction);
+        plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
+        fwdRates = mean(fwdRateSubsamples);
+        fwdRateErr = std(fwdRateSubsamples);
+        boundedline(plotbins,fwdRates,[fwdRateErr; fwdRateErr]',fwdFig(k).Children,':','cmap',plotColors(strainCtr,:))        
+        if strainCtr==nStrains
+            xlabel(fwdFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
+            ylabel(fwdFig(k).Children,'relative forward rate')
+            fwdFig(k).Children.YLim = [0 3];
+            fwdFig(k).Children.Box = 'on';
+            figurename = ['figures/reversals/phaseSpecific/forwards-density_knn' num2str(k) ...
+                '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+            formatAndExportFigure(fwdFig(k),figurename,useJoinedTraj,exportOptions)
+        end
+        %% plot increase in rev or fwd frequency vs density
+        knndensityEitherRevFwd = [knndensityAtRev(:,k); knndensityAtFwd(:,k)];
+        [~, densitybins] = histcounts(knndensityEitherRevFwd,'BinWidth',densityBinWidth,'BinLimits',[0 densityBinLimits('npr1')]);
+        % subsample to estimate variability
+        numSubSamples = 100;
+        sampleSizeFraction = 0.05;
+        revfwdRateSubsamples = subsampleRevFreq(knndensityEitherRevFwd,knndensity(:,k),...
+            densitybins,abs(signedSpeeds),frameRate,numSubSamples,sampleSizeFraction);
+        plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
+        revfwdRates = mean(revfwdRateSubsamples);
+        revfwdRateErr = std(revfwdRateSubsamples);
+        boundedline(plotbins,revfwdRates,[revfwdRateErr; revfwdRateErr]',revfwdFig(k).Children,'cmap',plotColors(strainCtr,:))
+        if strainCtr==nStrains
+            xlabel(revfwdFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
+            ylabel(revfwdFig(k).Children,'relative reorientation rate')
+            revfwdFig(k).Children.YLim = [0 3];
+            revfwdFig(k).Children.Box = 'on';
+            figurename = ['figures/reversals/phaseSpecific/reorient-density_knn' num2str(k) ...
+                '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+            formatAndExportFigure(revfwdFig(k),figurename,useJoinedTraj,exportOptions)
+        end
+%         %% plot increase in reversal frequency vs change in density
+%         [~, densityChangebins] = histcounts(knndensityChangeAtRev(:,k),'BinWidth',densityBinWidth,'BinLimits',[-2 2]*densityBinLimits('npr1'));
+%         % subsample to estimate variability
+%         numSubSamples = 100;
+%         sampleSizeFraction = 0.05;
+%         revRateSubsamples = subsampleRevFreq(knndensityChangeAtRev(:,k),knndensityChange(:,k),...
+%             densityChangebins,signedSpeeds,frameRate,numSubSamples,sampleSizeFraction);
+%         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
+%         revRates = mean(revRateSubsamples);
+%         revRateErr = std(revRateSubsamples);
+%         boundedline(plotbins,revRates,[revRateErr; revRateErr]',revFig2(k).Children,'--','cmap',plotColors(strainCtr,:))        
+%         if strainCtr==nStrains         
+% xlabel(revFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
+%         ylabel(revFig2(k).Children,'relative reversal rate')
+% revFig2(k).Children.YLim(1) = 0;
+% revFig2(k).Children.Box = 'on';
+%         figurename = ['figures/reversals/phaseSpecific/reversals-densityChange_knn' num2str(k) ...
+%             '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+%         formatAndExportFigure(revFig2(k),figurename,useJoinedTraj,exportOptions)
+%         end
+%         %% plot increase in fwd frequency vs change in density
+%         [~, densityChangebins] = histcounts(knndensityChangeAtFwd(:,k),'BinWidth',densityBinWidth,'BinLimits',[-2 2]*densityBinLimits('npr1'));
+%         % subsample to estimate variability
+%         numSubSamples = 100;
+%         sampleSizeFraction = 0.05;
+%         fwdRateSubsamples = subsampleRevFreq(knndensityChangeAtFwd(:,k),knndensityChange(:,k),...
+%             densityChangebins,-signedSpeeds,frameRate,numSubSamples,sampleSizeFraction);
+%         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
+%         fwdRates = mean(fwdRateSubsamples);
+%         fwdRateErr = std(fwdRateSubsamples);
+%         boundedline(plotbins,fwdRates,[fwdRateErr; fwdRateErr]',fwdFig2(k).Children,':','cmap',plotColors(strainCtr,:))        
+%         if strainCtr==nStrains         
+% xlabel(fwdFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
+%         ylabel(fwdFig2(k).Children,'relative forward rate')
+% fwdFig2(k).Children.YLim(1) = 0;
+% fwdFig2(k).Children.Box = 'on';
+%         figurename = ['figures/reversals/phaseSpecific/forwards-densityChange_knn' num2str(k) ...
+%             '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+%         formatAndExportFigure(fwdFig2(k),figurename,useJoinedTraj,exportOptions)
+%         end
+%         %% plot increase in rev or fwd frequency vs change in density
+%         knndensityChangeEitherRevFwd = [knndensityChangeAtRev(:,k); knndensityChangeAtFwd(:,k)];
+%         [~, densityChangebins] = histcounts(knndensityChangeEitherRevFwd,'BinWidth',densityBinWidth,'BinLimits',[-2 2]*densityBinLimits('npr1'));
+%         % subsample to estimate variability
+%         numSubSamples = 100;
+%         sampleSizeFraction = 0.05;
+%         revfwdRateSubsamples = subsampleRevFreq(knndensityChangeEitherRevFwd,knndensity(:,k),...
+%             densityChangebins,abs(signedSpeeds),frameRate,numSubSamples,sampleSizeFraction);
+%         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
+%         revfwdRates = mean(revfwdRateSubsamples);
+%         revfwdRateErr = std(revfwdRateSubsamples);
+%         boundedline(plotbins,revfwdRates,[revfwdRateErr; revfwdRateErr]',revfwdFig2(k).Children,'cmap',plotColors(strainCtr,:))        
+%         if strainCtr==nStrains         
+% xlabel(revfwdFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
+%         ylabel(revfwdFig2(k).Children,'relative reorientation rate')
+% revfwdFig2(k).Children.YLim(1) = 0;
+% revfwdFig2(k).Children.Box = 'on';
+%         figurename = ['figures/reversals/phaseSpecific/reorient-densityChange_knn' num2str(k) ...
+%             '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
+%         formatAndExportFigure(revfwdFig2(k),figurename,useJoinedTraj,exportOptions)
+%         end
     end
-    set(revInterTimeFig.Children,'YScale','log')
-    title(revInterTimeFig.Children,[strains{strainCtr} ' ' wormnum],'FontWeight','normal');
-    set(revInterTimeFig,'PaperUnits','centimeters')
-    revInterTimeFig.Children.XLabel.String = 'inter-reversal time (s)';
-    revInterTimeFig.Children.YLabel.String = 'cumulative probability';
-    revInterTimeFig.Children.XLim(2) = 20;
-    revInterTimeFig.Children.YLim(1) = 1e-1;
-    if ~strcmp(wormnum,'1W')
-        legend(revInterTimeFig.Children.Children([9 6 3]),{'lone worms','leaving cluster','rev-leaving cluster'})
-    else
-        legend(revInterTimeFig.Children,'single worms')
-    end
-    figurename = ['figures/reversals/phaseSpecific/reversalintertime_pharynx_'...
-        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset)  '_jointraj' '_censored'];
-    exportfig(revInterTimeFig,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
-    
-    % reversal frequency from counts
-    set(0,'CurrentFigure',revFreqFig)
-    notBoxPlot([reversalfreq_lone,reversalfreq_leaveCluster,reversalfreq_revCluster],...
-        [-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
-    title(revFreqFig.Children,strains{strainCtr},'FontWeight','normal');
-    set(revFreqFig,'PaperUnits','centimeters')
-    if ~strcmp(wormnum,'1W')
-        revFreqFig.Children.XTickLabel = {'lone','leave','rev-leave'};
-    end
-    revFreqFig.Children.XLabel.String = 'worm categories';
-    revFreqFig.Children.YLabel.String = 'reversals (1/s)';
-    revFreqFig.Children.YLim(1) = 0;
-    revFreqFig.Children.YLim(2) = 1;
-    figurename = ['figures/reversals/phaseSpecific/reversalfrequency_pharynx_'...
-        strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'];
-    exportfig(revFreqFig,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
+    densityFig.Children.XLabel.String = ['\rho_' num2str(k) ' (worms/mm^2)'];
+    densityFig.Children.XLabel.String = ['P'];
+    lh = legend(densityFig.Children,num2str(knnbrNumValues'));
+    lh.Title.String = 'k nearest nbrs';
+    figurename = ['figures/reversals/phaseSpecific/density_convergence' ...
+        '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+    formatAndExportFigure(densityFig,figurename,useJoinedTraj,exportOptions)
+end
+
+end
+
+function subsamples = subsampleRevFreq(knndensityAtRev,knndensity,densitybins,...
+    signedSpeeds,frameRate,numSubSamples,sampleSizeFraction)
+subsamples = NaN(numSubSamples,length(densitybins) - 1);
+numSamplesRev = round(sampleSizeFraction*numel(knndensityAtRev));
+numSamplesDensity = round(sampleSizeFraction*numel(knndensity));
+for subSampleCtr = 1:numSubSamples
+    sampleDensityAtRev = datasample(knndensityAtRev,numSamplesRev,'Replace',false);
+    [sampleDensity, sampleIdcs] = datasample(knndensity,numSamplesDensity,'Replace',false);
+    sampleNkAtRev = histcounts(sampleDensityAtRev,densitybins);
+    sampleNkforward = histcounts(sampleDensity(signedSpeeds(sampleIdcs)>0),densitybins);
+    sampleTkforward = sampleNkforward/frameRate; % convert frames to time
+    sampleRevRate = sampleNkAtRev./sampleTkforward;
+    sampleRevRate = sampleRevRate./(sampleRevRate(1) + eps); % divide by lowest density estimate to get relative reversal rate
+    subsamples(subSampleCtr,:) = sampleRevRate;
+end
+end
+
+function [] = formatAndExportFigure(handle,figurename,useJoinedTraj,exportOptions)
+set(handle,'PaperUnits','centimeters')
+if useJoinedTraj, figurename = [figurename '_jointraj']; end
+exportfig(handle,[figurename '.eps'],exportOptions)
+system(['epstopdf ' figurename '.eps']);
+system(['rm ' figurename '.eps']);
 end

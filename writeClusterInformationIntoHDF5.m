@@ -5,18 +5,8 @@ clear
 close all
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
-<<<<<<< HEAD
 strains = {'N2','npr1'};
 wormnums = {'40'};
-=======
-strains = {'npr1','N2'};
-wormnums = {'40'}%,'HD'};
-<<<<<<< HEAD
->>>>>>> 472724817e77576ca8dda353e33047674896813b
-=======
->>>>>>> 4ab6b71013bf87820e87a317cbde0cbe6dab5a8c
->>>>>>> 0d19a0cf6b8fce8c077af5387da268761088408b
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 maxBlobSize_r = 2.5e5;
 maxBlobSize_g = 1e4;

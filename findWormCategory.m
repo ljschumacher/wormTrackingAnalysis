@@ -26,6 +26,10 @@ neighbr_dist = h5read(filename,'/neighbr_distances');
 frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
 trajData = h5read(filename,'/trajectories_data');
 
+%% fixed parameters
+preClusterExitFramesChecked = 3*frameRate;
+minPreClusterExitFrames = round(1.0*frameRate);
+minPreClusterExitInClusterFraction = 0.5;
 %% classify worms
 %% identify small cluster worms
 smallClusterLogInd = (num_close_neighbrs==2 & neighbr_dist(:,3)>=minNeighbrDist)...
@@ -39,22 +43,36 @@ loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
 if nargin <4
     leaveClusterLogInd = [];
 else
+    leaveClusterLogInd = false(size(inClusterLogInd));
     % find worm-frames where inCluster changes from true to false
-    leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
-    leaveClusterStart = find(leaveClusterLogInd);
+    clusterChangeLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
+    leaveClusterStarts = find(clusterChangeLogInd);
+    % only keep exits where the change from in-cluster to not-cluster is from the same worm
+    sameWormLogInd = trajData.worm_index_joined(leaveClusterStarts)==trajData.worm_index_joined(leaveClusterStarts-1);
+    leaveClusterStarts = leaveClusterStarts(sameWormLogInd);
     % loop through each exit event, retain frames for the specified duration after a worm exits cluster
-    for exitCtr = 1:numel(leaveClusterStart)
-        thisExitIdx = leaveClusterStart(exitCtr);
+    for exitCtr = 1:numel(leaveClusterStarts)
+        thisExitIdx = leaveClusterStarts(exitCtr);
         wormIndex = trajData.worm_index_joined(thisExitIdx);
-        % check for the number of frames that the same worm has beyond the point of cluster exit
-        wormPathLength = nnz(trajData.worm_index_joined(thisExitIdx:end)==wormIndex);
-        if wormPathLength>=postExitDuration*frameRate
-            leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate-1;
-        else
-            leaveClusterEnd = leaveClusterStart+wormPathLength-1;
-        end % this also excludes movie segments with ending frames beyond highest frame number
-        % go through each starting frame to generate logical index for leave cluster worms
-        leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
+        % find the number of frames that the same worm was in-cluster before the point of cluster exit
+        wormPreExitInClusterNumFrames = nnz(trajData.worm_index_joined(...
+            thisExitIdx-preClusterExitFramesChecked:thisExitIdx-1)==wormIndex&...
+            inClusterLogInd(thisExitIdx-preClusterExitFramesChecked:thisExitIdx-1));
+        if wormPreExitInClusterNumFrames>=minPreClusterExitFrames % only count this cluster exit if the worm was tracked in-cluster for a minimum number of frames before
+            wormPreExitInClusterRatio = wormPreExitInClusterNumFrames/...
+                nnz(trajData.worm_index_joined(thisExitIdx-preClusterExitFramesChecked:thisExitIdx-1)==wormIndex);
+            if wormPreExitInClusterRatio >= minPreClusterExitInClusterFraction
+                % check for the number of frames that the same worm has beyond the point of cluster exit
+                wormPathNumFrames = nnz(trajData.worm_index_joined(thisExitIdx:end)==wormIndex);
+                if wormPathNumFrames>=postExitDuration*frameRate
+                    leaveClusterEnd = leaveClusterStarts+postExitDuration*frameRate-1;
+                else
+                    leaveClusterEnd = leaveClusterStarts+wormPathNumFrames-1;
+                end % this also excludes movie segments with ending frames beyond highest frame number
+                % go through each starting frame to generate logical index for leave cluster worms
+                leaveClusterLogInd(leaveClusterStarts(exitCtr):leaveClusterEnd(exitCtr))=true;
+            end
+        end
     end
     % exclude when worms move back into a cluster
     leaveClusterLogInd(inClusterLogInd)=false;

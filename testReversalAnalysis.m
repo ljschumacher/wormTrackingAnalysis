@@ -24,7 +24,7 @@ legend('original data')
 
 iRnans = iRcat;
 cutoff = 30;
-iRnans(iRnans > cutoff*(1 + rand(size(iRnans)))) = NaN; % randomly sets large values to NaN
+iRnans(iRnans >= cutoff*(1 + rand(size(iRnans)))) = NaN; % randomly sets large values to NaN
 
 figure, hold on
 ecdf(iRcat,'Bounds','off','function','survivor')

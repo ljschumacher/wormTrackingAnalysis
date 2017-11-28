@@ -203,7 +203,7 @@ auto.refobj = -1;
 auto.bounds = 'tight';
 auto.boundscode = 'internal';
 explicitbounds = 0;
-auto.lockaxes = 1;
+auto.lockaxes = 0; % I changed this default to 0 as it was messing up the order of category labels fopr me in notBoxPlot
 auto.separatetext = 0;
 opts = auto;
 
@@ -230,14 +230,14 @@ for k = 1:2:length(paramPairs)
     end
    case 'width'
     opts.width = LocalToNum(value, auto.width);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.width)
 	error('Width must be a numeric scalar > 0');
       end
     end
    case 'height'
     opts.height = LocalToNum(value, auto.height);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if(~LocalIsPositiveScalar(opts.height))
 	error('Height must be a numeric scalar > 0');
       end
@@ -254,28 +254,28 @@ for k = 1:2:length(paramPairs)
     end
    case 'fontsize'
     opts.fontsize = LocalToNum(value,auto.fontsize);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.fontsize)
 	error('FontSize must be a numeric scalar > 0');
       end
     end
    case 'defaultfixedfontsize'
     opts.defaultfontsize = LocalToNum(value,auto.defaultfontsize);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.defaultfontsize)
 	error('DefaultFixedFontSize must be a numeric scalar > 0');
       end
     end
    case 'fontsizemin'
     opts.fontmin = LocalToNum(value,auto.fontmin);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.fontmin)
 	error('FontSizeMin must be a numeric scalar > 0');
       end
     end
    case 'fontsizemax'
     opts.fontmax = LocalToNum(value,auto.fontmax);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.fontmax)
 	error('FontSizeMax must be a numeric scalar > 0');
       end
@@ -292,14 +292,14 @@ for k = 1:2:length(paramPairs)
     end
    case 'linewidth'
     opts.linewidth = LocalToNum(value,auto.linewidth);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.linewidth)
 	error('LineWidth must be a numeric scalar > 0');
       end
     end
    case 'defaultfixedlinewidth'
     opts.defaultlinewidth = LocalToNum(value,auto.defaultlinewidth);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.defaultlinewidth)
 	error(['DefaultFixedLineWidth must be a numeric scalar >' ...
 	       ' 0']);
@@ -307,14 +307,14 @@ for k = 1:2:length(paramPairs)
     end
    case 'linewidthmin'
     opts.linemin = LocalToNum(value,auto.linemin);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.linemin)
 	error('LineWidthMin must be a numeric scalar > 0');
       end
     end
    case 'linewidthmax'
     opts.linemax = LocalToNum(value,auto.linemax);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~LocalIsPositiveScalar(opts.linemax)
 	error('LineWidthMax must be a numeric scalar > 0');
       end
@@ -323,7 +323,7 @@ for k = 1:2:length(paramPairs)
     opts.stylemap = LocalCheckAuto(value,auto.stylemap);
    case 'renderer'
     opts.renderer = LocalCheckAuto(lower(value),auto.renderer);
-    if ~ischar(value) | ~strcmp(value,'auto')
+    if ~ischar(value) || ~strcmp(value,'auto')
       if ~strcmp(opts.renderer,{'painters','zbuffer','opengl'})
 	error(['Renderer must be ''painters'', ''zbuffer'' or' ...
 	       ' ''opengl''.']);
@@ -331,8 +331,8 @@ for k = 1:2:length(paramPairs)
     end
    case 'resolution'
     opts.resolution = LocalToNum(value,auto.resolution);
-    if ~ischar(value) | ~strcmp(value,'auto')
-      if ~(isnumeric(value) & (prod(size(value)) == 1) & (value >= 0));
+    if ~ischar(value) || ~strcmp(value,'auto')
+      if ~(isnumeric(value) && (numel(value) == 1) && (value >= 0))
 	error('Resolution must be a numeric scalar >= 0');
       end
     end
@@ -396,7 +396,7 @@ old.prop = {};
 old.values = {};
 
 % Process format
-if strncmp(opts.format,'eps',3) & ~strcmp(opts.preview,'none')
+if strncmp(opts.format,'eps',3) && ~strcmp(opts.preview,'none')
   args = {args{:}, ['-' opts.preview]};
 end
 
@@ -426,7 +426,7 @@ try
     set(opts.refobj, 'Units', oldUnits);
   end
   aspectRatio = refsize(1)/refsize(2);
-  if (opts.width == -1) & (opts.height == -1)
+  if (opts.width == -1) && (opts.height == -1)
     opts.width = refsize(1);
     opts.height = refsize(2);
   elseif (opts.width == -1)
@@ -450,12 +450,12 @@ try
   set(H,'Color','w');
 
   % process line-style map
-  if ~isempty(opts.stylemap) & ~isempty(allLines)
+  if ~isempty(opts.stylemap) && ~isempty(allLines)
     oldlstyle = LocalGetAsCell(allLines,'LineStyle');
     old = LocalPushOldData(old, allLines, {'LineStyle'}, ...
 			   oldlstyle);
     newlstyle = oldlstyle;
-    if ischar(opts.stylemap) & strcmpi(opts.stylemap,'bw')
+    if ischar(opts.stylemap) && strcmpi(opts.stylemap,'bw')
       newlstyle = LocalMapColorToStyle(allLines);
     else
       try
@@ -470,7 +470,7 @@ try
   % Process rendering parameters
   switch (opts.color)
    case {'bw', 'gray'}
-    if ~strcmp(opts.color,'bw') & strncmp(opts.format,'eps',3)
+    if ~strcmp(opts.color,'bw') && strncmp(opts.format,'eps',3)
       opts.format = [opts.format 'c'];
     end
     args = {args{:}, ['-d' opts.format]};
@@ -518,7 +518,7 @@ try
   if (~isempty(opts.renderer))
     args = {args{:}, ['-' opts.renderer]};
   end
-  if (~isempty(opts.resolution)) | ~strncmp(opts.format,'eps',3)
+  if (~isempty(opts.resolution)) || ~strncmp(opts.format,'eps',3)
     if isempty(opts.resolution)
       opts.resolution = 0;
     end
@@ -551,7 +551,7 @@ try
     old = LocalPushOldData(old, allFont, {'FontSize'}, oldfonts);
     old = LocalPushOldData(old, allFont, {'FontUnits'}, oldfontunits);
   end
-  if strcmp(opts.fontencoding,'adobe') & strncmp(opts.format,'eps',3)
+  if strcmp(opts.fontencoding,'adobe') && strncmp(opts.format,'eps',3)
     args = {args{:}, '-adobecset'};
   end
 
@@ -579,8 +579,8 @@ try
 
   % adjust figure bounds to surround axes
   if strcmp(opts.bounds,'tight')
-    if (~strncmp(opts.format,'eps',3) & LocalHas3DPlot(allAxes)) | ...
-	  (strncmp(opts.format,'eps',3) & opts.separatetext)
+    if (~strncmp(opts.format,'eps',3) && LocalHas3DPlot(allAxes)) || ...
+	  (strncmp(opts.format,'eps',3) && opts.separatetext)
       if (explicitbounds == 1)
 	warning(['Cannot compute ''tight'' bounds. Using ''loose''' ...
 		 ' bounds.']);
@@ -602,7 +602,7 @@ try
 	usemcode = 1;
       end
     end
-    if strcmp(opts.bounds,'tight') & usemcode
+    if strcmp(opts.bounds,'tight') && usemcode
       oldaunits = LocalGetAsCell(allAxes,'Units');
       oldapos = LocalGetAsCell(allAxes,'Position');
       oldtunits = LocalGetAsCell(allText,'units');
@@ -644,7 +644,7 @@ try
   end
   
   % Process text in a separate file if needed
-  if opts.separatetext & ~opts.applystyle
+  if opts.separatetext && ~opts.applystyle
     % First hide all text and export
     oldtvis = LocalGetAsCell(allText,'visible');
     set(allText,'visible','off');
@@ -662,14 +662,14 @@ try
     set(allAxes,{'YTickLabel'},olday);
     set(allAxes,{'ZTickLabel'},oldaz);
     % Now hide all non-text and export as eps in painters
-    [path, name, ext] = fileparts(filename);
+    [path, name, ~] = fileparts(filename);
     tfile = fullfile(path,[name '_t.eps']);
     tfile2 = fullfile(path,[name '_t2.eps']);
     foundRenderer = 0;
     for k=1:length(args)
       if strncmp('-d',args{k},2)
 	args{k} = '-deps';
-      elseif strncmp('-zbuffer',args{k},8) | ...
+      elseif strncmp('-zbuffer',args{k},8) || ...
 	    strncmp('-opengl', args{k},6)
 	args{k} = '-painters';
 	foundRenderer = 1;
@@ -706,7 +706,7 @@ try
 	fprintf(fid1,'%s\n',['%%Title: ', tfile]);
       elseif (length(line) < 3) 
 	fprintf(fid1,'%s\n',line);
-      elseif ~strcmp(line(end-2:end),' PR') & ...
+      elseif ~strcmp(line(end-2:end),' PR') && ...
 	    ~strcmp(line(end-1:end),' L')
 	fprintf(fid1,'%s\n',line);
       end
@@ -732,7 +732,7 @@ if opts.applystyle
   varargout{1} = old;
 else
   for n=1:length(old.objs)
-    if ~iscell(old.values{n}) & iscell(old.prop{n})
+    if ~iscell(old.values{n}) && iscell(old.prop{n})
       old.values{n} = {old.values{n}};
     end
     set(old.objs{n}, old.prop{n}, old.values{n});
@@ -752,12 +752,12 @@ outData.objs = {objs, inData.objs{:}};
 outData.prop = {prop, inData.prop{:}};
 outData.values = {values, inData.values{:}};
 
-function cellArray = LocalGetAsCell(fig,prop,allowemptycell);
+function cellArray = LocalGetAsCell(fig,prop,allowemptycell)
 cellArray = get(fig,prop);
 if nargin < 3
   allowemptycell = 0;
 end
-if ~iscell(cellArray) & (allowemptycell | ~isempty(cellArray))
+if ~iscell(cellArray) && (allowemptycell || ~isempty(cellArray))
   cellArray = {cellArray};
 end
 
@@ -794,7 +794,7 @@ if ~ischar(color)
   gray = 0.30*color(1) + 0.59*color(2) + 0.11*color(3);
 end
 
-function newArray = LocalMapToGray(inArray);
+function newArray = LocalMapToGray(inArray)
 n = length(inArray);
 newArray = cell(n,1);
 for k=1:n
@@ -802,14 +802,14 @@ for k=1:n
   if ~isempty(color)
     color = LocalMapToGray1(color);
   end
-  if isempty(color) | ischar(color)
+  if isempty(color) || ischar(color)
     newArray{k} = color;
   else
     newArray{k} = [color color color];
   end
 end
 
-function newArray = LocalMapColorToStyle(inArray);
+function newArray = LocalMapColorToStyle(inArray)
 inArray = LocalGetAsCell(inArray,'Color');
 n = length(inArray);
 newArray = cell(n,1);
@@ -818,10 +818,10 @@ uniques = [];
 nstyles = length(styles);
 for k=1:n
   gray = LocalMapToGray1(inArray{k});
-  if isempty(gray) | ischar(gray) | gray < .05
+  if isempty(gray) || ischar(gray) || gray < .05
     newArray{k} = '-';
   else
-    if ~isempty(uniques) & any(gray == uniques)
+    if ~isempty(uniques) && any(gray == uniques)
       ind = find(gray==uniques);
     else
       uniques = [uniques gray];
@@ -831,12 +831,12 @@ for k=1:n
   end
 end
 
-function newArray = LocalMapCData(inArray);
+function newArray = LocalMapCData(inArray)
 n = length(inArray);
 newArray = cell(n,1);
 for k=1:n
   color = inArray{k};
-  if (ndims(color) == 3) & isa(color,'double')
+  if (ndims(color) == 3) && isa(color,'double')
     gray = 0.30*color(:,:,1) + 0.59*color(:,:,2) + 0.11*color(:,:,3);
     color(:,:,1) = gray;
     color(:,:,2) = gray;
@@ -861,7 +861,7 @@ end
 
 function bool = LocalIsPositiveScalar(value)
 bool = isnumeric(value) & ...
-       prod(size(value)) == 1 & ...
+       numel(value) == 1 & ...
        value > 0;
 
 function value = LocalToNum(value,auto)
@@ -884,7 +884,7 @@ c = {opts{:}};
 
 function c = LocalIsHG(obj,hgtype)
 c = 0;
-if (length(obj) == 1) & ishandle(obj) 
+if (length(obj) == 1) && ishandle(obj) 
   c = strcmp(get(obj,'type'),hgtype);
 end
 
@@ -964,8 +964,8 @@ if strcmp(get(a,'visible'),'on')
     ry(3) = maxw+5;
     ry(4) = ry(4) + ext(4);
     if ~isempty(yticks)
-      if ~strcmp(get(a,'yscale'),'log') & ...
-            ((str2num(ylabs(1,:)) ~= yticks(1)) | ...
+      if ~strcmp(get(a,'yscale'),'log') && ...
+            ((str2num(ylabs(1,:)) ~= yticks(1)) || ...
              (str2num(ylabs(end,:)) ~= yticks(end)))
         set(label,'string','10^1');
         ext = get(label,'extent');
@@ -1002,8 +1002,8 @@ if strcmp(get(a,'visible'),'on')
       rx(2) = rx(2) + axesR(4);
     end
     if ~isempty(xticks)
-      if ~strcmp(get(a,'xscale'),'log') & ...
-            ((str2num(xlabs(1,:)) ~= xticks(1)) | ...
+      if ~strcmp(get(a,'xscale'),'log') && ...
+            ((str2num(xlabs(1,:)) ~= xticks(1)) || ...
              (str2num(xlabs(end,:)) ~= xticks(end)))
         set(label,'string','10^1');
         ext = get(label,'extent');
@@ -1052,6 +1052,6 @@ set(allNonLogZAxes,zs,'manual');
 c = old;
 
 function val = LocalCheckAuto(val, auto)
-if ischar(val) & strcmp(val,'auto')
+if ischar(val) && strcmp(val,'auto')
   val = auto;
 end
