@@ -9,7 +9,7 @@ clear
 dataset = 2;
 wormnum = '40';
 strain = 'npr1';
-marker = 'pharynx';
+marker = 'bodywall';
 phase = 'joining';
 numTrajToPlot = 200;
 numFramesForRotationAngle = 3; % the number of frames to use for rotation angle calculation - only needed to rotate trajectories
@@ -108,7 +108,7 @@ for wormcatCtr = 1:length(wormcats)
     end
     figurename = ['figures/turns/allTraj_' strain '_' wormnum '_' phase '_' wormcats{wormcatCtr} '_data' num2str(dataset) '_' marker];
     load('exportOptions.mat')
-    exportfig(figureHandle,[figurename '.eps'],exportOptions)
-    system(['epstopdf ' figurename '.eps']);
-    system(['rm ' figurename '.eps']);
+%     exportfig(figureHandle,[figurename '.eps'],exportOptions)
+%     system(['epstopdf ' figurename '.eps']);
+%     system(['rm ' figurename '.eps']);
 end
