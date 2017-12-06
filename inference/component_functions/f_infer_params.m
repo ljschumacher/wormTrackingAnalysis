@@ -1,5 +1,5 @@
-function chosen_params = f_infer_params(test_params, n_cuts)
-
+function chosen_params = f_infer_params(expsim_dists, test_params, n_cuts)
+global num_statistics
 % Set the cutoffs for taking the top n% of simulations e.g to select the
 % closest 1% of simulations, use 'n_cuts = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,

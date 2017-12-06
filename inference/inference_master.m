@@ -5,7 +5,7 @@ num_statistics = 4
 num_statistics = num_statistics+1
 
 % Analyse simulation data
-sim_ss_array = f_analyse_sims('list_extended_simulations.txt')
+sim_ss_array = f_analyse_sims('list_extended_simulations.txt', 0)
 
 % Analyse experimental data
 [exp_ss_array, exp_strain_list] = f_analyse_exps(...
@@ -17,4 +17,4 @@ expsim_dists = f_exp2sim_dist(...
 
 % Perform parameter inference
 chosen_params = f_infer_params(...
-    {'vs', 'revRateClusterEdge', 'Rir', 'Ris'}, [0.01])
+    expsim_dists, {'vs', 'revRateClusterEdge', 'Rir', 'Ris'}, [0.01])

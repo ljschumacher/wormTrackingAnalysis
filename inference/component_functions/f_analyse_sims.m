@@ -1,4 +1,5 @@
-function sim_ss_array = analyse_sims(sim_file_list)
+function [sim_ss_array, sim_file_names, param_return] = ...
+    analyse_sims(sim_file_list, extract_params)
 global num_statistics
 
 sim_file_names = {};
@@ -21,11 +22,24 @@ fclose(my_list_file)
 % strain/exp name
 sim_ss_array = cell(length(sim_file_names), num_statistics);
 
+if iscell(extract_params)
+    param_return = zeros(length(sim_file_names), length(extract_params));
+end
+
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
 for sim = 1:length(sim_file_names)
     progress = sim/length(sim_file_names)
     load(sim_file_names{sim});
+    
+    % Extract desired parameters if extract_params is a cell array
+    if iscell(extract_params)
+        for par = 1:length(param_return)
+            param_return(sim,par) = ...
+                eval(strcat('param.', extract_params{par}));
+        end
+    end
+    
     sim_ss_array{sim,1} = sim_file_names{sim};
     % Read in the appropriate data
     data = xyarray;

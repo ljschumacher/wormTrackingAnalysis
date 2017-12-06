@@ -652,7 +652,7 @@ for cutoff = 1:length(n_cuts)
     n = n_cuts(cutoff);
     top_n = floor(length(projected_complex_dists))*n;
     
-    lin = reshape( projected_complex_dists(:,:,1).' ,1,numel(projected_complex_dists(:,:,1)));
+    lin = reshape(projected_complex_dists(:,:,1).' ,1,numel(projected_complex_dists(:,:,1)));
     A = sort(lin);
     %A = sort(expsim_dists(:,:,1));
     B = (projected_complex_dists(:,:,1)<=A(top_n)).*projected_complex_dists(:,:,1);
