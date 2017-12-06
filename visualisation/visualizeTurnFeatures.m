@@ -39,7 +39,7 @@ for strainCtr = 1:length(strains)
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         % load data
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
         numFiles = length(filenames);
         % create cell arrays to hold individual movie values to be pooled
         maxPathNum = 200; % assume maximum number of paths per file is as set. Script checks for this later and gives warning if this is not enough
@@ -121,7 +121,7 @@ for strainCtr = 1:length(strains)
         xlim([0 8])
         ylim([0 2])
         set(headAngularSpeedFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/headAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        figurename = ['../figures/turns/headAngularSpeed_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
         %exportfig(headAngularSpeedFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);
         %system(['rm ' figurename '.eps']);
@@ -138,7 +138,7 @@ for strainCtr = 1:length(strains)
         xlim([0 0.8])
         ylim([0 18])
         set(omegaTurnFreqFig,'PaperUnits','centimeters')
-        figurename = ['figures/turns/omegaTurnFreq_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
+        figurename = ['../figures/turns/omegaTurnFreq_' strains{strainCtr} '_' wormnums{numCtr} '_' phase '_CL'];
         savefig(omegaTurnFreqFig,[figurename '.fig'])
         %exportfig(omegaTurnFreqFig,[figurename '.eps'],exportOptions)
         %system(['epstopdf ' figurename '.eps']);

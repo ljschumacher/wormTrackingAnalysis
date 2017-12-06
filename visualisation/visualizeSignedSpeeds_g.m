@@ -32,9 +32,9 @@ for numCtr = 1:length(wormnums)
         strain = strains{strainCtr};
         %% load data
         if dataset ==1
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         elseif dataset ==2
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         end
         numFiles = length(filenames);
         if numFiles >12
@@ -85,11 +85,11 @@ for numCtr = 1:length(wormnums)
         end
         % save figure
         if dataset ==1
-            epsFileName = ['figures/speeds/g1_' strains{strainCtr} '_' wormnum '.eps'];
-            figFileName = ['figures/speeds/g1_' strains{strainCtr} '_' wormnum '.fig'];
+            epsFileName = ['../figures/speeds/g1_' strains{strainCtr} '_' wormnum '.eps'];
+            figFileName = ['../figures/speeds/g1_' strains{strainCtr} '_' wormnum '.fig'];
         elseif dataset ==2
-            epsFileName = ['figures/speeds/g2_' strains{strainCtr} '_' wormnum '.eps'];
-            figFileName = ['figures/speeds/g2_' strains{strainCtr} '_' wormnum '.fig'];
+            epsFileName = ['../figures/speeds/g2_' strains{strainCtr} '_' wormnum '.eps'];
+            figFileName = ['../figures/speeds/g2_' strains{strainCtr} '_' wormnum '.fig'];
         end
         savefig(figFileName)
         exportfig(speedDistFig,epsFileName,exportOptions)

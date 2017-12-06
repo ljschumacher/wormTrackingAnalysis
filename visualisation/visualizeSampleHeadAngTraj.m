@@ -34,7 +34,7 @@ end
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     % load file
-    load(['figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
+    load(['../figures/turns/results/headAngSampleTraj_' featureToSample '_' strain '_' wormnum '_' phase '_data' num2str(dataset) '_' marker '.mat'])
     for rangeCtr = 1:size(headAngRanges,1)
         for wormcatCtr = 1:length(wormcats)
             samplePathFig = figure; hold on
@@ -80,7 +80,7 @@ for strainCtr = 1:length(strains)
             ax = gca;
             ax.XAxisLocation = 'origin';
             ax.YAxisLocation = 'origin';
-            figurename = ['figures/turns/sampleTraj/' featureToSample '_' strain '_' wormnum '_' wormcats{wormcatCtr} '_range' num2str(rangeCtr) '_' phase '_data' num2str(dataset) '_' marker ];
+            figurename = ['../figures/turns/sampleTraj/' featureToSample '_' strain '_' wormnum '_' wormcats{wormcatCtr} '_range' num2str(rangeCtr) '_' phase '_data' num2str(dataset) '_' marker ];
             if saveResults
                 load('exportOptions.mat')
                 exportfig(samplePathFig,[figurename '.eps'],exportOptions)

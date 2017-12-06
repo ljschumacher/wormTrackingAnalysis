@@ -34,9 +34,9 @@ for numCtr = 1:length(wormnums)
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};
         %% load data
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames);
-        filenames_g = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+        filenames_g = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         for fileCtr=1:numFiles
             filename = filenames{fileCtr};
             filename_g = filenames_g{fileCtr};
@@ -161,11 +161,11 @@ for numCtr = 1:length(wormnums)
                     figName = strrep(strrep(filename(end-32:end-17),'_',''),'/','');
                     set(smallClusterWormsFig,'Name',[strain ' ' wormnum ' ' figName])
                     if plotTraj == true
-                        epsFileName = ['figures/smallClusterTraj/red2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallClusterTraj/red2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallClusterTraj/red2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallClusterTraj/red2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
                     elseif plotTraj == false
-                        epsFileName = ['figures/smallCluster/red2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallCluster/red2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallCluster/red2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallCluster/red2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
                     end
                     %savefig(figFileName)
                     %exportfig(smallClusterWormsFig,epsFileName,'Color','rgb','Width',210,'Height',297)

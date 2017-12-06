@@ -1,14 +1,10 @@
+
 clear
 close all
 
-addpath('auxiliary/')
+addpath('../auxiliary/')
 
-% Script is based on visualizeRedManualTraj.m, except it lets you specify
-% first and last frames for plotting specific catergories of worms. This is
-% to help visualize trajectories of interest and narrow down frame ranges
-% (which is useful for observing the event from actual data). 
-
-% Script uses manually joined bodywall muscle marker trajectory data and
+% script uses manually joined bodywall muscle marker trajectory data and
 % goes worm by worm to plot its full trajectory (for the specified phase)
 % in black, and then categorised trajectories (leave cluster vs. lone worm)
 % using specified coloring schemes. The options are to color according to
@@ -16,21 +12,18 @@ addpath('auxiliary/')
 % category (if neither of the other option is selected).
 
 %% set parameters
-phase = 'partial'; % 'partial' to indicate that for this particular script, frames of interest are specified by hand
+phase = 'joining'; % 'fullMovie', 'joining', or 'sweeping'.
+dataset = 2; % 1 or 2
 marker = 'bodywall'; % 'bodywall'
 strains = {'npr1'}; % {'npr1','N2'}
 wormnums = {'40'};% {'40'};
 wormcats = {'leaveCluster','loneWorm'}; %'leaveCluster','loneWorm'
-preExitDuration = 2; % only applied if colorSpeed is true: duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
+preExitDuration = 5; % only applied if colorSpeed is true: duration (in seconds) before a worm exits a cluster to be included in the leave cluster analysis
 postExitDuration = 5; % duration (in seconds) after a worm exits a cluster to be included in the leave cluster analysis
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 colorDirection = false;
 colorSpeed = true;
 saveResults = false;
-
-currentFile = 5; %
-firstFrame = 18800; %
-lastFrame = 19000; %
 
 maxBlobSize_r = 2.5e5;
 minSkelLength_r = 850;
@@ -38,16 +31,25 @@ maxSkelLength_r = 1500;
 minNeighbrDist = 2000;
 inClusterNeighbourNum = 3;
 
+exportOptions = struct('Format','eps2',...
+    'Color','rgb',...
+    'Width',30,...
+    'Resolution',300,...
+    'FontMode','fixed',...
+    'FontSize',20,...
+    'LineWidth',1);
+
 %% go through strains, densities, movies
 for strainCtr = 1:length(strains)
     strain = strains{strainCtr};
     for numCtr = 1:length(wormnums)
         wormnum = wormnums{numCtr};
         % load file list
-        [~,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.xlsx'],1,'A1:E15','basic');
+        numFiles = length(filenames);
 
         %% go through individual movies
-        for fileCtr = currentFile
+        for fileCtr = 1:numFiles
             %% load data
             filename = filenames{fileCtr}
             trajData = h5read(filename,'/trajectories_data');
@@ -77,7 +79,8 @@ for strainCtr = 1:length(strains)
             % filter red by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)...
                 &filterSkelLength(skelData,pixelsize,minSkelLength_r,maxSkelLength_r);
-            % apply frame restriction            
+            % apply phase restriction
+            [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
             phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
             trajData.filtered(~phaseFrameLogInd) = false;
             % find worms that have just left a cluster vs lone worms
@@ -126,6 +129,7 @@ for strainCtr = 1:length(strains)
                 % use unique worm
                 wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr);
                 % apply phase restriction
+                [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
                 phaseFrameLogInd = trajData.frame_number <= lastFrame & trajData.frame_number >= firstFrame;
                 wormLogInd(~phaseFrameLogInd) = false;
                 % get xy coordinates
@@ -136,7 +140,7 @@ for strainCtr = 1:length(strains)
                 plot(wormtraj_xcoords,wormtraj_ycoords,'k')
                 % now plot individually categorised traj on top of the full traj
                 wormLogInd = trajData.worm_index_manual==uniqueWorms(wormCtr) & trajData.filtered;
-                % go through each worm category
+                % go through each worm../ category
                 for wormcatCtr = 1:length(wormcats)
                     wormCatLogInd = wormLogInd & eval([wormcats{wormcatCtr} 'LogInd']);
                     % plot xy coordinates for categorised worms
@@ -189,11 +193,11 @@ for strainCtr = 1:length(strains)
                 xlim([0 12000])
                 ylim([0 12000])
                 if colorDirection
-                    figurename = (['figures/redManualTrajFull/redManualTrajFullDir_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
+                    figurename = (['../figures/redManualTrajFull/redManualTrajFullDir_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
                 elseif colorSpeed
-                    figurename = (['figures/redManualTrajFull/redManualTrajFullSpeed_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
+                    figurename = (['../figures/redManualTrajFull/redManualTrajFullSpeed_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
                 else
-                    figurename = (['figures/redManualTrajFull/redManualTrajFull_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
+                    figurename = (['../figures/redManualTrajFull/redManualTrajFull_' phase '_' filename(end-31:end-18) '_worm' num2str(uniqueWorms(wormCtr))]);
                 end
                 if saveResults
                 exportfig(fullTraj,[figurename '.eps'],exportOptions)
@@ -203,4 +207,53 @@ for strainCtr = 1:length(strains)
             end
         end
     end
+end
+
+%%%%%%%%%%%%%%%%%% local function %%%%%%%%%%%%%%%%%%
+% function is simiar to findwormCategory.m, but for leave cluster worms it
+% also turns on the logical index for 2 seconds prior to worm exit, in
+% order to detect potential speed increase prior to cluster exit.
+
+function [leaveClusterLogInd,loneWormLogInd] = ...
+    findLeaveClusterPlusWorms(filename,inClusterNeighbourNum,minNeighbrDist,preExitDuration,postExitDuration)
+
+% load data
+min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
+num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
+trajData = h5read(filename,'/trajectories_data');
+frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+
+% identify in cluster worms
+inClusterLogInd = num_close_neighbrs>=inClusterNeighbourNum;
+%% identify lone worms
+loneWormLogInd = min_neighbr_dist>=minNeighbrDist;
+
+% find worm-frames where inCluster changes from true to false
+    leaveClusterLogInd = vertcat(false,inClusterLogInd(1:end-1)&~inClusterLogInd(2:end));
+    leaveClusterStart = find(leaveClusterLogInd);
+    % loop through each exit event, retain frames for the specified duration before/after a worm exits cluster
+    for exitCtr = 1:numel(leaveClusterStart)
+        thisExitIdx = leaveClusterStart(exitCtr);
+        wormIndex = trajData.worm_index_manual(thisExitIdx);
+        wormPathLengthBefore = nnz(trajData.worm_index_manual(1:thisExitIdx)==wormIndex);
+        % check for the number of frames that the same worm has before the point of cluster exit
+        if wormPathLengthBefore>=preExitDuration*frameRate
+            leaveClusterStart = leaveClusterStart-preExitDuration*frameRate+1;
+        else
+            leaveClusterStart = leaveClusterStart-wormPathLengthBefore+1;
+        end % this also excludes movie segments with starting frames beyond lowest frame number
+        % check for the number of frames that the same worm has beyond the point of cluster exit
+        wormPathLengthAfter = nnz(trajData.worm_index_manual(thisExitIdx:end)==wormIndex);
+        if wormPathLengthAfter>=postExitDuration*frameRate
+            leaveClusterEnd = leaveClusterStart+postExitDuration*frameRate-1;
+        else
+            leaveClusterEnd = leaveClusterStart+wormPathLengthAfter-1;
+        end % this also excludes movie segments with ending frames beyond highest frame number
+        % go through each starting frame to generate logical index for leave cluster worms
+        leaveClusterLogInd(leaveClusterStart(exitCtr):leaveClusterEnd(exitCtr))=true;
+    end
+    % exclude when worms move back into a cluster
+    leaveClusterLogInd(inClusterLogInd)=false;
+    % exclude worms that have become lone worm
+    leaveClusterLogInd(loneWormLogInd)=false;
 end

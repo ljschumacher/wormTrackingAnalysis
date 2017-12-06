@@ -38,11 +38,11 @@ for numCtr = 1:length(wormnums)
         strain = strains{strainCtr};
         if dataset == 1
             %% load data
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         elseif dataset == 2
             %% load data
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
-            filenames_r = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames_r = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         end
         numFiles = length(filenames);
         for fileCtr=1:numFiles
@@ -222,19 +222,19 @@ for numCtr = 1:length(wormnums)
                 set(smallClusterTrajFig,'Name',[strain ' ' wormnum ' ' figName])
                 if plotTraj == true
                     if dataset ==1
-                        epsFileName = ['figures/smallClusterTraj/green1/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallClusterTraj/green1/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallClusterTraj/green1/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallClusterTraj/green1/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
                     elseif dataset ==2
-                        epsFileName = ['figures/smallClusterTraj/green2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallClusterTraj/green2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallClusterTraj/green2/pdf/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallClusterTraj/green2/fig/sampleSmallClusterTraj_' strain '_' wormnum '_' figName '.fig'];
                     end
                 elseif plotTraj == false
                     if dataset ==1
-                        epsFileName = ['figures/smallCluster/green1/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallCluster/green1/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallCluster/green1/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallCluster/green1/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
                     elseif dataset ==2
-                        epsFileName = ['figures/smallCluster/green2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
-                        figFileName = ['figures/smallCluster/green2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
+                        epsFileName = ['../figures/smallCluster/green2/pdf/sampleSmallCluster_' strain '_' wormnum '_' figName '.eps'];
+                        figFileName = ['../figures/smallCluster/green2/fig/sampleSmallCluster_' strain '_' wormnum '_' figName '.fig'];
                     end
                 end
                 %savefig(figFileName)

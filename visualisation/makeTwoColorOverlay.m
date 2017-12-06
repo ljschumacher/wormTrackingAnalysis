@@ -1,12 +1,12 @@
 % script takes hdf5 masked movies, reads them frame by frame, and overlay the two
 % channels to generate new frame and avi movie.
 
-addpath('auxiliary/')
+addpath('../auxiliary/')
 %% set parameters
 frameInterval = 1;
 
 %% load manual annotation file and extract recording and frame annotations
-[~,~,annotations] = xlsread(['datalists/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I83','basic');
+[~,~,annotations] = xlsread(['../datalists/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I83','basic');
 recordingNumbers = annotations(:,1);
 
 %% loop through each entry and exit event

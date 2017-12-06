@@ -12,7 +12,7 @@ for numCtr = 1:length(wormnums)
         strain = strains{strainCtr};
         figure, hold on
         % load red channel file list
-        filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames);
         for fileCtr = 1:numFiles
             filename = filenames{fileCtr};

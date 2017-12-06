@@ -35,9 +35,9 @@ for strainCtr = 1:length(strains)
         wormnum = wormnums{numCtr};
         % load data
         if dataset == 1
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_list.txt']);
         elseif dataset == 2
-            filenames = importdata(['datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
+            filenames = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_g_list.txt']);
         end
         numFiles = length(filenames);
         wormDensityFig = figure; hold on
@@ -60,7 +60,7 @@ for strainCtr = 1:length(strains)
         ylabel('number of tracked objects','FontSize',20)
         set(gca,'FontSize',15)
         title([strains{strainCtr} ' ' wormnums{numCtr} ' data ' num2str(dataset)],'FontWeight','normal');
-        figurename = ['figures/wormDensity/wormDensity_' strains{strainCtr} '_' wormnums{numCtr} '_data' num2str(dataset)];
+        figurename = ['../figures/wormDensity/wormDensity_' strains{strainCtr} '_' wormnums{numCtr} '_data' num2str(dataset)];
         exportfig(wormDensityFig,[figurename '.eps'],exportOptions)
         system(['epstopdf ' figurename '.eps']);
         system(['rm ' figurename '.eps']);

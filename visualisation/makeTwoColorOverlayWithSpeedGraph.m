@@ -1,7 +1,7 @@
 clear
 close all
 
-addpath('auxiliary/')
+addpath('../auxiliary/')
 
 % script takes hdf5 masked movies, reads them frame by frame, and overlay the two
 % channels to generate new frame and avi movie.
@@ -19,7 +19,7 @@ events2Plot = [45]; % specify the list of event numbers here to make movie for
 %% load manual annotation files
 
 % entry exit event annotations
-[~,~,annotations] = xlsread(['datalists/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I80','basic');
+[~,~,annotations] = xlsread(['../datalists/entryExitEvents_npr1_40_joining.xlsx'],1,'A2:I80','basic');
 % frames for movie phase of interest, for extract joining phase limits
 [phaseFrames,filenames,~] = xlsread(['datalists/npr1_40_r_list.xlsx'],1,'A1:E15','basic');
 recordingNumbers = annotations(:,1);

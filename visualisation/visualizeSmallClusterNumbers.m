@@ -22,7 +22,7 @@ for numCtr = 1:length(wormnums)
     for strainCtr = 1:length(strains)
         strain = strains{strainCtr};
         % load files
-        filenames_r = importdata([strains{strainCtr} '_' wormnum '_r_list.txt']);
+        filenames_r = importdata(['../datalists/' strains{strainCtr} '_' wormnum '_r_list.txt']);
         numFiles = length(filenames_r);
         for fileCtr = 1:numFiles
             filename_r = filenames_r{fileCtr};
