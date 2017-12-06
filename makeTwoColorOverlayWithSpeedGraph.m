@@ -1,6 +1,8 @@
 clear
 close all
 
+addpath('auxiliary/')
+
 % script takes hdf5 masked movies, reads them frame by frame, and overlay the two
 % channels to generate new frame and avi movie.
 

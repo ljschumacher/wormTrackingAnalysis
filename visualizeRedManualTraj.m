@@ -2,6 +2,8 @@
 clear
 close all
 
+addpath('auxiliary/')
+
 % script uses manually joined bodywall muscle marker trajectory data and
 % goes worm by worm to plot its full trajectory (for the specified phase)
 % in black, and then categorised trajectories (leave cluster vs. lone worm)

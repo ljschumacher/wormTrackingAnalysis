@@ -1,6 +1,8 @@
 clear
 close all
 
+addpath('auxiliary/')
+
 % Script is based on visualizeRedManualTraj.m, except it lets you specify
 % first and last frames for plotting specific catergories of worms. This is
 % to help visualize trajectories of interest and narrow down frame ranges

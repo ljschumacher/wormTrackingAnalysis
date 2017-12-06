@@ -9,8 +9,6 @@ function [] = analyzeReversalPharynx(dataset,phase,wormnum)
 % none returned, but figures are exported
 
 % issues / todo:
-% - for the kaplan-meier survival curves, we should not plot the inter rev
-% time for lone worms, but the time from a random starting point until rev
 
 
 exportOptions = struct('Format','eps2',...
@@ -21,6 +19,7 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 load ~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt
+addpath('auxiliary/')
 
 %% set parameters
 if dataset ==1
@@ -33,7 +32,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
-useJoinedTraj = true
+useJoinedTraj = false
 maxBlobSize_g = 1e4;
 minPathLength = 50; % minimum path length of reversals to be included
 knnbrNumValues =4:7; % which numbers of knnbrs to consider for checking density dependence
@@ -81,6 +80,9 @@ for strainCtr = 1:nStrains
     knndensityChangeAtFwd = cell(numFiles,1);
     signedSpeeds = cell(numFiles,1);
     %% loop through files and load data
+    %%%%
+    numFramesAllFiles = 0;
+    %%%%%
     for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
         shortFileName = filename(end-31:end-5);
@@ -131,6 +133,10 @@ for strainCtr = 1:nStrains
                 signedSpeedThisFile(~phaseFrameLogInd) =NaN;
             end
             nonNanFramesLogInd = ~isnan(signedSpeedThisFile);
+            %%%
+            numFramesAllFiles = numFramesAllFiles + nnz(nonNanFramesLogInd);
+            disp(['total frame count ' num2str(numFramesAllFiles)])
+            %%%%
             signedSpeeds{fileCtr} = signedSpeedThisFile(nonNanFramesLogInd);
             %% find reversals in signed speed
             [revStartInd, ~, untrackedRevEnds, ~, incompleteInterRev] = ...
@@ -241,16 +247,18 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         revRateSubsamples = subsampleRevFreq(knndensityAtRev(:,k),knndensity(:,k),...
             densitybins,signedSpeeds,frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
-        revRates = mean(revRateSubsamples);
-        revRateErr = std(revRateSubsamples).*samplingCorrectionFactor;
+        revRates = mean(revRateSubsamples,1);
+        revRateErr = std(revRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        revRates = revRates./(revRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        revRateErr = revRateErr./(revRates(mindensityIdx) + eps);
+        revRatesNormalised = revRates./(revRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        revRateErrNormalised = revRatesNormalised.*sqrt((revRateErr./(revRates + eps)).^2 + ...
+            (revRateErr(mindensityIdx)./(revRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule
         % this normalisation could result in large estimates for low outliers
         % (where revRates(mindensityIdx)==0), so may it be better to
         % normalise by the mean, or the lowest non-zero estimate?
-        boundedline(plotbins,revRates,[revRateErr; revRateErr]',revFig(k).Children,'-','cmap',plotColors(strainCtr,:))
+        boundedline(plotbins,revRatesNormalised,[revRateErrNormalised; revRateErrNormalised]',revFig(k).Children,'-','cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(revFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(revFig(k).Children,'relative reversal rate')
@@ -265,13 +273,15 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         fwdRateSubsamples = subsampleRevFreq(knndensityAtFwd(:,k),knndensity(:,k),...
             densitybins,-signedSpeeds,frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
-        fwdRates = mean(fwdRateSubsamples);
-        fwdRateErr = std(fwdRateSubsamples).*samplingCorrectionFactor;
+        fwdRates = mean(fwdRateSubsamples,1);
+        fwdRateErr = std(fwdRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        fwdRates = fwdRates./(fwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        fwdRateErr = fwdRateErr./(fwdRates(mindensityIdx) + eps);
-        boundedline(plotbins,fwdRates,[fwdRateErr; fwdRateErr]',fwdFig(k).Children,':','cmap',plotColors(strainCtr,:))
+        fwdRatesNormalised = fwdRates./(fwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        fwdRateErrNormalised = fwdRatesNormalised.*sqrt((fwdRateErr./(fwdRates + eps)).^2 + ...
+            (fwdRateErr(mindensityIdx)./(fwdRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule
+        boundedline(plotbins,fwdRatesNormalised,[fwdRateErrNormalised; fwdRateErrNormalised]',fwdFig(k).Children,':','cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(fwdFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(fwdFig(k).Children,'relative forward rate')
@@ -287,13 +297,15 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         revfwdRateSubsamples = subsampleRevFreq(knndensityEitherRevFwd,knndensity(:,k),...
             densitybins,abs(signedSpeeds),frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
-        revfwdRates = mean(revfwdRateSubsamples);
-        revfwdRateErr = std(revfwdRateSubsamples).*samplingCorrectionFactor;
+                revfwdRates = mean(revfwdRateSubsamples,1);
+        revfwdRateErr = std(revfwdRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        revfwdRates = revfwdRates./(revfwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        revfwdRateErr = revfwdRateErr./(revfwdRates(mindensityIdx) + eps);
-        boundedline(plotbins,revfwdRates,[revfwdRateErr; revfwdRateErr]',revfwdFig(k).Children,'cmap',plotColors(strainCtr,:))
+        revfwdRatesNormalised = revfwdRates./(revfwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        revfwdRateErrNormalised = revfwdRatesNormalised.*sqrt((revfwdRateErr./(revfwdRates + eps)).^2 + ...
+            (revfwdRateErr(mindensityIdx)./(revfwdRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule      
+        boundedline(plotbins,revfwdRatesNormalised,[revfwdRateErrNormalised; revfwdRateErrNormalised]',revfwdFig(k).Children,'cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(revfwdFig(k).Children,['\rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(revfwdFig(k).Children,'relative reorientation rate')
@@ -308,18 +320,22 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         revRateSubsamples = subsampleRevFreq(knndensityChangeAtRev(:,k),knndensityChange(:,k),...
             densityChangebins,signedSpeeds,frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
-        revRates = mean(revRateSubsamples);
-        revRateErr = std(revRateSubsamples).*samplingCorrectionFactor;
+        revRates = mean(revRateSubsamples,1);
+        revRateErr = std(revRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        revRates = revRates./(revRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        revRateErr = revRateErr./(revRates(mindensityIdx) + eps);
-        boundedline(plotbins,revRates,[revRateErr; revRateErr]',revFig2(k).Children,'--','cmap',plotColors(strainCtr,:))
+        revRatesNormalised = revRates./(revRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        revRateErrNormalised = revRatesNormalised.*sqrt((revRateErr./(revRates + eps)).^2 + ...
+            (revRateErr(mindensityIdx)./(revRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule
+        boundedline(plotbins,revRatesNormalised,[revRateErrNormalised; revRateErrNormalised]',revFig2(k).Children,'--','cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(revFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
             ylabel(revFig2(k).Children,'relative reversal rate')
             revFig2(k).Children.YLim(1) = 0;
             revFig2(k).Children.Box = 'on';
+            revFig2(k).Children,XLim = minmax(plotbins);
+            plot(revFig2(k).Children,[0 0],revFig2(k).Children.YLim,'k--')
             figurename = ['figures/reversals/phaseSpecific/reversals-densityChange_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
             formatAndExportFigure(revFig2(k),figurename,useJoinedTraj,exportOptions)
@@ -329,18 +345,22 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         fwdRateSubsamples = subsampleRevFreq(knndensityChangeAtFwd(:,k),knndensityChange(:,k),...
             densityChangebins,-signedSpeeds,frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
-        fwdRates = mean(fwdRateSubsamples);
-        fwdRateErr = std(fwdRateSubsamples).*samplingCorrectionFactor;
+        fwdRates = mean(fwdRateSubsamples,1);
+        fwdRateErr = std(fwdRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        fwdRates = fwdRates./(fwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        fwdRateErr = fwdRateErr./(fwdRates(mindensityIdx) + eps);
-        boundedline(plotbins,fwdRates,[fwdRateErr; fwdRateErr]',fwdFig2(k).Children,':','cmap',plotColors(strainCtr,:))
+        fwdRatesNormalised = fwdRates./(fwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        fwdRateErrNormalised = fwdRatesNormalised.*sqrt((fwdRateErr./(fwdRates + eps)).^2 + ...
+            (fwdRateErr(mindensityIdx)./(fwdRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule
+        boundedline(plotbins,fwdRatesNormalised,[fwdRateErrNormalised; fwdRateErrNormalised]',fwdFig2(k).Children,':','cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(fwdFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
             ylabel(fwdFig2(k).Children,'relative forward rate')
             fwdFig2(k).Children.YLim(1) = 0;
             fwdFig2(k).Children.Box = 'on';
+            fwdFig2(k).Children,XLim = minmax(plotbins);
+            plot(fwdFig2(k).Children,[0 0],fwdFig2(k).Children.YLim,'k--')
             figurename = ['figures/reversals/phaseSpecific/forwards-densityChange_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
             formatAndExportFigure(fwdFig2(k),figurename,useJoinedTraj,exportOptions)
@@ -351,18 +371,22 @@ for strainCtr = 1:nStrains
         % subsample to estimate variability
         revfwdRateSubsamples = subsampleRevFreq(knndensityChangeEitherRevFwd,knndensityChange(:,k),...
             densityChangebins,abs(signedSpeeds),frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
+        %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densityChangebins(2:end) - mean(diff(densityChangebins)); % convert from bin edges to centers
-        revfwdRates = mean(revfwdRateSubsamples);
-        revfwdRateErr = std(revfwdRateSubsamples).*samplingCorrectionFactor;
+        revfwdRates = mean(revfwdRateSubsamples,1);
+        revfwdRateErr = std(revfwdRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
-        revfwdRates = revfwdRates./(revfwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
-        revfwdRateErr = revfwdRateErr./(revfwdRates(mindensityIdx) + eps);
-        boundedline(plotbins,revfwdRates,[revfwdRateErr; revfwdRateErr]',revfwdFig2(k).Children,'cmap',plotColors(strainCtr,:))
+        revfwdRatesNormalised = revfwdRates./(revfwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
+        revfwdRateErrNormalised = revfwdRatesNormalised.*sqrt((revfwdRateErr./(revfwdRates + eps)).^2 + ...
+            (revfwdRateErr(mindensityIdx)./(revfwdRates(mindensityIdx) + eps)).^2); % sum of square relative errors rule
+        boundedline(plotbins,revfwdRatesNormalised,[revfwdRateErrNormalised; revfwdRateErrNormalised]',revfwdFig2(k).Children,'cmap',plotColors(strainCtr,:))
         if strainCtr==nStrains
             xlabel(revfwdFig2(k).Children,['\Delta_t\rho_' num2str(k) ' (worms/mm^2/s)'])
             ylabel(revfwdFig2(k).Children,'relative reorientation rate')
             revfwdFig2(k).Children.YLim(1) = 0;
             revfwdFig2(k).Children.Box = 'on';
+            revfwdFig2(k).Children,XLim = minmax(plotbins);
+            plot(revfwdFig2(k).Children,[0 0],revfwdFig2(k).Children.YLim,'k--')
             figurename = ['figures/reversals/phaseSpecific/reorient-densityChange_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
             formatAndExportFigure(revfwdFig2(k),figurename,useJoinedTraj,exportOptions)

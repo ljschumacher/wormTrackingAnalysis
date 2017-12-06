@@ -1,6 +1,7 @@
 % script takes hdf5 masked movies, reads them frame by frame, and overlay the two
 % channels to generate new frame and avi movie.
 
+addpath('auxiliary/')
 %% set parameters
 frameInterval = 1;
 

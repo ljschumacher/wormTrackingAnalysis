@@ -13,6 +13,8 @@ function [] = analyzeCorrelationData(dataset,phase,wormnum,markerType,plotDiagno
 % - seperate into individual functions for each statistic?
 % - calculate red-green correlations as well as red-red
 
+addpath('auxiliary/')
+
 %% set other parameters
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...

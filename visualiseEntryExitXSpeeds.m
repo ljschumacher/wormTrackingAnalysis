@@ -1,6 +1,8 @@
 clear
 close all
 
+addpath('auxiliary/')
+
 %% to improve the script: limit how far to linearly interpolate within naninterp i.e. maybe specify maxinum interpolation window to be 9 or something and leave values NaN if no values nearby;
 %% also turn analysis needs debugging
 
