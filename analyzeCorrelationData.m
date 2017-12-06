@@ -100,18 +100,17 @@ for strainCtr = 1:nStrains
     accnbrcorr = cell(numFiles,1);
     pairdist = cell(numFiles,1);
     nNbrDist= cell(numFiles,1);
-    numNbrs= cell(numFiles,1);
     gr =cell(numFiles,1);
     %% loop through files
-    for fileCtr = 1%:numFiles % can be parfor
+    for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
         %% load tracking data
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
         skelData = h5read(filename,'/skeleton');
         %         min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
-        num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
-        neighbr_dist = h5read(filename,'/neighbr_distances');
+%         num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
+%         neighbr_dist = h5read(filename,'/neighbr_distances');
         % check formats
         assert(size(skelData,1)==2,['Wrong skeleton size for ' filename])
         assert(size(skelData,2)==2,['Wrong skeleton size for ' filename])
@@ -161,7 +160,6 @@ for strainCtr = 1:nStrains
         accnbrcorr{fileCtr} = cell(numFrames,1);
         pairdist{fileCtr} = cell(numFrames,1);
         nNbrDist{fileCtr}= cell(numFrames,1);
-        numNbrs{fileCtr}= cell(numFrames,1);
         gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
         if strcmp(markerType,'bodywall')
             [ ~, velocities_x, velocities_y, ~, acceleration_x, acceleration_y ] = ...
@@ -207,12 +205,6 @@ for strainCtr = 1:nStrains
                         (numel(dirxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
                     error(['Inconsistent number of variables in frame ' num2str(frame) ' of ' filename ])
                 end
-                %% calculate numbers of neighbours at various distances
-                %                 numNbrs{fileCtr}{frameCtr} = num_close_neighbrs(frameLogInd);
-                numNbrs{fileCtr}{frameCtr} = zeros(nnz(frameLogInd),8);
-                for nbrdistbin=1:8
-                    numNbrs{fileCtr}{frameCtr}(:,nbrdistbin) = sum(neighbr_dist(frameLogInd,:)<=nbrdistbin*250,2);
-                end
                 %% calculate direction towards nearest (few) neighbour(s) for each worm
                 dx = double(x(nNbrIndx) - x); dy = double(y(nNbrIndx) - y);
                 velnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(vx,vy,dx,dy,true,false);
@@ -231,7 +223,6 @@ for strainCtr = 1:nStrains
         accnbrcorr{fileCtr} = vertcat(accnbrcorr{fileCtr}{:});
         pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
         nNbrDist{fileCtr} = horzcat(nNbrDist{fileCtr}{:});
-        numNbrs{fileCtr} = vertcat(numNbrs{fileCtr}{:})';
         %% heat map of sites visited - this only makes sense for 40 worm dataset where we don't move the camera
         if strcmp(wormnum,'40')&& plotDiagnostics
             siteVisitFig = figure;
@@ -252,49 +243,12 @@ for strainCtr = 1:nStrains
     end
     %% combine data from multiple files
     nNbrDist = horzcat(nNbrDist{:});
-    numNbrs = horzcat(numNbrs{:});
     speeds = vertcat(speeds{:});
     pairdist = horzcat(pairdist{:});
     dirxcorr = horzcat(dirxcorr{:});
     velxcorr = horzcat(velxcorr{:});
     velnbrcorr = vertcat(velnbrcorr{:});
     accnbrcorr = vertcat(accnbrcorr{:});
-    %% plot histogram of speed vs number of close nbrs at various distances
-    for nbrdistbin=1:8
-        speedHist2FigNbrNum = figure;
-        h = histogram2(numNbrs(nbrdistbin,:),speeds','DisplayStyle','tile','EdgeColor','none',...
-            'XBinEdges',-0.5:10.5,'YBinLimits',[0 400]);
-        normfactor = sum(h.BinCounts,2);
-        normfactor(normfactor==0) = 1;
-        h.BinCounts = h.BinCounts./normfactor; % conditional normalisation    xlabel(speedHist2FigNbrNum.Children,'number of neighbours within 500 μm')
-        box on
-        ylabel(speedHist2FigNbrNum.Children,'speed (μm/s)')
-        xlabel(speedHist2FigNbrNum.Children,['# neighbours within' num2str(nbrdistbin*250) 'μm'])
-        colormap(speedHist2FigNbrNum,flipud(cmap_Blues))
-        xlim([-0.5 10.5])
-        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrnum' num2str(nbrdistbin*250) 'Hist2D_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-        exportfig(speedHist2FigNbrNum,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        close(speedHist2FigNbrNum)
-        % stair plots of conditional histograms
-        speedHistFig = figure; hold on
-        nbrnums = 0:5;
-        speedbins = 0:20:400;
-        for nbrnum = nbrnums
-            plot(speedbins(1:end-1)+10,histcounts(speeds(numNbrs(nbrdistbin,:)==nbrnum),speedbins,'Normalization','Probability'));
-        end
-        speedHistFig.Children.Box = 'on';
-        xlabel(speedHistFig.Children,'speed (μm/s)')
-        ylabel(speedHistFig.Children,'P')
-        lgh = legend(num2str(nbrnums'),'Location','EastOutside');
-        lgh.Title.String = {'# nbrs in'; [num2str(nbrdistbin*250) 'μm']};
-        figurename = ['figures/correlation/phaseSpecific/speedvsneighbrnum' num2str(nbrdistbin*250) 'Hist_' strains{strainCtr} '_'  wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-        exportfig(speedHistFig,[figurename '.eps'],exportOptions)
-        system(['epstopdf ' figurename '.eps']);
-        system(['rm ' figurename '.eps']);
-        close(speedHistFig)
-    end
     %% bin distance data
     [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
         'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
@@ -344,7 +298,7 @@ for strainCtr = 1:nStrains
     end
 end
 %% format and export figures
-for figHandle = [speedFig, dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig poscorrFig] % common formating for both figures
+for figHandle = [speedFig, dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig, poscorrFig] % common formating for both figures
     set(figHandle,'PaperUnits','centimeters')
 end
 % speeds v distance
