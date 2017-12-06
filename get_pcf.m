@@ -85,13 +85,13 @@ for movie = 1:length(filename)
         
         % Initialise empty matrix to store pairwise distances
         distances = [];
-        
+
         % Pick out the xy coordinates for these worms at this time
         for i = 1:num_worms
             coords(i,1) = x_data(t_indexes(i));
             coords(i,2) = y_data(t_indexes(i));
         end
-        
+
         % Obtain the pairwise distances with pdist
         pair_dist = pdist(coords);
         
@@ -169,12 +169,12 @@ for movie = 1:length(filename)
     plot((0:final_t),max_gr, 'Color', [0.4,0.4,0.4])
     xlabel('Frames')
     ylabel('g(r_{max})')
-    
+
     % For each vertical divisor to be plotted
     for i = 1:num_slices
         % Get the appropriate colour index
         col_index = round(((col_size(1)-1)*mean(chunks(i,:)))/final_t);
-        
+
         % Draw the vertical lines
         line([chunks(i,1),chunks(i,1)],ylim, 'Color', pallete(col_index+1,:))
         line([chunks(i,2),chunks(i,2)],ylim, 'Color', pallete(col_index+1,:))
@@ -215,10 +215,10 @@ for movie = 1:length(filename)
     c = colorbar();
     c.Label.String = 'Frames from video';
     colormap cool
+
     %legend(line_names)
     suptitle(strrep(filename{movie},'_','\_'))
     hold off
-    
     
     % Consider how g(rmax) varies over time
     % This would be useful for comparing different movies to eachother
@@ -238,7 +238,7 @@ for movie = 1:length(filename)
     % Store these values in the initialised cell arrays for plotting
     max_gr_store{end+1} = max_gr(:);
     r_pos_store{end+1} = r_pos(:);
-    
+
 end
 
 % Perform the appropriate plotting, having considered all input movies

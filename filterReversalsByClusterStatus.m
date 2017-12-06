@@ -1,24 +1,25 @@
-function [ clusterStatusReversalLogInd, interRevTimesFiltered, revDurationFiltered, incompleteInterRevFiltered ] = ...
+function [ revStartClusterStatusLogInd, interRevTimesFiltered, revDurationFiltered, incompleteInterRevFiltered ] = ...
     filterReversalsByClusterStatus(revStartInd, clusterStatusLogInd,...
     interRevTime, revDuration, incompleteInterRev)
 % filters reversals by a given cluster status and adjusts interreversal
 % times for when a cluster status changes between reversals
-clusterStatusReversalLogInd = ismember(revStartInd,find(clusterStatusLogInd));
-interRevTimesFiltered = interRevTime(clusterStatusReversalLogInd);
-revDurationFiltered = revDuration(clusterStatusReversalLogInd);
-% censor those inter-reversal times that arise from non-contiguous reversal
-% sequences, eg when cluster status changes btw reversals
-clusterStatusReversalInd = find(clusterStatusReversalLogInd);
-clusterStatusInd = find(clusterStatusLogInd);
-nonContRevs = find(diff(clusterStatusReversalInd)~=1);
-for nCRctr = nonContRevs'
-    % assign last time of same cluster status after each
-    % non-contiguous reversal, and mark rev-intertime as censored
-    interRevTimesFiltered(nCRctr) = ...
-        clusterStatusInd(find(clusterStatusInd<revStartInd(clusterStatusReversalInd(nCRctr)+1),1,'last'))... % find last time of this cluster status that is smaller than the start of the next reversal
-        -revStartInd(clusterStatusReversalInd(nCRctr)); % subtract the start of the current reversal
+revStartClusterStatusLogInd = ismember(revStartInd,find(clusterStatusLogInd)); % for each reversal, check if it's of the required cluster status
+% for each reversal, find if the cluster status changes before the next
+% reversal
+revStartClusterStatusInd = find(revStartClusterStatusLogInd); 
+notClusterStatusInd = find(~clusterStatusLogInd);
+for revCtr = revStartClusterStatusInd'
+    thisRevStart = revStartInd(revCtr);
+    thisInterRevTime = interRevTime(revCtr);
+    nextClusterStatusChange = notClusterStatusInd(find(notClusterStatusInd>thisRevStart,1,'first'));
+    if nextClusterStatusChange<thisRevStart+thisInterRevTime
+        % set end of reversal to when cluster status changes
+        interRevTime(revCtr) = nextClusterStatusChange-thisRevStart;
+        incompleteInterRev(revCtr) = true; % and mark as not fully tracked
+    end
 end
-incompleteInterRevFiltered = incompleteInterRev(clusterStatusReversalLogInd);
-incompleteInterRevFiltered(nonContRevs) = true;
+interRevTimesFiltered = interRevTime(revStartClusterStatusLogInd);
+revDurationFiltered = revDuration(revStartClusterStatusLogInd);
+incompleteInterRevFiltered = incompleteInterRev(revStartClusterStatusLogInd);
 end
 

@@ -68,12 +68,11 @@ for movie = 1:num_movies
         box_pos = [500 500 box_w box_h];
         % Scale box size to investigate effect of changing this on the gf
         box_pos = box_pos.*scale(s);
-        
+
         for n = 1:num_reps
             % Spawn a new box in the observed space
             box_pos(1) = round(rand(1)*(peak2peak(x_data)-box_pos(3)))+min(x_data);
-            box_pos(2) = round(rand(1)*(peak2peak(y_data)-box_pos(4)))+min(y_data);
-            
+            box_pos(2) = round(rand(1)*(peak2peak(y_data)-box_pos(4)))+min(y_data);            
             
             % Obtain these random frame indices within the defined limits
             rand_frames = randi(peak2peak(cut_out), to_sample, 1);
@@ -113,7 +112,7 @@ for movie = 1:num_movies
                         counter = counter+1;
                     end
                 end
-                
+
                 % Adjust the count for the number of worms in the box suitably
                 worm_counts(1,i) = counter;
             end
@@ -125,7 +124,7 @@ for movie = 1:num_movies
             data_store(2,n,s)  = var(worm_counts);
             all_pairs_y(end+1) = var(worm_counts);
         end
-        
+
     end
     
 end
@@ -160,7 +159,7 @@ for movie = 0:num_movies-1
     
     x = x(isfinite(x));
     y = y(isfinite(y));
-    
+
     b1 = x'\y';
     y_calc = b1.*x;
     
@@ -169,7 +168,7 @@ for movie = 0:num_movies-1
     scatter(x,y)
     plot(x,y_calc)
     refline(1,0)
-    
+
     xlabel('N')
     ylabel('var')
     legend({'data', ['a = ' num2str(b1)], 'a = 1',})

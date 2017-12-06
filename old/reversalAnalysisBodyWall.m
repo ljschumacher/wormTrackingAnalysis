@@ -96,30 +96,9 @@ for strainCtr = 1:length(strains)
                 smallCluster = false(size(trajData_r.frame_number));
             end
             %% calculate overall midbody speeds, until we can link trajectories and features from the tracker
-            % centroids of midbody skeleton
-            midbody_x = mean(squeeze(skelData_r(1,midbodyIndcs,:)))*pixelsize;
-            midbody_y = mean(squeeze(skelData_r(2,midbodyIndcs,:)))*pixelsize;
-            % change in centroid position over time (issue of worm shifts?)
-            dmidbody_xdt = gradient(midbody_x)*frameRate;
-            dmidbody_ydt = gradient(midbody_y)*frameRate;
-            % midbody speed and velocity
-            dFramedt = gradient(double(trajData_r.frame_number))';
-            midbodySpeed = sqrt(dmidbody_xdt.^2 + dmidbody_ydt.^2)./dFramedt;
-            midbodyVelocity = [dmidbody_xdt; dmidbody_ydt]./dFramedt;
-            % direction of segments pointing along midbody
-            [~, dmidbody_yds] = gradient(squeeze(skelData_r(2,midbodyIndcs,:)),-1);
-            [~, dmidbody_xds] = gradient(squeeze(skelData_r(1,midbodyIndcs,:)),-1);
-            % sign speed based on relative orientation of velocity to midbody
-            midbodySpeedSigned = getSignedSpeed(midbodyVelocity,[mean(dmidbody_xds); mean(dmidbody_yds)]);
-            % ignore first and last frames of each worm's track
-            wormChangeIndcs = gradient(double(trajData_r.worm_index_joined))~=0;
-            midbodySpeedSigned(wormChangeIndcs)=NaN;
-            % ignore frames with bad skeletonization
-            midbodySpeedSigned(trajData_r.is_good_skel~=1)=NaN;
-            % ignore skeletons otherwise filtered out
-            midbodySpeedSigned(~trajData_r.filtered) = NaN;
-            % smooth speed to denoise
-            midbodySpeedSigned = smooth(midbodySpeedSigned,3,'moving');
+            [ ~, ~, ~, midbodySpeedSigned ] = ...
+                calculateSpeedsFromSkeleton(trajData_r,skelData_r,midbodyIndcs,...
+                pixelsize,frameRate,true,3);
             % find reversals in midbody speed
             [revStartInd, revDuration] = findReversals(...
                 midbodySpeedSigned,trajData_r.worm_index_joined);
@@ -203,7 +182,7 @@ for strainCtr = 1:length(strains)
         set(0,'CurrentFigure',revFreqFig)
         notBoxPlot([reversalfreq_lone,reversalfreq_smallCluster,reversalfreq_inCluster],...
             numCtr+[-0.3 0 0.3],'markMedian',true,'jitter',0.2)%,'style','line')
-
+        
         revFreqFig.Children.XLim = [0 length(wormnums)+1];
         
         % reversal duration

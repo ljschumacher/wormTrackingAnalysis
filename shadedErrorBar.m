@@ -52,7 +52,6 @@ function varargout=shadedErrorBar(x,y,errBar,lineProps,transparent)
 % Error checking    
 narginchk(3,5)
 
-
 %Process y using function handles if needed to make the error bar
 %dynamically
 if iscell(errBar) 
@@ -92,9 +91,6 @@ if isempty(lineProps), lineProps=defaultProps; end
 if ~iscell(lineProps), lineProps={lineProps}; end
 
 if nargin<5, transparent=0; end
-
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
@@ -152,7 +148,6 @@ H.edge(2)=plot(x,uE,'-','color',edgeColor);
 
 %Now replace the line (this avoids having to bugger about with z coordinates)
 uistack(H.mainLine,'top')
-
 
 if ~holdStatus, hold off, end
 
