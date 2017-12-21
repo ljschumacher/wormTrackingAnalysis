@@ -44,8 +44,7 @@ for sim = 1:length(sim_file_names)
     % Read in the appropriate data
     data = xyarray;
     
-    % Then compute all chosen summary statistics, as with the simulated
-    % data above.
+    % Then compute all chosen summary statistics
     ss_results = f_compute_ss(in_data, 'simulation')
     
     for each_ss = 1:length(ss_results)

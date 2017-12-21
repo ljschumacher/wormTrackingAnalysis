@@ -4,8 +4,10 @@ global num_statistics
 num_statistics = 4
 num_statistics = num_statistics+1
 
+addpath('component_functions')
+
 % Analyse simulation data
-sim_ss_array = f_analyse_sims('list_extended_simulations.txt', 0)
+sim_ss_array = f_analyse_sims('datalists/woidM18_999samples.txt', 0)
 
 % Analyse experimental data
 [exp_ss_array, exp_strain_list] = f_analyse_exps(...
