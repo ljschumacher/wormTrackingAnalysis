@@ -9,7 +9,7 @@ addpath('component_functions')
 % Analyse simulation data
 sim_ss_array = f_analyse_sims('datalists/woidM18_999samples.txt', 0)
 
-% Analyse experimental data
+% Analyse experimental data %% needs updating from here on
 [exp_ss_array, exp_strain_list] = f_analyse_exps(...
     {'N2_40_g_list.txt'},1)
 
