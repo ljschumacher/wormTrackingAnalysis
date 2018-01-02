@@ -12,7 +12,7 @@ bins = 0:bin_width:L/2;
 
 %Also specify the proportion of frames to be sampled e.g to sample 20% of
 %the frames, use the following: 'to_sample = 0.2'.
-to_sample = 0.25;
+fraction_to_sample = 0.25;
 burn_in = 0.25;
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')
@@ -29,7 +29,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
     final_t = dims(4);
     
     % Sample fraction of the frames in the video
-    num_samples = round(final_t * (1 - burn_in) * to_sample);
+    num_samples = round(final_t * (1 - burn_in) * fraction_to_sample);
     sampled_t = randi([round(burn_in*final_t) final_t],1,num_samples);
     
     for sampleCtr = 1:num_samples
@@ -65,34 +65,35 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
     % Compute the average g(r) over the sampled timepoints
     gr_mean = zeros(1,length(gr_normalised));
     
-    for i = 1:length(gr_normalised)
-        gr_mean(i) = mean(gr_store(:,i));
+    for binCtr = 1:length(gr_normalised)
+        gr_mean(binCtr) = mean(gr_store(:,binCtr));
     end
     
-elseif format == 'experiment' %%% THIS NEEDS UPDATING
+elseif format == 'experiment'
     % Analagous code for obtaining the same gr output from the
     % experimental .hdf5 data structure
     frames = data{3};
     
-    % Randomly sample 20% of the frames in the video
-    num_samples = floor(length(unique(frames)) * 0.2);
-    to_sample = randi([min(frames),max(frames)], 1, num_samples);
+    % Randomly sample fraction of the frames in the video
+    num_samples = floor(length(unique(frames)) * fraction_to_sample);
+    frames_sampled = randi([min(frames),max(frames)], 1, num_samples);
     
-    for i = 1:num_samples;
-        f = to_sample(i);
+    for sampleCtr = 1:num_samples
+        thisFrame = frames_sampled(sampleCtr);
         
-        returned = find(frames==f);
+        thisFrame_logInd = find(frames==thisFrame);
         
-        while length(returned) < 2;
-            f = randi([min(frames),max(frames)],1);
-            returned = find(frames==f);
+        while length(thisFrame_logInd) < 2 % resample if less than two worms in frame
+            thisFrame = randi([min(frames),max(frames)],1);
+            frames_sampled(sampleCtr) = thisFrame;
+            thisFrame_logInd = find(frames==thisFrame);
         end
         
-        num_worms = length(returned);
+        num_worms = length(thisFrame_logInd);
         coords = zeros(num_worms,2);
         
-        coords(:,1) = data{1}(returned);
-        coords(:,2) = data{2}(returned);
+        coords(:,1) = data{1}(thisFrame_logInd);
+        coords(:,2) = data{2}(thisFrame_logInd);
         
         % Make pixel xy coordinates informative by converting to mm
         pix2mm = 0.1/19.5;
@@ -106,21 +107,20 @@ elseif format == 'experiment' %%% THIS NEEDS UPDATING
         
         % Radial distribution function
         % Normalization step
-        R = max(bins);
-        gr_normalised = gr_raw.*R^2./(2*bins(2:end)*bin_width*((num_worms^2)-num_worms));
+        gr_normalised = gr_raw.*(pi*(8.5/2).^2)./(2*pi*bins(2:end)*bin_width*num_worms*(num_worms-1)/2);
         
         % Store the gr information for each of the sampled timepoints
-        if i == 1
+        if sampleCtr == 1
             gr_store = zeros(num_samples,length(gr_normalised));
         end
-        gr_store(i,:) = gr_normalised;
+        gr_store(sampleCtr,:) = gr_normalised;
     end
     
     % Compute the average g(r) over the sampled timepoints
     gr_mean = zeros(1,length(gr_normalised));
     
-    for p = 1:length(gr_normalised)
-        gr_mean(p) = mean(gr_store(:,p));
+    for binCtr = 1:length(gr_normalised)
+        gr_mean(binCtr) = mean(gr_store(:,binCtr));
     end
 end
 end

@@ -15,21 +15,7 @@ function [] = analyzeCorrelationData(dataset,phase,wormnum,markerType,plotDiagno
 
 addpath('auxiliary/')
 
-%% set other parameters
-exportOptions = struct('Format','eps2',...
-    'Color','rgb',...
-    'Width',10,...
-    'Resolution',300,...
-    'FontMode','fixed',...
-    'FontSize',12,...
-    'LineWidth',1);
-% define functions for grpstats
-mad1 = @(x) mad(x,1); % median absolute deviation
-% alternatively could use boxplot-style confidence intervals on the mean,
-% which are 1.57*iqr/sqrt(n) - unclear how justified this is
-iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
-% or one could use a bootstrapped confidence interval
-bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
+%% set fixed parameters
 
 if nargin<5
     plotDiagnostics = false; % true or false
@@ -47,7 +33,8 @@ end
 useJoinedTraj = true;
 
 nStrains = length(strains);
-plotColors = lines(nStrains);
+
+% filtering parameters
 if dataset == 1
     intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
 elseif dataset ==2
@@ -64,14 +51,32 @@ elseif strcmp(markerType,'bodywall')
 else
     error('unknown marker type specified, should be pharynx or bodywall')
 end
+% analysis parameters
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-if plotDiagnostics, visitfreqFig = figure; hold on, end
 distBinWidth = 50; % in units of micrometers
-maxDist = 2000;
 maxSpeed = 1500;
+maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
+% define functions for grpstats
+% mad1 = @(x) mad(x,1); % median absolute deviation
+% % alternatively could use boxplot-style confidence intervals on the mean,
+% % which are 1.57*iqr/sqrt(n) - unclear how justified this is
+% iqrci = @(x) 1.57*iqr(x)/sqrt(numel(x));
+% % or one could use a bootstrapped confidence interval
+bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParallel',false));
+% plotting parameters
+plotColors = lines(nStrains);
+if plotDiagnostics, visitfreqFig = figure; hold on, end
 dircorrxticks = 0:500:maxDist;
-load ~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt
+load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
+% export fig parameters
+exportOptions = struct('Format','eps2',...
+    'Color','rgb',...
+    'Width',10,...
+    'Resolution',300,...
+    'FontMode','fixed',...
+    'FontSize',12,...
+    'LineWidth',1);
 %% initialize figures
 speedFig = figure; hold on
 dircorrFig = figure; hold on
@@ -125,7 +130,7 @@ for strainCtr = 1:nStrains
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
         numFrames = round((lastFrame-firstFrame)/frameRate);
         framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
-        %% filter worms
+        %% filter data for worms
         if plotDiagnostics
             visualizeIntensitySizeFilter(blobFeats,pixelsize,intensityThresholds(wormnum),maxBlobSize,...
                 [wormnum ' ' strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
@@ -143,12 +148,12 @@ for strainCtr = 1:nStrains
                 filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
         end
         % apply phase restriction
-        phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
-        trajData.filtered(~phaseFrameLogInd)=false;
+        phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
+        trajData.filtered(~phaseFilter_logInd)=false;
         %% calculate stats
         % calculate area for normalisation of pair correlation function
         if strcmp(wormnum,'40')
-            OverallArea = pi*(8300/2)^2;
+            OverallArea = pi*(8500/2)^2;
         else
             OverallArea = peak2peak(trajData.coord_x(trajData.filtered)).*...
                 peak2peak(trajData.coord_y(trajData.filtered)).*pixelsize.^2;
