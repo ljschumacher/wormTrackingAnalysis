@@ -1,6 +1,8 @@
 function [exp_ss_array, strain_list] = f_analyse_exps(strain_list, dataset)
 global num_statistics
 
+addpath('../')
+
 useJoinedTraj = true;
 
 % Construct arrays for storing the summary statistic outputs
@@ -20,9 +22,9 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels;
 for strainCtr = 1:length(strain_list)
     %% load file lists
     if dataset == 1
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strain_list{strainCtr} '_40_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['../datalists/' strain_list{strainCtr} '_40_list.xlsx'],1,'A1:E15','basic');
     elseif dataset == 2
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strain_list{strainCtr} '_40_g_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['../datalists/' strain_list{strainCtr} '_40_g_list.xlsx'],1,'A1:E15','basic');
     end
     if ~useJoinedTraj
         filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
@@ -34,11 +36,7 @@ for strainCtr = 1:length(strain_list)
     exp_replicate_ss_array = cell(num_expmnts, num_statistics);
     %% For each movie file identified in this list...
     for expCtr = 1:num_expmnts
-        
-        % Manipulate the stored string to get the filename
-        fullFileName = filenames{expCtr};
-        find(fullFileName=='/',1, 'last');
-        filename = fullFileName(find(fullFileName=='/',1, 'last')+1:end);
+        filename = filenames{expCtr};
 
         %% OBTAINING AND FILTERING DATA 
         
@@ -72,10 +70,10 @@ for strainCtr = 1:length(strain_list)
         
         % Then compute all chosen summary statistics, as with the simulated
         % data above.
-        ss_results = f_compute_ss(in_data, 'experiment')
+        ss_results = f_compute_ss(in_data, 'experiment');
         
         for each_ss = 1:length(ss_results)
-            exp_replicate_ss_array{expCtr, each_ss+1} = ss_results{each_ss}
+            exp_replicate_ss_array{expCtr, each_ss+1} = ss_results{each_ss};
         end
                 
     end
