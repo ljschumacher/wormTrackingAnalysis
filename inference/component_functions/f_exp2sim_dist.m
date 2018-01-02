@@ -1,12 +1,12 @@
 function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_list)
-global num_statistics
-
 % Compute the appropriate distances between each of the
 % simulations and the experimental references
 
 % Constuct a n-by-m-by-l+1 matrix for containing the distances between each 
 % experiment (n) and each simulation (m) for each of the summary statistics
 % computed (l)
+
+num_statistics = size(exp_ss_array,2);
 
 numSims = size(sim_ss_array,1);
 numStrains = length(exp_strain_list);
@@ -15,25 +15,15 @@ expsim_dists = zeros(numStrains,numSims, num_statistics);
 for strainCtr = 1:numStrains
     for simCtr = 1:numSims
         
-        if strainCtr ==1 && simCtr ==1
-            running_dists = zeros(1,size(exp_ss_array,2)-1,numStrains);
-        end
-        
         exp_data = exp_ss_array(strainCtr,2:end);
         sim_data = sim_ss_array(simCtr,2:end);
-        %%% THIS NEEDS TO CHECKED IN DEBUG MODE
+        dists = NaN(num_statistics - 1,1);
         for statCtr = 1:length(sim_data)
-            if length(exp_data{statCtr})>1
-                exp_data{statCtr} = norm(exp_data{statCtr}-sim_data{statCtr});
-                sim_data{statCtr} = 0;
-            end
+                % Compute the distance between this simulation and the reference
+                dists(statCtr) = norm(exp_data{statCtr}-sim_data{statCtr});
         end
         
-        % Compute the distance between this simulation and the reference
-        dists = cell2mat(exp_data)-cell2mat(sim_data);
-        running_dists(:,:,strainCtr) = running_dists(:,:,strainCtr)+dists;
-        expsim_dists(strainCtr,simCtr,:) = horzcat(norm(dists),dists);
-        %%%
+        expsim_dists(strainCtr,simCtr,2:end) = dists;
     end
 end
 
@@ -53,7 +43,7 @@ for strainCtr = 1:numStrains
     end
 end
 
-        %%% THIS NEEDS TO CHECKED IN DEBUG MODE
+        %%% THIS NEEDS TO CHECKED again for multiple stats / strains
 
 % Consider the distance composition to check whether this normalization of
 % the summary statistic weights has been successful.

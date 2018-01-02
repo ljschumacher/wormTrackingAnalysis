@@ -1,9 +1,11 @@
-function chosen_params = f_infer_params(expsim_dists, params, p_cutoffs)
-global num_statistics
+function chosen_params = f_infer_params(expsim_dists, params, p_cutoffs, paramFile)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
 % separate values with a comma: 'p_cutoffs = [0.04,0.02,0.01].
+
+num_statistics = size(expsim_dists,3);
+load(paramFile)
 
 %Create array for storing the parameters of the top p% of simulations
 chosen_params = zeros(floor(prod(size(expsim_dists))*max(p_cutoffs)/num_statistics),...
@@ -13,45 +15,28 @@ chosen_params = zeros(floor(prod(size(expsim_dists))*max(p_cutoffs)/num_statisti
 % the parameters
 for cutoffCtr = 1:length(p_cutoffs)
     this_cutoff = p_cutoffs(cutoffCtr)
-    top_samples = floor(prod(size(expsim_dists))*this_cutoff/num_statistics);
-            %%% THIS NEEDS TO CHECKED IN DEBUG MODE
+    num_top_samples = floor(prod(size(expsim_dists))*this_cutoff/num_statistics);
 
-    lin = reshape( expsim_dists(:,:,1).' ,1,numel(expsim_dists(:,:,1)));
-    A = sort(lin);
-    %A = sort(expsim_dists(:,:,1));
-    B = (expsim_dists(:,:,1)<=A(top_samples)).*expsim_dists(:,:,1);
-    
-    best_sims = floor(find(B)/length(in_list));
-    list_best = {};
-    
-    for sim = 1:length(best_sims)
-        list_best{end+1} = sim_file_names(best_sims(sim)+1);
-    end
-    
-    % Could use the mat file to find the parameters for plotting, 
-    % no need to reload each of the simulations. Remains fast without.
+    sorted_distances = sort(expsim_dists(:,:,1)); % this syntax will sort distances across strains, which may not be what we want if we call the function with multiple strains
+    acceptedSamples_logInd = expsim_dists(:,:,1)<=sorted_distances(num_top_samples);
     
     for paramCtr = 1:length(params)
-        for i = 1:length(list_best)
-            load(list_best{i}{1});
-            chosen_params(i,paramCtr,cutoffCtr) = eval(strcat('param.', params{paramCtr}));
-        end  
+        thisParamSamples = eval(strcat('paramSamples.', params{paramCtr}));
+        chosen_params(:,paramCtr,cutoffCtr) = thisParamSamples(acceptedSamples_logInd);
     end    
-    %%%
 end
 
 % -------- Producing joint distributions of inferred parameters -------- %
 figure;
 for cutoffCtr = 1:length(p_cutoffs)
     to_plot = chosen_params(:,:,cutoffCtr);
-                %%% THIS NEEDS TO CHECKED IN DEBUG MODE
 
     % Eliminate redundantrows, where all parameter values are zero
     % Useful when there are multiple, increasingly tight cutoffs
-    to_plot = to_plot(any(to_plot~=0,2),:);
+    to_plot = to_plot(any(to_plot~=0,2),:);  %% unclear if necessary
     
     subplot(1,length(p_cutoffs),cutoffCtr)
-    [S,AX,BigAx,H,HAx] = plotmatrix(to_plot); %% add KDE?
+    [~,AX,~,~,~] = plotmatrix(to_plot); %% add KDE, or use hplotmatrix?
     
     title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'])
     
@@ -59,6 +44,5 @@ for cutoffCtr = 1:length(p_cutoffs)
         ylabel(AX(i,1),params(i))
         xlabel(AX(length(params),i),params(i))
     end
-    %%%
 end
 end

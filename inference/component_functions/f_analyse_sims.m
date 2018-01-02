@@ -29,25 +29,25 @@ end
 filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
-for sim = 1:length(sim_file_names)
-    progress = sim/length(sim_file_names)
-    load([filepath sim_file_names{sim}]);
+for simCtr = 1:length(sim_file_names)
+    progress = simCtr/length(sim_file_names)
+    load([filepath sim_file_names{simCtr}]);
     
     % Extract desired parameters if extract_params is a cell array
     if iscell(extract_params)
         for par = 1:length(param_return)
-            param_return(sim,par) = ...
+            param_return(simCtr,par) = ...
                 eval(strcat('param.', extract_params{par}));
         end
     end
     
-    sim_sstat_array{sim,1} = sim_file_names{sim};
+    sim_sstat_array{simCtr,1} = sim_file_names{simCtr};
     
     % compute all chosen summary statistics
     sstat_results = f_compute_ss(xyarray, 'simulation');
     
     for sstatCtr = 1:length(sstat_results)
-        sim_sstat_array{sim, sstatCtr+1} = sstat_results{sstatCtr};
+        sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};
     end 
     
 end

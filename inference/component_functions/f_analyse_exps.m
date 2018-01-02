@@ -88,7 +88,10 @@ for strainCtr = 1:length(strain_list)
                 + var(exp_replicate_ss_array{expCtr,statCtr});
         end
     end
+    %%% this does not seem to be used?
     strain_vars(strainCtr,:) = strain_vars(strainCtr,:)/num_expmnts;
+    %%%
+    exp_ss_array{strainCtr, 1} = strain_list{strainCtr};
     exp_ss_array(strainCtr, 2:end) = replicate_summary;
 end
 end
