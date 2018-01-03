@@ -45,7 +45,7 @@ for simCtr = 1:length(sim_file_names)
     sim_sstat_array{simCtr,1} = sim_file_names{simCtr};
     
     % compute all chosen summary statistics
-    fraction_to_sample = min(param.dT*param.saveEvery,1); % specifiy fraction of frames to sample
+    fraction_to_sample = min(param.dT*param.saveEvery/3,1); % specifiy fraction of frames to sample
     sstat_results = f_compute_ss(xyarray, 'simulation', fraction_to_sample);
     
     for sstatCtr = 1:length(sstat_results)
