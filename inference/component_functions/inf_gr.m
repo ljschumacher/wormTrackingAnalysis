@@ -1,6 +1,6 @@
 % Function to calculate the pair correlation function over many sampled
 % frames, and return a discretised array of the resulting g(r) distribution
-function gr_mean = inf_gr(data, format)
+function gr_mean = inf_gr(data, format, fraction_to_sample)
 
 % Create bins of a given width, to store the data in. The bin width
 % controls the width of the rings drawn from each reference particle during
@@ -10,13 +10,13 @@ bin_width = 0.1;
 L = 7.5;
 bins = 0:bin_width:L/2;
 
-%Also specify the proportion of frames to be sampled e.g to sample 20% of
-%the frames, use the following: 'to_sample = 0.2'.
-fraction_to_sample = 0.25;
-burn_in = 0.25;
+if nargin<3
+    fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
+end
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')
-    
+    burn_in = 0.25; % specifies how much to ignore at the start of the simulation
+
     % Get the dimensions of the dataframe
     dims = size(data);
     if strcmp(format,'simulation')
@@ -49,7 +49,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
         pair_dist = pdist(coords, @periodiceucdist);
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr_raw = histcounts(pair_dist,bins,'Normalization','probability');
+        gr_raw = histcounts(pair_dist,bins,'Normalization','count');
         
         % Radial distribution function
         % Normalization step
@@ -97,13 +97,12 @@ elseif format == 'experiment'
         
         % Make pixel xy coordinates informative by converting to mm
         pix2mm = 0.1/19.5;
-        coords = coords.*pix2mm;
         
         % Obtain the pairwise distances with pdist
-        pair_dist = pdist(coords);
+        pair_dist = pdist(coords).*pix2mm;
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr_raw = histcounts(pair_dist,bins,'Normalization','probability');
+        gr_raw = histcounts(pair_dist,bins,'Normalization','count');
         
         % Radial distribution function
         % Normalization step

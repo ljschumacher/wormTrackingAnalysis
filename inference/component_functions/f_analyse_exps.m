@@ -70,7 +70,9 @@ for strainCtr = 1:length(strain_list)
         
         % Then compute all chosen summary statistics, as with the simulated
         % data above.
-        ss_results = f_compute_ss(in_data, 'experiment');
+        frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+        fraction_to_sample = 1/max(frameRate,1); % specifiy fraction of frames to sample
+        ss_results = f_compute_ss(in_data, 'experiment', fraction_to_sample);
         
         for each_ss = 1:length(ss_results)
             exp_replicate_ss_array{expCtr, each_ss+1} = ss_results{each_ss};

@@ -26,7 +26,8 @@ if iscell(extract_params)
     param_return = zeros(length(sim_file_names), length(extract_params));
 end
 
-filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
+% filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
+filepath = '';
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
 for simCtr = 1:length(sim_file_names)
@@ -44,7 +45,8 @@ for simCtr = 1:length(sim_file_names)
     sim_sstat_array{simCtr,1} = sim_file_names{simCtr};
     
     % compute all chosen summary statistics
-    sstat_results = f_compute_ss(xyarray, 'simulation');
+    fraction_to_sample = min(param.dT*param.saveEvery,1); % specifiy fraction of frames to sample
+    sstat_results = f_compute_ss(xyarray, 'simulation', fraction_to_sample);
     
     for sstatCtr = 1:length(sstat_results)
         sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};
