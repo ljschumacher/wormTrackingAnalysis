@@ -128,7 +128,7 @@ for strainCtr = 1:nStrains
         %% randomly sample which frames to analyze
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
-        numFrames = round((lastFrame-firstFrame)/frameRate);
+        numFrames = round((lastFrame-firstFrame)/frameRate/3);
         framesAnalyzed = randperm((lastFrame-firstFrame),numFrames) + firstFrame; % randomly sample frames without replacement
         %% filter data for worms
         if plotDiagnostics
