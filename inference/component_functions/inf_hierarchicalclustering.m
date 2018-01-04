@@ -5,6 +5,7 @@ function [branch_hist] ...
 bin_width = 0.1;
 L = 7.5;
 branch_bins = 0:bin_width:L/2;
+linkageMethod = 'single';
 
 % Specify fraction of frames to sample
 if nargin<3
@@ -48,10 +49,10 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
         % Calculate pairwise distances with custom distance function
         % 'periodiceucdists' to take into account the horizontal and
         % vertical periodicity of the simulations.
-        pair_dist = pdist(coords, @periodiceucdists);
+        pair_dist = pdist(coords, @periodiceucdist);
         
         % generate hierarchical clustering tree
-        clustTree = linkage(pair_dist, 'complete');
+        clustTree = linkage(pair_dist, linkageMethod);
         
         % store linkage distances between clusters (should these be
         % cumulative?)
@@ -83,8 +84,8 @@ elseif format == 'experiment'
         
         while length(thisFrame_logInd) < 2 % resample if less than two worms in frame
             thisFrame = randi([min(frames),max(frames)],1);
-            frames_sampled(sampleCtr) = thisFrame;
-            thisFrame_logInd = find(frames==f);
+            frames_sampled(frameCtr) = thisFrame;
+            thisFrame_logInd = find(frames==thisFrame);
         end
         
         num_worms = length(thisFrame_logInd);
@@ -97,7 +98,7 @@ elseif format == 'experiment'
         pair_dist = pdist(coords).*pix2mm;
         
         % generate hierarchical clustering tree
-        clustTree = linkage(pair_dist, 'complete');
+        clustTree = linkage(pair_dist, linkageMethod);
         
         clustDists{frameCtr} = clustTree(:,3);
         

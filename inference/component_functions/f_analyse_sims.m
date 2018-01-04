@@ -16,21 +16,22 @@ end
 % Close the list file, having read in all of the file names
 fclose(my_list_file)
 
+numSims = length(sim_file_names);
+
 % Construct array for storing the outputs of the summary statistics for
 % each simulation. Firstly, have to account for the extra column for the
 % strain/exp name
-sim_sstat_array = cell(length(sim_file_names), 1+num_statistics);
+sim_sstat_array = cell(numSims, 1+num_statistics);
 
 if iscell(extract_params)
-    param_return = zeros(length(sim_file_names), length(extract_params));
+    param_return = zeros(numSims, length(extract_params));
 end
 
 filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
 % filepath = '';
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
-for simCtr = 1:length(sim_file_names)
-    progress = simCtr/length(sim_file_names)
+for simCtr = 1:numSims
     load([filepath sim_file_names{simCtr}]);
     
     % Extract desired parameters if extract_params is a cell array
@@ -50,7 +51,8 @@ for simCtr = 1:length(sim_file_names)
     for sstatCtr = 1:length(sstat_results)
         sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};
     end 
-    
+    % display progress
+    disp(['analysed ' num2str(100*simCtr/numSims) '% of simulations'])
 end
 end
 

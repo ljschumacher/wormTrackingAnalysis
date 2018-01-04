@@ -72,12 +72,13 @@ for strainCtr = 1:length(strain_list)
         % data above.
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
         fraction_to_sample = 1/max(frameRate,1)/3; % specifiy fraction of frames to sample
-        ss_results = f_compute_ss(in_data, 'experiment', fraction_to_sample);
+        ss_results = f_compute_ss(in_data, 'experiment', fraction_to_sample, num_statistics);
         
         for each_ss = 1:length(ss_results)
             exp_replicate_ss_array{expCtr, each_ss+1} = ss_results{each_ss};
         end
-                
+        % display progress
+        disp(['analysed ' num2str(100*expCtr/num_expmnts) '% of experiments for strain ' strain_list{strainCtr}])
     end
     
     % Combine SS from different experimental replicates, to give single
