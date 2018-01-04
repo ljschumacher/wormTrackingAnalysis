@@ -1,6 +1,5 @@
 function [sim_sstat_array, sim_file_names, param_return] = ...
-    analyse_sims(sim_file_list, extract_params)
-global num_statistics
+    f_analyse_sims(sim_file_list, extract_params,num_statistics)
 
 sim_file_names = {};
 my_list_file = fopen(sim_file_list);
@@ -20,14 +19,14 @@ fclose(my_list_file)
 % Construct array for storing the outputs of the summary statistics for
 % each simulation. Firstly, have to account for the extra column for the
 % strain/exp name
-sim_sstat_array = cell(length(sim_file_names), num_statistics);
+sim_sstat_array = cell(length(sim_file_names), 1+num_statistics);
 
 if iscell(extract_params)
     param_return = zeros(length(sim_file_names), length(extract_params));
 end
 
-% filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
-filepath = '';
+filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
+% filepath = '';
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
 for simCtr = 1:length(sim_file_names)
@@ -46,7 +45,7 @@ for simCtr = 1:length(sim_file_names)
     
     % compute all chosen summary statistics
     fraction_to_sample = min(param.dT*param.saveEvery/3,1); % specifiy fraction of frames to sample
-    sstat_results = f_compute_ss(xyarray, 'simulation', fraction_to_sample);
+    sstat_results = f_compute_ss(xyarray, 'simulation', fraction_to_sample, num_statistics);
     
     for sstatCtr = 1:length(sstat_results)
         sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};

@@ -6,7 +6,7 @@ function gr_mean = inf_gr(data, format, fraction_to_sample)
 % controls the width of the rings drawn from each reference particle during
 % the computation of g(r). It also controls the bins into which the g(r)
 % distribution is discretised.
-bin_width = 0.1;
+bin_width = 0.05;
 L = 7.5;
 bins = 0:bin_width:L/2;
 
@@ -16,7 +16,7 @@ end
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')
     burn_in = 0.25; % specifies how much to ignore at the start of the simulation
-
+    
     % Get the dimensions of the dataframe
     dims = size(data);
     if strcmp(format,'simulation')
@@ -24,24 +24,25 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
     elseif strcmp(format,'complexsim')
         trackedNodes = 1:8;
     end
+    
     % Get information from the dimensions of the input data
     num_worms = dims(1);
-    final_t = dims(4);
+    final_frame = dims(4);
     
     % Sample fraction of the frames in the video
-    num_samples = round(final_t * (1 - burn_in) * fraction_to_sample);
-    sampled_t = randi([round(burn_in*final_t) final_t],1,num_samples);
+    num_samples = round(final_frame * (1 - burn_in) * fraction_to_sample);
+    sampled_frames = randi([round(burn_in*final_frame) final_frame],1,num_samples);
     
     for sampleCtr = 1:num_samples
         
-        % Access the data for the tracked worm node(s), initially for the first frame
-        this_frame_data = data(:,round(mean(trackedNodes)),:,sampled_t(sampleCtr));
+        % Access the data for the tracked worm node(s)
+        thisFrameData = data(:,round(mean(trackedNodes)),:,sampled_frames(sampleCtr));
         
         % Initialise empty matrices to store location coordinates
         coords = zeros(num_worms,2);
         
-        coords(:,1) = this_frame_data(:,:,1);
-        coords(:,2) = this_frame_data(:,:,2);
+        coords(:,1) = thisFrameData(:,:,1);
+        coords(:,2) = thisFrameData(:,:,2);
         
         % Calculate pairwise distances with custom distance function
         % 'periodiceucdists' to take into account the horizontal and
@@ -72,9 +73,12 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
 elseif format == 'experiment'
     % Analagous code for obtaining the same gr output from the
     % experimental .hdf5 data structure
-    frames = data{3};
+    
+    % Make pixel xy coordinates informative by converting to mm
+    pix2mm = 0.1/19.5;
     
     % Randomly sample fraction of the frames in the video
+    frames = data{3};
     num_samples = floor(length(unique(frames)) * fraction_to_sample);
     frames_sampled = randi([min(frames),max(frames)], 1, num_samples);
     
@@ -95,10 +99,7 @@ elseif format == 'experiment'
         coords(:,1) = data{1}(thisFrame_logInd);
         coords(:,2) = data{2}(thisFrame_logInd);
         
-        % Make pixel xy coordinates informative by converting to mm
-        pix2mm = 0.1/19.5;
-        
-        % Obtain the pairwise distances with pdist
+        % Obtain the pairwise distances
         pair_dist = pdist(coords).*pix2mm;
         
         % Get the histogram counts of the pair_dist data using the bins

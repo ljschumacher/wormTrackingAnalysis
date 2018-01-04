@@ -2,10 +2,7 @@
 mapping_params = {'revRateClusterEdge', 'vs'}
 
 % State how many summary statistics will be computed (then increment by 1)
-global num_statistics
 num_statistics = 4
-num_statistics = num_statistics+1
-
 
 % Analyse a small set of simple simulations first
 [simple_sim_ss_array, simple_sim_file_names] = f_analyse_sims(...

@@ -1,13 +1,13 @@
-function [exp_ss_array, strain_list] = f_analyse_exps(strain_list, dataset)
-global num_statistics
+function [exp_ss_array, strain_list] = f_analyse_exps(strain_list, dataset,...
+    num_statistics)
 
 addpath('../')
 
 useJoinedTraj = true;
 
 % Construct arrays for storing the summary statistic outputs
-exp_ss_array = cell(length(strain_list), num_statistics);
-strain_vars = zeros(length(strain_list), num_statistics-1);
+exp_ss_array = cell(length(strain_list), 1 + num_statistics);
+strain_vars = zeros(length(strain_list), num_statistics);
 
 % set the filtering parameters
 if dataset == 1
@@ -33,7 +33,7 @@ for strainCtr = 1:length(strain_list)
     
     num_expmnts = length(filenames);
     
-    exp_replicate_ss_array = cell(num_expmnts, num_statistics);
+    exp_replicate_ss_array = cell(num_expmnts, 1 + num_statistics);
     %% For each movie file identified in this list...
     for expCtr = 1:num_expmnts
         filename = filenames{expCtr};
@@ -82,12 +82,12 @@ for strainCtr = 1:length(strain_list)
     
     % Combine SS from different experimental replicates, to give single
     % reference for each strain
-    replicate_summary = cell(1,num_statistics-1);
-    for statCtr = 2:num_statistics
-        replicate_summary{statCtr-1} = mean(cell2mat(exp_replicate_ss_array(:,statCtr)));
+    replicate_summary = cell(1,num_statistics);
+    for statCtr = 1:num_statistics
+        replicate_summary{statCtr} = mean(cell2mat(exp_replicate_ss_array(:,1+statCtr)));
         for expCtr = 1:num_expmnts
-            strain_vars(strainCtr,statCtr-1) = strain_vars(strainCtr,statCtr-1) ... 
-                + var(exp_replicate_ss_array{expCtr,statCtr});
+            strain_vars(strainCtr,statCtr) = strain_vars(strainCtr,statCtr) ... 
+                + var(exp_replicate_ss_array{expCtr,1+statCtr});
         end
     end
     %%% this does not seem to be used?
