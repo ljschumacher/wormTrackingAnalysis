@@ -1,11 +1,18 @@
 % Setting parameters
 % State how many summary statistics are to be computed
+
+% issues/to-do:
+% - calculation of summary statistics could be sped up by calculating all
+% stats within the loop over frames, rather than looping over frames for
+% each stat
 num_statistics = 2
 
 addpath('component_functions')
 
 %% Analyse simulation data
-sim_ss_array = f_analyse_sims('datalists/woidM18_7900_samples.txt', 0, num_statistics);
+[sim_ss_array, sim_file_names, param_return] = ...
+    f_analyse_sims('datalists/woidM18_10k_samples.txt',...
+    {'revRateClusterEdge','dkdN_dwell'}, num_statistics);
 
 %% Analyse experimental data
 [exp_ss_array, exp_strain_list] = f_analyse_exps(...
@@ -17,7 +24,7 @@ expsim_dists = f_exp2sim_dist(...
 
 %% Perform parameter inference
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, {'revRateClusterEdge','dkdN'}, [0.02, 0.01],...
+    expsim_dists, {'revRateClusterEdge','dkdN'}, [0.02],...
     '../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat');
 
 %% Plot summary statistics of experiments and best samples

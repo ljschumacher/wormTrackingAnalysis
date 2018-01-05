@@ -34,6 +34,7 @@ end
 
 % -------- Producing joint distributions of inferred parameters -------- %
 figure;
+load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
 for cutoffCtr = 1:length(p_cutoffs)
     to_plot = chosen_params(:,:,cutoffCtr);
 
@@ -42,8 +43,8 @@ for cutoffCtr = 1:length(p_cutoffs)
     to_plot = to_plot(any(to_plot~=0,2),:);  %% unclear if necessary
     
     subplot(1,length(p_cutoffs),cutoffCtr)
-    [~,AX,~,~,~] = plotmatrix(to_plot); %% add KDE, or use hplotmatrix?
-    
+    [~,AX,~,~,~] = hplotmatrix(to_plot); %% add KDE, or use hplotmatrix?
+    colormap(flipud(cmap_Blues))
     title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'])
     
     for i = 1:length(params)

@@ -36,9 +36,9 @@ for simCtr = 1:numSims
     
     % Extract desired parameters if extract_params is a cell array
     if iscell(extract_params)
-        for par = 1:length(param_return)
-            param_return(simCtr,par) = ...
-                eval(strcat('param.', extract_params{par}));
+        for parCtr = 1:length(extract_params)
+            param_return(simCtr,parCtr) = ...
+                eval(strcat('param.', extract_params{parCtr}));
         end
     end
     
@@ -52,7 +52,7 @@ for simCtr = 1:numSims
         sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};
     end 
     % display progress
-    disp(['analysed ' num2str(100*simCtr/numSims) '% of simulations'])
+    disp(['analysed ' num2str(100*simCtr/numSims,3) '% of simulations'])
 end
 end
 

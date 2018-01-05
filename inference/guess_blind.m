@@ -1,4 +1,4 @@
-%% Framework for generating initial distances between simulations and
+%% Framework for testing whether parameters of blind simulations can be recovered
 %  experimental data
 
 close all; clear; clc;
