@@ -1,15 +1,11 @@
 function [] = testHierarchicalClusteringData(dataset,phase,wormnum,linkageMethod)
-% calculate speed vs neighbr distance, directional correlation, and
-% radial distribution functions
 % INPUTS
 % dataset: 1 or 2. To specify which dataset to run the script for.
 % phase: 'joining', 'fullMovie', or 'sweeping'. Script defines stationary phase as: starts at 10% into the movie, and stops at 60% into the movie (HA and N2) or at specified stopping frames (npr-1).
 % wormnum: '40', or 'HD'
-% plotDiagnostics: true (default) or false
+% linkageMethod: 'single' (preferred), 'average','centroid','complete','median','weighted'
 % OUTPUTS
 % none returned, but figures are exported
-% issues/to-do:
-% - seperate into individual functions for each statistic?
 
 %% set other parameters
 exportOptions = struct('Format','eps2',...
@@ -32,7 +28,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
-maxBlobSize = 1e4;
+maxBlobSize = 1e6; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 mmConversion = 1e-3;
 %% go through strains, densities, movies
@@ -70,8 +66,9 @@ for strainCtr = 1:nStrains
         %% filter worms
         trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
-            intensityThresholds(wormnum),maxBlobSize)...
-            &trajData.has_skeleton;
+            intensityThresholds(wormnum),maxBlobSize);%...
+%             &trajData.has_skeleton; % careful: we may not want to filter for skeletonization for
+            %clustering statistics
         % apply phase restriction
         phaseFrameLogInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         trajData.filtered(~phaseFrameLogInd)=false;

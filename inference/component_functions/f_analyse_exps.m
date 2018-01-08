@@ -15,7 +15,7 @@ if dataset == 1
 elseif dataset == 2
     intensityThreshold = 60;
 end
-maxBlobSize = 1e4;
+maxBlobSize = 1e6; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels;
 
 % For each one of these list files provided i.e. for each group of videos..
@@ -54,7 +54,7 @@ for strainCtr = 1:length(strain_list)
         
         % Get filtering indices according to the parameters outlined
         filter_logInd = filterIntensityAndSize(blobData,pixelsize,...
-            intensityThreshold,maxBlobSize)&has_skeleton;
+            intensityThreshold,maxBlobSize);%&has_skeleton;
         % filter for experimental phase
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,'joining',expCtr);
         phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;

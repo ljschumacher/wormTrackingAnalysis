@@ -4,7 +4,7 @@ function [branch_hist] ...
 
 bin_width = 0.1;
 L = 7.5;
-branch_bins = 0:bin_width:L/2;
+branch_bins = 0:bin_width:2.5;
 linkageMethod = 'single';
 
 % Specify fraction of frames to sample

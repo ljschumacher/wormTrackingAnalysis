@@ -6,9 +6,9 @@ function gr_mean = inf_gr(data, format, fraction_to_sample)
 % controls the width of the rings drawn from each reference particle during
 % the computation of g(r). It also controls the bins into which the g(r)
 % distribution is discretised.
-bin_width = 0.05;
+bin_width = 0.1;
 L = 7.5;
-bins = 0:bin_width:L/2;
+bins = 0:bin_width:2.5;
 
 if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
@@ -31,8 +31,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
     
     % Sample fraction of the frames in the video
     num_samples = round(final_frame * (1 - burn_in) * fraction_to_sample);
-    sampled_frames = randi([round(burn_in*final_frame) final_frame],1,num_samples);
-    
+    sampled_frames = randi([round(burn_in*final_frame) final_frame],1,num_samples); % could also sample without replacement, or regularly, but it doesn't seem to make a difference
     for sampleCtr = 1:num_samples
         
         % Access the data for the tracked worm node(s)
@@ -64,11 +63,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
     end
     
     % Compute the average g(r) over the sampled timepoints
-    gr_mean = zeros(1,length(gr_normalised));
-    
-    for binCtr = 1:length(gr_normalised)
-        gr_mean(binCtr) = mean(gr_store(:,binCtr));
-    end
+    gr_mean = mean(gr_store);
     
 elseif format == 'experiment'
     % Analagous code for obtaining the same gr output from the
@@ -108,7 +103,7 @@ elseif format == 'experiment'
         % Radial distribution function
         % Normalization step
         gr_normalised = gr_raw.*(pi*(8.5/2).^2)./(2*pi*bins(2:end)*bin_width*num_worms*(num_worms-1)/2);
-        
+
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1
             gr_store = zeros(num_samples,length(gr_normalised));
@@ -117,10 +112,6 @@ elseif format == 'experiment'
     end
     
     % Compute the average g(r) over the sampled timepoints
-    gr_mean = zeros(1,length(gr_normalised));
-    
-    for binCtr = 1:length(gr_normalised)
-        gr_mean(binCtr) = mean(gr_store(:,binCtr));
-    end
+    gr_mean = mean(gr_store);
 end
 end

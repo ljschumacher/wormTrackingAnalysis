@@ -41,7 +41,7 @@ elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
 if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e4;
+    maxBlobSize = 1e4; % this filter may be too restrictive for pair correlati
     channelStr = 'g';
 elseif strcmp(markerType,'bodywall')
     maxBlobSize = 2.5e5;
@@ -141,7 +141,8 @@ for strainCtr = 1:nStrains
         end
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds(wormnum),maxBlobSize)...
-            &trajData.has_skeleton;
+            &trajData.has_skeleton; % careful: we may not want to filter for skeletonization for
+            %clustering statistics
         if strcmp(markerType,'bodywall')
             % filter red data by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...

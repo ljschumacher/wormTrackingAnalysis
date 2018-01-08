@@ -1,5 +1,5 @@
 function [sim_sstat_array, sim_file_names, param_return] = ...
-    f_analyse_sims(sim_file_list, extract_params,num_statistics)
+    f_analyse_sims(sim_file_list, filepath, extract_params,num_statistics)
 
 sim_file_names = {};
 my_list_file = fopen(sim_file_list);
@@ -27,8 +27,6 @@ if iscell(extract_params)
     param_return = zeros(numSims, length(extract_params));
 end
 
-filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
-% filepath = '';
 % For each simulation file in the list, compute the appropriate summary
 % statistics using supplied functions
 for simCtr = 1:numSims

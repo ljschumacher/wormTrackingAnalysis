@@ -98,6 +98,7 @@ for strainCtr = 1:nStrains
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds_g(wormnum),maxBlobSize_g);
         trajData.has_skeleton = squeeze(~any(any(isnan(skelData)))); % reset skeleton flag for pharynx data
+        
         % check worm-indices are monotonically increasing
         assert(~any(diff(trajData.worm_index_joined)<0),['worm indices are not sorted as expected for ' filename])
         %% get relevant experimental phase
