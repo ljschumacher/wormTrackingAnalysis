@@ -25,19 +25,23 @@ expsim_dists = f_exp2sim_dist(...
 
 %% Perform parameter inference
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, {'revRateClusterEdge','dkdN'}, [0.01],...
-    '../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat', true);
+    expsim_dists, exp_strain_list, {'revRateClusterEdge','dkdN'}, [0.01],...
+    '../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat', true);
 
 %% Plot summary statistics of experiments and best samples
 for statCtr = 1:num_statistics
     figure
-    plot(exp_ss_array{statCtr+1},'LineWidth',2)
+    for strainCtr = 1:length(exp_strain_list)
+    plot(exp_ss_array{strainCtr,statCtr+1},'LineWidth',2)
     hold on
-    for ii=1:10
-        plot(sim_ss_array{chosen_samples(ii),statCtr+1})
     end
+        for strainCtr = 1:length(exp_strain_list)
+    for ii=1:10
+        plot(sim_ss_array{chosen_samples(strainCtr,ii),statCtr+1})
+    end
+        end
     title(['summary statistic ' num2str(statCtr)])
-    legend('expmnt mean','best simulations')
+    legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],'best simulations')
 end
 
 % %% plot surface of dissimilatirity

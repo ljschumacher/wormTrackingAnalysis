@@ -12,7 +12,7 @@ if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
 end
 
-if strcmp(format,'simulation') || strcmp(format,'complexsim')
+if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'simulation-test')
     burn_in = 0.25; % specifies how much to ignore at the start of the simulation
     
     % Get the dimensions of the dataframe
@@ -21,6 +21,8 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
         trackedNodes = 1:3;% only track nodes equivalent to the head
     elseif strcmp(format,'complexsim')
         trackedNodes = 1:8;
+    elseif strcmp(format,'simulation-test')
+        trackedNodes = 1;
     end
     
     % Get information from the dimensions of the input data

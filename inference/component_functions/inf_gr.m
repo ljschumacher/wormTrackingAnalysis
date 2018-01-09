@@ -8,13 +8,13 @@ function gr_mean = inf_gr(data, format, fraction_to_sample)
 % distribution is discretised.
 bin_width = 0.1;
 L = 7.5;
-bins = 0:bin_width:2.5;
+bins = bin_width:bin_width:2.5;
 
 if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
 end
 
-if strcmp(format,'simulation') || strcmp(format,'complexsim')
+if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'simulation-test')
     burn_in = 0.25; % specifies how much to ignore at the start of the simulation
     
     % Get the dimensions of the dataframe
@@ -23,6 +23,8 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')
         trackedNodes = 1:3;% only track nodes equivalent to the head
     elseif strcmp(format,'complexsim')
         trackedNodes = 1:8;
+    elseif strcmp(format,'simulation-test')
+        trackedNodes = 1;
     end
     
     % Get information from the dimensions of the input data
@@ -91,11 +93,11 @@ elseif format == 'experiment'
         num_worms = length(thisFrame_logInd);
         coords = zeros(num_worms,2);
         
-        coords(:,1) = data{1}(thisFrame_logInd);
-        coords(:,2) = data{2}(thisFrame_logInd);
+        coords(:,1) = data{1}(thisFrame_logInd).*pix2mm;
+        coords(:,2) = data{2}(thisFrame_logInd).*pix2mm;
         
         % Obtain the pairwise distances
-        pair_dist = pdist(coords).*pix2mm;
+        pair_dist = pdist(coords);
         
         % Get the histogram counts of the pair_dist data using the bins
         gr_raw = histcounts(pair_dist,bins,'Normalization','count');

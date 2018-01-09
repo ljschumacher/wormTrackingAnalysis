@@ -1,5 +1,5 @@
 function [chosen_params, chosen_samples] = f_infer_params(expsim_dists,...
-    params, p_cutoffs, paramFile, plotResults)
+    exp_strain_list, params, p_cutoffs, paramFile, plotResults)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
@@ -25,7 +25,7 @@ chosen_samples = zeros(num_strains,floor(num_sims*max(p_cutoffs)),...
 for strainCtr = 1:num_strains
     % For each of the % cutoffs specified in p_cutoffs, produce distributions of
     % the parameters
-    disp(['Inferring parameters for strain ' num2str(strainCtr) '/' num2str(num_strains)])
+    disp(['Inferring parameters for strain ' exp_strain_list{strainCtr}])
     for cutoffCtr = 1:length(p_cutoffs)
         this_cutoff = p_cutoffs(cutoffCtr);
         num_top_samples = floor(num_sims*this_cutoff);
@@ -53,7 +53,8 @@ for strainCtr = 1:num_strains
             subplot(1,length(p_cutoffs),cutoffCtr)
             [~,AX,~,~,~] = hplotmatrix(to_plot); %% add KDE, or use hplotmatrix?
             colormap(flipud(cmap_Blues))
-            title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'])
+            title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
+                ' for ' exp_strain_list{strainCtr}])
             
             for i = 1:length(params)
                 ylabel(AX(i,1),params(i))
