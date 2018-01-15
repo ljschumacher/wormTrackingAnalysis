@@ -16,9 +16,8 @@ for statCtr = 1:num_statistics
     % to scale the distances for the scale of the summary
     % statistics, one commonly scales by the standard deviation
     % of each statistic. since we have distributions (ie binned
-    % data), we will divide by the highest standard deviation
-    % across bins)
-    normfactor = max(std(cat(1,sim_ss_array{:,1+statCtr})));
+    % data), we will divide by the deviation for each bin
+    normfactor = std(cat(1,sim_ss_array{:,1+statCtr}));
     for strainCtr = 1:numStrains
         for simCtr = 1:numSims
             exp_data = exp_ss_array{strainCtr,1+statCtr};

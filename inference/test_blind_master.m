@@ -1,7 +1,7 @@
 %% Framework for testing whether parameters of blind simulations can be recovered
 %  experimental data
 
-num_statistics = 2
+num_statistics = 4
 
 addpath('component_functions')
 

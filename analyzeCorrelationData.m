@@ -41,7 +41,7 @@ elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
 if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e4; % this filter may be too restrictive for pair correlati
+    maxBlobSize = 1e4; % this filter may be too restrictive for pair correlations or hierarchical clustering
     channelStr = 'g';
 elseif strcmp(markerType,'bodywall')
     maxBlobSize = 2.5e5;
@@ -53,10 +53,10 @@ else
 end
 % analysis parameters
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-distBinWidth = 50; % in units of micrometers
+distBinWidth = 100; % in units of micrometers
 maxSpeed = 1500;
 maxDist = 2000;
-distBins = 0:distBinWidth:maxDist;
+distBins = distBinWidth:distBinWidth:maxDist;
 % define functions for grpstats
 % mad1 = @(x) mad(x,1); % median absolute deviation
 % % alternatively could use boxplot-style confidence intervals on the mean,
@@ -84,6 +84,7 @@ velcorrFig = figure; hold on
 velnbrcorrFig = figure; hold on
 accnbrcorrFig = figure; hold on
 poscorrFig = figure; hold on
+orderFig = figure; hold on
 lineHandles = NaN(nStrains,1);
 %% loop through strains
 for strainCtr = 1:nStrains
@@ -107,6 +108,8 @@ for strainCtr = 1:nStrains
     accnbrcorr = cell(numFiles,1);
     pairdist = cell(numFiles,1);
     nNbrDist= cell(numFiles,1);
+    polar_order= cell(numFiles,1);
+    nematic_order= cell(numFiles,1);
     gr =cell(numFiles,1);
     %% loop through files
     for fileCtr = 1:numFiles % can be parfor
@@ -169,6 +172,8 @@ for strainCtr = 1:nStrains
         pairdist{fileCtr} = cell(numFrames,1);
         nNbrDist{fileCtr}= cell(numFrames,1);
         gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
+        polar_order{fileCtr} = zeros(numFrames,1);
+        nematic_order{fileCtr} = zeros(numFrames,1);
         if strcmp(markerType,'bodywall')
             [ ~, velocities_x, velocities_y, ~, acceleration_x, acceleration_y ] = ...
                 calculateSpeedsFromSkeleton(trajData,skelData,1:5,...
@@ -192,8 +197,8 @@ for strainCtr = 1:nStrains
                     vy = velocities_y(frameLogInd);
                     accx = acceleration_x(frameLogInd);
                     accy = acceleration_y(frameLogInd);
-                    orientation_x = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,5,frameLogInd)));
-                    orientation_y = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,5,frameLogInd)));
+                    orientation_x = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,8,frameLogInd)));
+                    orientation_y = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,8,frameLogInd)));
                 end
                 %% calculate speeds and correlations
                 speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
@@ -221,6 +226,10 @@ for strainCtr = 1:nStrains
                 % would have to loop through each worm here, might be
                 % easier to pre-calculate the acceleration in x,y in python
                 accnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(accx,accy,dx,dy,true,false);
+                %% calculate polar and nematic global order
+                thetas = atan2(orientation_y,orientation_x);
+                polar_order{fileCtr}(frameCtr) = abs(mean(exp(1i*thetas)));
+                nematic_order{fileCtr}(frameCtr) = abs(mean(exp(2i*thetas)));
             end
         end
         %% pool data from frames
@@ -257,6 +266,8 @@ for strainCtr = 1:nStrains
     velxcorr = horzcat(velxcorr{:});
     velnbrcorr = vertcat(velnbrcorr{:});
     accnbrcorr = vertcat(accnbrcorr{:});
+    polar_order = vertcat(polar_order{:});
+    nematic_order = vertcat(nematic_order{:});
     %% bin distance data
     [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
         'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
@@ -285,8 +296,8 @@ for strainCtr = 1:nStrains
     [corr_o_med,corr_o_ci] = grpstats(dirxcorr,pairDistbinIdx,{@median,bootserr});
     [corr_v_med,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{@median,bootserr});
     %% plot data
-    [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smooth(s_med),...
-        [smooth(s_med - s_ci(:,1)), smooth(s_ci(:,2) - s_med)],...
+    [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smoothdata(s_med),...
+        [smoothdata(s_med - s_ci(:,1)), smoothdata(s_ci(:,2) - s_med)],...
         'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
     % correlations
     boundedline(pairDistBins,corr_o_med,[corr_o_med - corr_o_ci(:,1), corr_o_ci(:,2) - corr_o_med],...
@@ -301,6 +312,13 @@ for strainCtr = 1:nStrains
     boundedline(distBins(2:end)-distBinWidth/2,nanmean(gr,2),...
         [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(sum(~isnan(gr),2))),...
         'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
+    % plot orientational order
+    set(0,'CurrentFigure',orderFig)
+    subplot(1,2,strainCtr)
+    violinplot([polar_order, nematic_order],{'polar','nematic'});
+    title(strains{strainCtr})
+    ylim([0 1]), box on
+    % plot frequency of visited sites
     if  strcmp(wormnum,'40')&& plotDiagnostics
         histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','pdf')
     end
@@ -390,6 +408,12 @@ legend(poscorrFig.Children,lineHandles,strains)
 figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum '_' phase '_data' num2str(dataset) '_' markerType];
 if useJoinedTraj, figurename = [figurename '_jointraj']; end
 exportfig(poscorrFig,[figurename '.eps'],exportOptions)
+system(['epstopdf ' figurename '.eps']);
+system(['rm ' figurename '.eps']);
+% polar and nematic order
+figurename = ['figures/correlation/phaseSpecific/polarNematicOrder_' wormnum '_' phase '_data' num2str(dataset) '_' markerType];
+if useJoinedTraj, figurename = [figurename '_jointraj']; end
+exportfig(orderFig,[figurename '.eps'],exportOptions)
 system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % heatmap of sites visited

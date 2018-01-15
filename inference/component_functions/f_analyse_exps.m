@@ -15,7 +15,7 @@ if dataset == 1
 elseif dataset == 2
     intensityThreshold = 60;
 end
-maxBlobSize = 1e5; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
+maxBlobSize = 1e4; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels;
 
 % For each one of these list files provided i.e. for each group of videos..

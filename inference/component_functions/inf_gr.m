@@ -8,7 +8,7 @@ function gr_mean = inf_gr(data, format, fraction_to_sample)
 % distribution is discretised.
 bin_width = 0.1;
 L = 7.5;
-bins = bin_width:bin_width:2.5;
+bins = bin_width:bin_width:2;
 
 if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled

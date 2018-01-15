@@ -1,11 +1,6 @@
-%% Function to output distribution of branch heights from hierarchical clustering from many frames
-function [branch_hist] ...
-    = inf_hierarchicalclustering(data, format, fraction_to_sample)
-
-bin_width = 0.1;
-L = 7.5;
-branch_bins = 0:bin_width:2;
-linkageMethod = 'single';
+%% Function to output mean spread of points and std of median position over time
+function [sig_x, sig_t] ...
+    = inf_positionalmoments(data, format, fraction_to_sample)
 
 % Specify fraction of frames to sample
 if nargin<3
@@ -33,8 +28,10 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     num_samples = round(final_frame * (1 - burn_in) * fraction_to_sample);
     sampled_frames = randi([round(burn_in*final_frame) final_frame],1,num_samples);
     
-    % initialise matrix to store linkage lengths of hierarchical clusters
-    clustDists = zeros(num_worms - 1, num_samples);
+    % initialise matrix to store spread of points
+    std_pos = zeros(num_samples,1);
+    % initialise matrix to store median (x,y) positions
+    med_pos = zeros(num_samples,2);
     
     for frameCtr=1:num_samples
         thisFrame = sampled_frames(frameCtr);
@@ -48,22 +45,10 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         coords(:,1) = thisFrameData(:,:,1);
         coords(:,2) = thisFrameData(:,:,2);
         
-        % Calculate pairwise distances with custom distance function
-        % 'periodiceucdists' to take into account the horizontal and
-        % vertical periodicity of the simulations.
-        pair_dist = pdist(coords, @periodiceucdist);
+        std_pos(frameCtr) = sqrt(sum(var(coords)));
         
-        % generate hierarchical clustering tree
-        clustTree = linkage(pair_dist, linkageMethod);
-        
-        % store linkage distances between clusters (should these be
-        % cumulative?)
-        clustDists(:,frameCtr) = clustTree(:,3);
-        
+        med_pos(frameCtr,:) = median(coords);
     end
-    
-    branch_hist = histcounts(clustDists(:), branch_bins, ...
-        'Normalization', 'probability');
     
 elseif format == 'experiment'
     % Analagous code for producing same histcount outputs from the
@@ -77,7 +62,10 @@ elseif format == 'experiment'
     num_samples = floor(length(unique(frames)) * fraction_to_sample);
     frames_sampled = randi([min(frames),max(frames)], 1, num_samples);
     
-    clustDists = cell(num_samples,1);
+    % initialise matrix to store spread of points
+    std_pos = zeros(num_samples,1);
+    % initialise matrix to store median (x,y) positions
+    med_pos = zeros(num_samples,2);
     
     for frameCtr = 1:num_samples
         thisFrame = frames_sampled(frameCtr);
@@ -93,24 +81,18 @@ elseif format == 'experiment'
         num_worms = length(thisFrame_logInd);
         coords = zeros(num_worms,2);
         
-        coords(:,1) = data{1}(thisFrame_logInd);
-        coords(:,2) = data{2}(thisFrame_logInd);
+        coords(:,1) = data{1}(thisFrame_logInd).*pix2mm;
+        coords(:,2) = data{2}(thisFrame_logInd).*pix2mm;
+ 
+        std_pos(frameCtr) = sqrt(sum(var(coords)));
         
-        % Obtain the pairwise distances
-        pair_dist = pdist(coords).*pix2mm;
-        
-        % generate hierarchical clustering tree
-        clustTree = linkage(pair_dist, linkageMethod);
-        
-        clustDists{frameCtr} = clustTree(:,3);
+        med_pos(frameCtr,:) = median(coords);
         
     end
-    
-    % pool data over frames
-    clustDists = cat(1,clustDists{:});
-    
-    branch_hist = histcounts(clustDists, branch_bins, ...
-        'Normalization', 'probability');
-    
+   
 end
+
+sig_x = mean(std_pos);
+sig_t = std(med_pos);
+
 end

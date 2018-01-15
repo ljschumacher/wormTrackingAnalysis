@@ -9,7 +9,7 @@ num_statistics = 2
 addpath('component_functions')
 
 %% Analyse simulation data
-sim_file_list = 'datalists/woidM18_12312samples_npr1.txt';
+sim_file_list = 'datalists/woidM18_20k_samples_npr1like.txt';
 filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
 
 [sim_ss_array, sim_file_names, param_return] = f_analyse_sims(sim_file_list,...

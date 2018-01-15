@@ -12,6 +12,9 @@ ss_results{1} = inf_gr(in_data, expsim_classifier, fraction_to_sample);
 
 if num_statistics>1
     ss_results{2} = inf_hierarchicalclustering(in_data, expsim_classifier, fraction_to_sample);
+    if num_statistics>2
+       [ss_results{3}, ss_results{4}] = inf_positionalmoments(in_data, expsim_classifier, fraction_to_sample); 
+    end
 end
 % Extend for as many summary statistics as needed
 % e.g. ss_results{n} = ss_function_n(in_data, expsim_classifier)
