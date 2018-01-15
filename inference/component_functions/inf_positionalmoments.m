@@ -93,6 +93,6 @@ elseif format == 'experiment'
 end
 
 sig_x = mean(std_pos);
-sig_t = std(med_pos);
+sig_t = sqrt(sum(var(med_pos)));
 
 end

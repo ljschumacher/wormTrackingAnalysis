@@ -7,7 +7,6 @@ useJoinedTraj = true;
 
 % Construct arrays for storing the summary statistic outputs
 exp_ss_array = cell(length(strain_list), 1 + num_statistics);
-strain_vars = zeros(length(strain_list), num_statistics);
 
 % set the filtering parameters
 if dataset == 1

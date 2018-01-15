@@ -5,7 +5,7 @@
 % - calculation of summary statistics could be sped up by calculating all
 % stats within the loop over frames, rather than looping over frames for
 % each stat
-num_statistics = 2
+num_statistics = 4
 addpath('component_functions')
 
 %% Analyse simulation data
