@@ -1,5 +1,5 @@
 function [chosen_params, chosen_samples] = f_infer_params(expsim_dists,...
-    exp_strain_list, params, p_cutoffs, paramFile, plotResults)
+    exp_strain_list, p_cutoffs, paramSamples, plotResults)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
@@ -10,13 +10,14 @@ if nargin<5
 end
 num_sims = size(expsim_dists,2);
 num_strains = size(expsim_dists,1);
-load(paramFile)
+params = paramSamples.Properties.VariableNames;
+nParams = length(params);
 if plotResults
     load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
 end
 %Create array for storing the parameters of the top p% of simulations
 chosen_params = zeros(num_strains,floor(num_sims*max(p_cutoffs)),...
-    length(params),length(p_cutoffs));
+    nParams,length(p_cutoffs));
 % Create array for returning the original sample indicies of the chosen
 % params
 chosen_samples = zeros(num_strains,floor(num_sims*max(p_cutoffs)),...
@@ -34,10 +35,9 @@ for strainCtr = 1:num_strains
         acceptedSamples_logInd = expsim_dists(strainCtr,:,1)<=sorted_distances(num_top_samples);
         chosen_samples(strainCtr,1:num_top_samples,cutoffCtr) = sorted_indeces(1:num_top_samples);
         
-        for paramCtr = 1:length(params)
-            thisParamSamples = eval(strcat('paramSamples.', params{paramCtr}));
+        for paramCtr = 1:nParams
             chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
-                thisParamSamples(acceptedSamples_logInd);
+                paramSamples{acceptedSamples_logInd,paramCtr};
         end
     end
     
@@ -56,9 +56,9 @@ for strainCtr = 1:num_strains
             title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
                 ' for ' exp_strain_list{strainCtr}])
             
-            for i = 1:length(params)
+            for i = 1:nParams
                 ylabel(AX(i,1),params(i))
-                xlabel(AX(length(params),i),params(i))
+                xlabel(AX(nParams,i),params(i))
             end
         end
     end

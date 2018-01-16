@@ -24,9 +24,9 @@ expsim_dists = f_exp2sim_dist(...
     exp_ss_array, sim_ss_array, exp_strain_list);
 
 %% Perform parameter inference
+load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, exp_strain_list, {'revRateClusterEdge','dkdN'}, [0.01],...
-    '../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat', true);
+    expsim_dists, exp_strain_list, [0.01],paramSamples, true);
 
 %% Plot summary statistics of experiments and best samples
 for statCtr = 1:num_statistics
