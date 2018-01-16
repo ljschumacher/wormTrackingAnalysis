@@ -3,7 +3,7 @@
 
 num_statistics = 4
 
-addpath('component_functions')
+addpath('component_functions');
 
 %% Analyse simulation data - or load precomputed summary stats
 sim_file_list = 'datalists/woidM18_10k_samples.txt';
@@ -28,7 +28,7 @@ blindsim_dists = f_exp2sim_dist(...
 
 %% infer parameters
 test_params = {'revRateClusterEdge','dkdN'};
-param_file = '../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat';
+param_file = '../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat';
 [chosen_params, chosen_samples] = f_infer_params(blindsim_dists,...
     blind_file_names,test_params, 0.01, param_file, false);
 

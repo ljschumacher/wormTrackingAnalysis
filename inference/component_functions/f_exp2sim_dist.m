@@ -1,4 +1,4 @@
-function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_list)
+function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_list, weights)
 % Compute the appropriate distances between each of the
 % simulations and the experimental references
 
@@ -8,23 +8,30 @@ function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_li
 
 num_statistics = size(exp_ss_array,2)-1;
 
+if nargin<4
+    weights=[];
+end
 numSims = size(sim_ss_array,1);
 numStrains = length(exp_strain_list);
 expsim_dists = zeros(numStrains,numSims, 1+num_statistics);
 
 for statCtr = 1:num_statistics
-    % to scale the distances for the scale of the summary
-    % statistics, one commonly scales by the standard deviation
-    % of each statistic. since we have distributions (ie binned
-    % data), we will divide by the deviation for each bin
-    normfactor = std(cat(1,sim_ss_array{:,1+statCtr}));
+    if isempty(weights)
+        % to scale the distances for the scale of the summary
+        % statistics, one commonly scales by the standard deviation
+        % of each statistic. since we have distributions (ie binned
+        % data), we will divide by the deviation for each bin
+        normfactor = 1./std(cat(1,sim_ss_array{:,1+statCtr}));
+    else
+        normfactor = weights(statCtr);
+    end
     for strainCtr = 1:numStrains
         for simCtr = 1:numSims
             exp_data = exp_ss_array{strainCtr,1+statCtr};
             sim_data = sim_ss_array{simCtr,1+statCtr};
             % Compute the distance between this simulation and the reference
             expsim_dists(strainCtr,simCtr,1+statCtr) = norm((exp_data - sim_data)...
-                ./normfactor);
+                .*normfactor);
         end
     end
 end

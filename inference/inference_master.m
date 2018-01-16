@@ -6,10 +6,10 @@
 % stats within the loop over frames, rather than looping over frames for
 % each stat
 num_statistics = 4
-addpath('component_functions')
+addpath('component_functions');
 
 %% Analyse simulation data
-sim_file_list = 'datalists/woidM18_20k_samples_npr1like.txt';
+sim_file_list = 'datalists/woidM18_20k_samples_N2like.txt';
 filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
 
 [sim_ss_array, sim_file_names, param_return] = f_analyse_sims(sim_file_list,...
