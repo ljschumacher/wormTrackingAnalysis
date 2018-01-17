@@ -18,12 +18,10 @@ num_statistics = 4
     {'N2_40_g_list.txt'},1)
 
 % Compute distances between the simple simulations and the experiments
-expsimple_dists = f_exp2sim_dist(...
-    exp_ss_array, simple_sim_ss_array, exp_strain_list)
+expsimple_dists = f_exp2sim_dist(exp_ss_array, simple_sim_ss_array)
 
 % Then compute the distances between the complex simulations and the exps
-expcomplex_dists = f_exp2sim_dist(...
-    exp_ss_array, complex_sim_ss_array, exp_strain_list)
+expcomplex_dists = f_exp2sim_dist(exp_ss_array, complex_sim_ss_array)
 
 % Create a mapping
 [map, smooth_p1, smooth_p2] = f_create_map(simple_sim_file_names, complex_sim_file_names, ...
@@ -34,8 +32,7 @@ expcomplex_dists = f_exp2sim_dist(...
     = f_analyse_sims('simple_simulation_list_mapping.txt', mapping_params)
 
 % Compute the initial distance from these simple simulations to the exps
-full_expsimple_dists = f_exp2sim_dist(...
-    exp_ss_array, full_simple_sim_ss_array, exp_strain_list)
+full_expsimple_dists = f_exp2sim_dist(exp_ss_array, full_simple_sim_ss_array)
 
     
 % Scale the distances for the full cohort of simple simulations by the map

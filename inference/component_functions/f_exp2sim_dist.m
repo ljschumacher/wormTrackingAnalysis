@@ -1,4 +1,4 @@
-function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_list, weights)
+function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, weights)
 % Compute the appropriate distances between each of the
 % simulations and the experimental references
 
@@ -8,11 +8,11 @@ function expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, exp_strain_li
 
 num_statistics = size(exp_ss_array,2)-1;
 
-if nargin<4
+if nargin<3
     weights=[];
 end
 numSims = size(sim_ss_array,1);
-numStrains = length(exp_strain_list);
+numStrains = size(exp_ss_array,1);
 expsim_dists = zeros(numStrains,numSims, 1+num_statistics);
 
 for statCtr = 1:num_statistics
@@ -29,9 +29,10 @@ for statCtr = 1:num_statistics
         for simCtr = 1:numSims
             exp_data = exp_ss_array{strainCtr,1+statCtr};
             sim_data = sim_ss_array{simCtr,1+statCtr};
+            dim_factor = 1./sqrt(length(exp_data)); % correction factor for higher dimensional summary statistics
             % Compute the distance between this simulation and the reference
             expsim_dists(strainCtr,simCtr,1+statCtr) = norm((exp_data - sim_data)...
-                .*normfactor);
+                .*normfactor).*dim_factor;
         end
     end
 end

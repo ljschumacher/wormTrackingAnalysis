@@ -23,8 +23,7 @@ filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/
 %% COMPUTING DISTANCES
 % Then, compute the appropriate distances between each of the simulations
 % and the blind references
-blindsim_dists = f_exp2sim_dist(...
-    blind_ss_array, sim_ss_array, blind_file_names);
+blindsim_dists = f_exp2sim_dist(blind_ss_array, sim_ss_array);
 
 %% infer parameters
 test_params = {'revRateClusterEdge','dkdN'};

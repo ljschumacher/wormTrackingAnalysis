@@ -20,9 +20,11 @@ filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/
     {'npr1','N2'},2,num_statistics);
 
 %% Obtain distances between each of the experiments and simulations
-expsim_dists = f_exp2sim_dist(...
-    exp_ss_array, sim_ss_array, exp_strain_list);
+expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array);
 
+%% optimise weightings of summary statistics
+expsim_dists = f_optim_posterior(exp_ss_array(1,:), sim_ss_array,...
+    0.05, '../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat');
 %% Perform parameter inference
 load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
 [chosen_params, chosen_samples] = f_infer_params(...

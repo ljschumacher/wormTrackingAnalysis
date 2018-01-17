@@ -26,7 +26,9 @@ chosen_samples = zeros(num_strains,floor(num_sims*max(p_cutoffs)),...
 for strainCtr = 1:num_strains
     % For each of the % cutoffs specified in p_cutoffs, produce distributions of
     % the parameters
+    if ~isempty(exp_strain_list)
     disp(['Inferring parameters for strain ' exp_strain_list{strainCtr}])
+    end
     for cutoffCtr = 1:length(p_cutoffs)
         this_cutoff = p_cutoffs(cutoffCtr);
         num_top_samples = floor(num_sims*this_cutoff);
