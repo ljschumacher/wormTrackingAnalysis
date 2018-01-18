@@ -1,4 +1,4 @@
-function expsim_dists = f_optim_posterior(exp_ss_array, sim_ss_array,...
+function [expsim_dists, optim_weights] = f_optim_posterior(exp_ss_array, sim_ss_array,...
     p_cutoff, paramFile)
 % Optimise the weights of summary statistics to maximise the Hellinger
 % distance between the prior and posterior, and return the the appropriate distances between each of the
@@ -42,18 +42,15 @@ options = optimoptions('particleswarm','InitialSwarmMatrix',initial_weights,'Dis
 % options = optimoptions('patternsearch','Display','iter');
 % [wps,Lps] = patternsearch(L,mean(initial_weights),[],[],[],[],zeros(numStats,1),[],[],options);
 
-%% use simulated annealing
-options = optimoptions('simulannealbnd','Display','iter');
-[wsa,Lsa] = simulannealbnd(L,mean(initial_weights),zeros(numStats,1),[],options);
+% %% use simulated annealing
+% options = optimoptions('simulannealbnd','Display','iter');
+% [wsa,Lsa] = simulannealbnd(L,mean(initial_weights),zeros(numStats,1),[],options);
 end
 
 function L = hellinger(weights,prior,prior_query_points,...
     exp_ss_array,sim_ss_array,p_cutoff,paramSamples,supportRange)
 % for given weights, compute the distances
 expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, weights);
-if max(expsim_dists(:))==0
-    1;
-end
 % for these distances, select fraction of closest parameters
 [chosen_params, chosen_samples] = f_infer_params(...
     expsim_dists, [], p_cutoff, paramSamples, false);

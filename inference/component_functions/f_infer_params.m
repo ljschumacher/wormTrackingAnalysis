@@ -50,10 +50,11 @@ for strainCtr = 1:num_strains
             to_plot = squeeze(chosen_params(strainCtr,:,:,cutoffCtr));
             % Eliminate redundant rows, where all parameter values are zero
             % Occures when there are multiple cutoffs chosen
-            to_plot = to_plot(any(to_plot~=0,2),:);  %% unclear if necessary
+            to_plot = to_plot(any(to_plot~=0,2),:);  %% only necessary for multiple cut-offs
             
             subplot(1,length(p_cutoffs),cutoffCtr)
-            [~,AX,~,~,~] = hplotmatrix(to_plot); %% add KDE, or use hplotmatrix?
+            kde_weights = 1./expsim_dists(strainCtr,chosen_samples(strainCtr,:),1);
+            [~,AX,~,~,~] = hplotmatrix(to_plot,[],kde_weights);
             colormap(flipud(cmap_Blues))
             title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
                 ' for ' exp_strain_list{strainCtr}])
