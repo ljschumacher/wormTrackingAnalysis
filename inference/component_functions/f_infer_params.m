@@ -1,5 +1,5 @@
 function [chosen_params, chosen_samples] = f_infer_params(expsim_dists,...
-    exp_strain_list, p_cutoffs, paramSamples, plotResults)
+    exp_strain_list, p_cutoffs, paramSamples, plotResults, supportLimits)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
@@ -27,7 +27,7 @@ for strainCtr = 1:num_strains
     % For each of the % cutoffs specified in p_cutoffs, produce distributions of
     % the parameters
     if ~isempty(exp_strain_list)
-    disp(['Inferring parameters for strain ' exp_strain_list{strainCtr}])
+        disp(['Inferring parameters for strain ' exp_strain_list{strainCtr}])
     end
     for cutoffCtr = 1:length(p_cutoffs)
         this_cutoff = p_cutoffs(cutoffCtr);
@@ -36,11 +36,18 @@ for strainCtr = 1:num_strains
         [sorted_distances, sorted_indeces] = sort(expsim_dists(strainCtr,:,1));
         acceptedSamples_logInd = expsim_dists(strainCtr,:,1)<=sorted_distances(num_top_samples);
         chosen_samples(strainCtr,1:num_top_samples,cutoffCtr) = sorted_indeces(1:num_top_samples);
-        
+        if plotResults             % plot fraction of accepted samples
+            figure;
+            H = histogram(sorted_distances);
+            hold on
+            histogram(sorted_distances(1:num_top_samples),H.BinEdges)
+            legend('all samples',[num2str(this_cutoff) ' fraction'])
+            xlabel('distance'), ylabel('count'), title(exp_strain_list{strainCtr})
+        end
         for paramCtr = 1:nParams
             try
-            chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
-                paramSamples{acceptedSamples_logInd,paramCtr};
+                chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
+                    paramSamples{acceptedSamples_logInd,paramCtr};
             catch
                 1;
             end
@@ -58,7 +65,7 @@ for strainCtr = 1:num_strains
             
             subplot(1,length(p_cutoffs),cutoffCtr)
             kde_weights = 1./expsim_dists(strainCtr,chosen_samples(strainCtr,:),1);
-            [~,AX,~,~,~] = hplotmatrix(to_plot,[],kde_weights);
+            [~,AX,~,~,~] = hplotmatrix(to_plot,[],kde_weights, supportLimits);
             colormap(flipud(cmap_Blues))
             title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
                 ' for ' exp_strain_list{strainCtr}])

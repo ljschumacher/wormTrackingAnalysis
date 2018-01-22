@@ -5,10 +5,10 @@
 % - calculation of summary statistics could be sped up by calculating all
 % stats within the loop over frames, rather than looping over frames for
 % each stat
-num_statistics = 5
+num_statistics = 4
 addpath('component_functions');
-accept_ratio = 0.05;
-sum_stat_weights = [1 1 1 1 1];
+accept_ratio = 0.0125;
+sum_stat_weights = [1 1 1 1];
 %% Analyse simulation data
 sim_file_list = 'datalists/woidM36_2284_samples.txt';
 filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
@@ -30,10 +30,10 @@ expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,sum_stat_weights);
 %% Perform parameter inference
 load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, exp_strain_list,[accept_ratio],paramSamples, true);
+    expsim_dists, exp_strain_list,[0.0125],paramSamples, true, [revRate_range; dkdN_range]');
 
 %% Plot summary statistics of experiments and best samples
-for statCtr = 1:num_statistics
+for statCtr = 1:2
     figure
     for strainCtr = 1:length(exp_strain_list)
     plot(exp_ss_array{strainCtr,statCtr+1},'LineWidth',2)
