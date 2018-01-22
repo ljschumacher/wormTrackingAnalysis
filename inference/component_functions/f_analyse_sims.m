@@ -1,9 +1,12 @@
 function [sim_sstat_array, sim_file_names, param_return] = ...
-    f_analyse_sims(sim_file_list, filepath, extract_params,num_statistics)
+    f_analyse_sims(sim_file_list, filepath, extract_params,num_statistics,modelclassifier)
 
 sim_file_names = {};
 my_list_file = fopen(sim_file_list);
 
+if nargin<5 || isempty(modelclassifier)
+    modelclassifier = 'simulation';
+end
 % Read in the first line of the .txt file
 tline = fgetl(my_list_file);
 % For every line that still contains text...
@@ -44,7 +47,7 @@ for simCtr = 1:numSims
     
     % compute all chosen summary statistics
     fraction_to_sample = min(param.dT*param.saveEvery/3,1); % specifiy fraction of frames to sample
-    sstat_results = f_compute_ss(xyarray, 'simulation', fraction_to_sample, num_statistics);
+    sstat_results = f_compute_ss(xyarray, modelclassifier, fraction_to_sample, num_statistics);
     
     for sstatCtr = 1:length(sstat_results)
         sim_sstat_array{simCtr, sstatCtr+1} = sstat_results{sstatCtr};

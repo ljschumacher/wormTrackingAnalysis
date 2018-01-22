@@ -15,7 +15,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     if strcmp(format,'simulation')
         trackedNodes = 1:3;% only track nodes equivalent to the head
     elseif strcmp(format,'complexsim')
-        trackedNodes = 1:8;
+        trackedNodes = 1:6;
     elseif strcmp(format,'simulation-test')
         trackedNodes = 1;
     end

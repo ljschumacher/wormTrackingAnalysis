@@ -1,3 +1,4 @@
+
 % Function to calculate the pair correlation function over many sampled
 % frames, and return a discretised array of the resulting g(r) distribution
 function gr_mean = inf_gr(data, format, fraction_to_sample)
@@ -22,7 +23,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     if strcmp(format,'simulation')
         trackedNodes = 1:3;% only track nodes equivalent to the head
     elseif strcmp(format,'complexsim')
-        trackedNodes = 1:8;
+        trackedNodes = 1:6;
     elseif strcmp(format,'simulation-test')
         trackedNodes = 1;
     end

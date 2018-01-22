@@ -1,6 +1,9 @@
 %% Framework for testing whether parameters of blind simulations can be recovered
 %  experimental data
 
+%% note: it may be better to test coverage, or sample blind simulations from the posterior 
+% (as they may otherwise lie in indistinguishable regions of parameter
+% space)
 num_statistics = 4
 
 addpath('component_functions');

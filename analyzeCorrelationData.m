@@ -227,9 +227,9 @@ for strainCtr = 1:nStrains
                 % easier to pre-calculate the acceleration in x,y in python
                 accnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(accx,accy,dx,dy,true,false);
                 %% calculate polar and nematic global order
-                thetas = atan2(orientation_y,orientation_x);
-                polar_order{fileCtr}(frameCtr) = abs(mean(exp(1i*thetas)));
-                nematic_order{fileCtr}(frameCtr) = abs(mean(exp(2i*thetas)));
+                phis = atan2(orientation_y,orientation_x);
+                polar_order{fileCtr}(frameCtr) = abs(mean(exp(1i*phis)));
+                nematic_order{fileCtr}(frameCtr) = abs(mean(exp(2i*phis)));
             end
         end
         %% pool data from frames

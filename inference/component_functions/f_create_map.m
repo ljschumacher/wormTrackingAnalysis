@@ -1,21 +1,19 @@
 function [smooth_map,smooth_p1_used,smooth_p2_used] = f_create_map(...
-    simple_sim_file_names, complex_sim_file_names, ... 
+    simple_param_return, complex_param_return, ... 
     expsimple_dists, expcomplex_dists, mapping_parameters)
+ %% THIS NEEDS EDITING
+list_parameter_values_used = zeros(size(simple_param_return,1),length(mapping_parameters),2);
 
-list_parameter_values_used = zeros(length(complex_sim_file_names),length(mapping_parameters),2);
-
-for mapping_point = 1:length(complex_sim_file_names)
+for mapping_point = 1:size(complex_param_return,1)
     
-    load(simple_sim_file_names{mapping_point})
-    for par = 1:length(mapping_parameters)
-        list_parameter_values_used(mapping_point,par,1) = ...
-            eval(strcat('param.', mapping_parameters{par}));
+    for parCtr = 1:length(mapping_parameters)
+        list_parameter_values_used(mapping_point,parCtr,1) = ...
+            simple_param_return(mapping_point,parCtr);
     end
     
-    load(complex_sim_file_names{mapping_point})
-    for par = 1:length(mapping_parameters)
-        list_parameter_values_used(mapping_point,par,2) = ...
-            eval(strcat('param.', mapping_parameters{par}));
+    for parCtr = 1:length(mapping_parameters)
+        list_parameter_values_used(mapping_point,parCtr,2) = ...
+            complex_param_return(mapping_point,parCtr);
     end
 end
 

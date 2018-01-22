@@ -38,8 +38,12 @@ for strainCtr = 1:num_strains
         chosen_samples(strainCtr,1:num_top_samples,cutoffCtr) = sorted_indeces(1:num_top_samples);
         
         for paramCtr = 1:nParams
+            try
             chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
                 paramSamples{acceptedSamples_logInd,paramCtr};
+            catch
+                1;
+            end
         end
     end
     

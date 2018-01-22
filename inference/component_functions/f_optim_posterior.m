@@ -1,4 +1,4 @@
-function [expsim_dists, optim_weights] = f_optim_posterior(exp_ss_array, sim_ss_array,...
+function [wga,Lga,wsw,Lsw] = f_optim_posterior(exp_ss_array, sim_ss_array,...
     p_cutoff, paramFile)
 % Optimise the weights of summary statistics to maximise the Hellinger
 % distance between the prior and posterior, and return the the appropriate distances between each of the
@@ -18,29 +18,16 @@ L = @(x) hellinger(x,prior,prior_query_points,...
     + lambda*norm(x,1); % include regularisation
 nIter = 10*numStats;
 initial_weights = rand(nIter,numStats);
-% %% run multiple iterations of fmincon with different initial weights
-% options = optimoptions(@fmincon,'Display','final-detailed');
-% weights = zeros(nIter,numStats);
-% Lval = zeros(nIter,1);
-% for iterCtr = 1:nIter
-%     % choose weights
-%     [this_weights, thisL] = fmincon(L,initial_weights(iterCtr,:),[],[],[],[],zeros(numStats,1),[],[],options);
-%     weights(iterCtr,:) = this_weights;
-%     Lval(iterCtr) = thisL;
-%     display(['Optimisation ' num2str(iterCtr) ': weights=' num2str(this_weights) ', L=' num2str(thisL)])
-% end
 
 %% use the ga global optimization toolbox solver
-options = optimoptions('ga','InitialPopulationMatrix',initial_weights,'Display','iter');
+options = optimoptions('ga','InitialPopulationMatrix',initial_weights,'Display','iter',...
+    'HybridFcn',@fmincon);
 [wga,Lga] = ga(L,numStats,[],[],[],[],zeros(numStats,1),[],[],options);
 
 %% use the particle swarm optimizer
-options = optimoptions('particleswarm','InitialSwarmMatrix',initial_weights,'Display','iter');
+options = optimoptions('particleswarm','InitialSwarmMatrix',initial_weights,'Display','iter',...
+    'HybridFcn',@fmincon);
 [wsw,Lsw] = particleswarm(L,numStats,1e-2*ones(numStats,1),10*ones(numStats,1),options);
-
-% %% use patternsearch
-% options = optimoptions('patternsearch','Display','iter');
-% [wps,Lps] = patternsearch(L,mean(initial_weights),[],[],[],[],zeros(numStats,1),[],[],options);
 
 % %% use simulated annealing
 % options = optimoptions('simulannealbnd','Display','iter');

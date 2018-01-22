@@ -23,7 +23,7 @@ for statCtr = 1:num_statistics
         % data), we will divide by the deviation for each bin
         normfactor = 1./std(cat(1,sim_ss_array{:,1+statCtr}));
     else
-        normfactor = weights(statCtr);
+        normfactor = weights(statCtr);%./std(cat(1,sim_ss_array{:,1+statCtr}));
         % for summary statistics that are made up of binned data, we may
         % still want to normalise the scale/range across different bins
         % (so as not to weight bins with higher counts more strongly)
@@ -31,11 +31,13 @@ for statCtr = 1:num_statistics
     end
     for strainCtr = 1:numStrains
         exp_data = exp_ss_array{strainCtr,1+statCtr};
+        scale_factor = exp_data;
+        scale_factor(scale_factor==0) = min(scale_factor(scale_factor~=0)); % to normalise by observed summary statistic, take care not to divide by zero
         for simCtr = 1:numSims
             sim_data = sim_ss_array{simCtr,1+statCtr};
             dim_factor = 1./sqrt(length(exp_data)); % correction factor for higher dimensional summary statistics
             % Compute the distance between this simulation and the reference
-            expsim_dists(strainCtr,simCtr,1+statCtr) = norm((exp_data - sim_data)./exp_data...
+            expsim_dists(strainCtr,simCtr,1+statCtr) = norm((exp_data - sim_data)./scale_factor...
                 .*normfactor).*dim_factor;
         end
     end

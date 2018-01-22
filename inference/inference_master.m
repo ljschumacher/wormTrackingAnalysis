@@ -5,12 +5,13 @@
 % - calculation of summary statistics could be sped up by calculating all
 % stats within the loop over frames, rather than looping over frames for
 % each stat
-num_statistics = 4
+num_statistics = 5
 addpath('component_functions');
-
+accept_ratio = 0.05;
+sum_stat_weights = [1 1 1 1 1];
 %% Analyse simulation data
-sim_file_list = 'datalists/woidM18_20k_samples_N2like.txt';
-filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
+sim_file_list = 'datalists/woidM36_2284_samples.txt';
+filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
 
 [sim_ss_array, sim_file_names, param_return] = f_analyse_sims(sim_file_list,...
     filepath, {'revRateClusterEdge','dkdN_dwell'}, num_statistics);
@@ -20,15 +21,16 @@ filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/
     {'npr1','N2'},2,num_statistics);
 
 %% Obtain distances between each of the experiments and simulations
-expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,[0.01, 0.01, 0.01, 10]);
+expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,sum_stat_weights);
 
 %% optimise weightings of summary statistics
-expsim_dists = f_optim_posterior(exp_ss_array(1,:), sim_ss_array,...
-    0.025, '../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat');
+[wga,Lga,wsw,Lsw] = f_optim_posterior(exp_ss_array(1,:), sim_ss_array,...
+    accept_ratio, '../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
+
 %% Perform parameter inference
-load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
+load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, exp_strain_list,[0.0125],paramSamples, true);
+    expsim_dists, exp_strain_list,[accept_ratio],paramSamples, true);
 
 %% Plot summary statistics of experiments and best samples
 for statCtr = 1:num_statistics
@@ -45,6 +47,11 @@ for statCtr = 1:num_statistics
     title(['summary statistic ' num2str(statCtr)])
     legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],'best simulations')
 end
+
+%% test coverage
+% for npr1
+f_test_coverage(chosen_samples(1,:),100,...
+    sim_ss_array,sum_stat_weights,accept_ratio,paramSamples,true)
 
 % %% plot surface of dissimilatirity
 % load ../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat

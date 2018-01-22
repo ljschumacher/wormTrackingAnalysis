@@ -36,8 +36,8 @@ for strainCtr = 1:length(strain_list)
     %% For each movie file identified in this list...
     for expCtr = 1:num_expmnts
         filename = filenames{expCtr};
-
-        %% OBTAINING AND FILTERING DATA 
+        
+        %% OBTAINING AND FILTERING DATA
         
         % Must obtain logical indices for filtering the tracking data based
         % on the intensity and size of potential worms. This is to
@@ -47,9 +47,6 @@ for strainCtr = 1:length(strain_list)
         trajData = h5read(filename, '/trajectories_data');
         % Read in the associated data
         blobData = h5read(filename, '/blob_features');
-%         skelData = h5read(filename,'/skeleton');
-
-%         has_skeleton = squeeze(~any(any(isnan(skelData))));
         
         % Get filtering indices according to the parameters outlined
         filter_logInd = filterIntensityAndSize(blobData,pixelsize,...
@@ -58,14 +55,22 @@ for strainCtr = 1:length(strain_list)
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,'joining',expCtr);
         phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         filter_logInd(~phaseFilter_logInd)=false;
-
+        
         % Then split it to obtain the important information, whilst
         % applying the filter obtained from \blob_features above
         x_data = trajData.coord_x(filter_logInd);
         y_data = trajData.coord_y(filter_logInd);
         frames = trajData.frame_number(filter_logInd);
-%         relative_blob_sizes = blobData.area(filter_logInd)./mode(blobData.area(filter_logInd));
-        in_data = {x_data, y_data, frames};
+        %         relative_blob_sizes = blobData.area(filter_logInd)./mode(blobData.area(filter_logInd));
+        if num_statistics>4
+            % also pass on skeleton data to compute orientational order
+            skelData = h5read(filename,'/skeleton');
+%             has_skeleton = squeeze(~any(any(isnan(skelData))));
+            skelData = skelData(:,:,filter_logInd);
+            in_data = {x_data, y_data, frames, skelData};
+        else
+            in_data = {x_data, y_data, frames};
+        end
         
         % Then compute all chosen summary statistics, as with the simulated
         % data above.
