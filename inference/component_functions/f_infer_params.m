@@ -1,5 +1,5 @@
 function [chosen_params, chosen_samples] = f_infer_params(expsim_dists,...
-    exp_strain_list, p_cutoffs, paramSamples, plotResults, supportLimits)
+    exp_strain_list, p_cutoffs, param_names, param_values, plotResults, supportLimits)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
@@ -9,9 +9,8 @@ if nargin<5
     plotResults = false;
 end
 num_sims = size(expsim_dists,2);
-num_strains = size(expsim_dists,1);
-params = paramSamples.Properties.VariableNames;
-nParams = length(params);
+num_strains = size(expsim_dists,1); 
+nParams = length(param_names);
 if plotResults
     load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
 end
@@ -45,12 +44,8 @@ for strainCtr = 1:num_strains
             xlabel('distance'), ylabel('count'), title(exp_strain_list{strainCtr})
         end
         for paramCtr = 1:nParams
-            try
                 chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
-                    paramSamples{acceptedSamples_logInd,paramCtr};
-            catch
-                1;
-            end
+                    param_values(acceptedSamples_logInd,paramCtr);
         end
     end
     
@@ -71,8 +66,8 @@ for strainCtr = 1:num_strains
                 ' for ' exp_strain_list{strainCtr}])
             
             for i = 1:nParams
-                ylabel(AX(i,1),params(i))
-                xlabel(AX(nParams,i),params(i))
+                ylabel(AX(i,1),param_names(i))
+                xlabel(AX(nParams,i),param_names(i))
             end
         end
     end

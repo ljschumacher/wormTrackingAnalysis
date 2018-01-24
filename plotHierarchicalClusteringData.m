@@ -30,7 +30,7 @@ if dataset == 1
 elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
-maxBlobSize = 1e6; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
+maxBlobSize = 1e5; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 mmConversion = 1e-3;
 %% go through strains, densities, movies
@@ -84,19 +84,22 @@ for strainCtr = 1:nStrains
                 pairDists = pdist([x y]).*pixelsize.*mmConversion; % distance between all pairs, in micrometer
                 clustTree = linkage(pairDists,linkageMethod);
                 branchHeights{fileCtr}{frameCtr} = clustTree(:,3);
-                if N>Nmax&&N>30
+                if N>Nmax&&N>=36
                     Nmax = N;
                     figure
+                    subplot(1,2,1)
                     dendrogram(clustTree,0,'Reorder',optimalleaforder(clustTree,pairDists));
                     ax = gca;
                     ax.XTick=[];ax.YLabel.String=[linkageMethod 'linkage distance (mm)'];
                     ax.Box = 'on';
-                    % make inset with scatter plot of positions
-                    ax = axes('Position',[0.6 0.6 0.25 0.25]);
-                    scatter(ax,x,y,'.')
+%                     % make inset with scatter plot of positions
+%                     ax = axes('Position',[0.6 0.6 0.25 0.25]);
+                    subplot(1,2,2)
+                    scatter(x,y,'.')
+                    ax = gca;
                     ax.XTick = []; ax.YTick = [];
                     ax.Box = 'on';
-                    ax.DataAspectRatio = [1 1 1];
+                    axis equal
                     set(gcf,'PaperUnits','centimeters')
                     figurename = ['figures/clustering/trees/clusterTree_' ...
                         linkageMethod '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'...
@@ -113,7 +116,8 @@ for strainCtr = 1:nStrains
     %% combine data from multiple files
     branchHeights = vertcat(branchHeights{:});
     %% plot histogram of branch heights
-    histogram(clustFig.Children,branchHeights,'Normalization','probability','EdgeColor','none','BinWidth',0.05)
+    set(0,'CurrentFigure',clustFig)
+    histogram(branchHeights,'Normalization','probability','EdgeColor','none','BinWidth',0.05)
 end
 %% format and export figures
 set(clustFig,'PaperUnits','centimeters')
