@@ -1,12 +1,13 @@
 function [sim_sstat_array, sim_file_names, param_return] = ...
-    f_analyse_sims(sim_file_list, filepath, extract_params,num_statistics,modelclassifier)
-
-sim_file_names = {};
-my_list_file = fopen(sim_file_list);
+    f_analyse_sims(sim_file_list, filepath, param_names,num_statistics,modelclassifier)
 
 if nargin<5 || isempty(modelclassifier)
     modelclassifier = 'simulation';
 end
+
+sim_file_names = {};
+my_list_file = fopen(sim_file_list);
+
 % Read in the first line of the .txt file
 tline = fgetl(my_list_file);
 % For every line that still contains text...
@@ -26,8 +27,8 @@ numSims = length(sim_file_names);
 % strain/exp name
 sim_sstat_array = cell(numSims, 1+num_statistics);
 
-if iscell(extract_params)
-    param_return = zeros(numSims, length(extract_params));
+if iscell(param_names)
+    param_return = zeros(numSims, length(param_names));
 end
 
 % For each simulation file in the list, compute the appropriate summary
@@ -36,10 +37,10 @@ for simCtr = 1:numSims
     load([filepath sim_file_names{simCtr}]);
     
     % Extract desired parameters if extract_params is a cell array
-    if iscell(extract_params)
-        for parCtr = 1:length(extract_params)
+    if iscell(param_names)
+        for parCtr = 1:length(param_names)
             param_return(simCtr,parCtr) = ...
-                eval(strcat('param.', extract_params{parCtr}));
+                eval(strcat('param.', param_names{parCtr}));
         end
     end
     

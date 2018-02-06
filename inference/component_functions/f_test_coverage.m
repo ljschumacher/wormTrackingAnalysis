@@ -1,9 +1,9 @@
-function [] = f_test_coverage(chosen_samples,num_test_samples,...
-    sim_ss_array,sum_stat_weights,accept_ratio,paramSamples,plot_flag)
+function [] = f_test_coverage(chosen_samples,num_test_samples,sample_weights,...
+    sim_ss_array,sum_stat_weights,accept_ratio,param_names,param_values,supportLimits,plot_flag)
 % test coverage to assess quality of posterios
 % (see Prangle 2013, van der Vaart 2017)
-numParams = size(paramSamples,2);
-test_samples = randsample(chosen_samples,num_test_samples,'false');
+numParams = length(param_names);
+test_samples = randsample(chosen_samples,num_test_samples,'true',sample_weights);
 proportion_under = NaN(num_test_samples,numParams);
 for sampleCtr = 1:num_test_samples
     % calculate distances to remaining samples
@@ -13,9 +13,9 @@ for sampleCtr = 1:num_test_samples
     this_dists(1,test_samples(sampleCtr),1) = Inf;
     % accept closest simulations
     [this_chosen_params, ~] = f_infer_params(this_dists, [], accept_ratio,...
-        paramSamples, false);
+         param_names, param_values, false, supportLimits);
     % calculate proportions
-    this_true_params = paramSamples{test_samples(sampleCtr),:};
+    this_true_params = param_values(test_samples(sampleCtr),:);
     for paramCtr = 1:numParams
         proportion_under(sampleCtr,paramCtr) = ...
             mean(this_chosen_params(1,:,paramCtr)<=this_true_params(paramCtr));

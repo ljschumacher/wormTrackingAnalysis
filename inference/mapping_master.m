@@ -1,9 +1,9 @@
 % Declare the two parameters for which to build to 2D map, as a cell array
 mapping_params = {'revRateClusterEdge','dkdN_dwell'};
 
-num_statistics = 4
+num_statistics = 3
 addpath('component_functions');
-sum_stat_weights = [0.32 0.3 0.03 0.79];
+sum_stat_weights = [0.27 0.71 0.02];
 %% Analyse a small set of simple simulations first
 filepath = '../../../sworm-model/woidModel/results/woidlinos/mapping/';
 [simple_sim_ss_array, simple_sim_file_names, simple_param_return] = f_analyse_sims(...
