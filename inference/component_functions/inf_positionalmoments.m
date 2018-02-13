@@ -1,5 +1,5 @@
 %% Function to output mean spread of points and std of median position over time
-function [sig_x, sig_t] ...
+function [sig_x, std_sig_x] ...
     = inf_positionalmoments(data, format, fraction_to_sample)
 
 % Specify fraction of frames to sample
@@ -30,8 +30,6 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     
     % initialise matrix to store spread of points
     std_pos = zeros(num_samples,1);
-    % initialise matrix to store median (x,y) positions
-    med_pos = zeros(num_samples,2);
     
     for frameCtr=1:num_samples
         thisFrame = sampled_frames(frameCtr);
@@ -46,8 +44,6 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         coords(:,2) = thisFrameData(:,:,2);
         
         std_pos(frameCtr) = sqrt(sum(var(coords)));
-        
-        med_pos(frameCtr,:) = median(coords);
     end
     
 elseif format == 'experiment'
@@ -64,8 +60,6 @@ elseif format == 'experiment'
     
     % initialise matrix to store spread of points
     std_pos = zeros(num_samples,1);
-    % initialise matrix to store median (x,y) positions
-    med_pos = zeros(num_samples,2);
     
     for frameCtr = 1:num_samples
         thisFrame = frames_sampled(frameCtr);
@@ -84,15 +78,12 @@ elseif format == 'experiment'
         coords(:,1) = data{1}(thisFrame_logInd).*pix2mm;
         coords(:,2) = data{2}(thisFrame_logInd).*pix2mm;
  
-        std_pos(frameCtr) = sqrt(sum(var(coords)));
-        
-        med_pos(frameCtr,:) = median(coords);
-        
+        std_pos(frameCtr) = sqrt(sum(var(coords)));            
     end
    
 end
 
 sig_x = mean(std_pos);
-sig_t = sqrt(sum(var(med_pos)));
+std_sig_x = std(std_pos);
 
 end
