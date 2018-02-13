@@ -1,5 +1,5 @@
 function [chosen_params, chosen_samples] = f_infer_params(expsim_dists,...
-    exp_strain_list, p_cutoffs, param_names, param_values, plotResults, supportLimits,scaleflag)
+    exp_strain_list, p_cutoffs, param_names, param_values, plotResults, supportLimits,scaleflag,modelstring)
 % Set the cutoffs for taking the top p% of simulations e.g to select the
 % closest 1% of simulations, use 'p_cutoffs = [0.01]'. To see the effect that
 % using different cutoffs has on the parameter distributions inferred,
@@ -11,11 +11,16 @@ end
 if nargin<8
     scaleflag = 'linear';
 end
+if nargin<9
+    modelstring = '';
+end
 num_sims = size(expsim_dists,2);
 num_strains = size(expsim_dists,1);
 nParams = length(param_names);
 if plotResults
     load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
+    exportOptions = struct('Format','eps2','Color','rgb','Width',14,...
+        'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
 end
 %Create array for storing the parameters of the top p% of simulations
 chosen_params = zeros(num_strains,floor(num_sims*max(p_cutoffs)),...
@@ -38,13 +43,16 @@ for strainCtr = 1:num_strains
         [sorted_distances, sorted_indeces] = sort(expsim_dists(strainCtr,:,1));
         acceptedSamples_logInd = expsim_dists(strainCtr,:,1)<=sorted_distances(num_top_samples);
         chosen_samples(strainCtr,1:num_top_samples,cutoffCtr) = sorted_indeces(1:num_top_samples);
-        if plotResults             % plot fraction of accepted samples
-            figure;
+        if plotResults % plot fraction of accepted samples
+            distFig = figure;
             H = histogram(sorted_distances);
             hold on
             histogram(sorted_distances(1:num_top_samples),H.BinEdges)
             legend('all samples',[num2str(this_cutoff) ' fraction'])
-            xlabel('distance'), ylabel('count'), title(exp_strain_list{strainCtr})
+            xlabel('distance'), ylabel('count'), title(exp_strain_list{strainCtr},'FontWeight','normal')
+            formatAndExportFigure(distFig,['figures/diagnostics/distances_' ...
+                exp_strain_list{strainCtr} '_alpha_' num2str(this_cutoff) '_' modelstring],...
+                exportOptions)
         end
         for paramCtr = 1:nParams
             chosen_params(strainCtr,1:num_top_samples,paramCtr,cutoffCtr) = ...
@@ -54,7 +62,6 @@ for strainCtr = 1:num_strains
     
     % -------- Producing joint distributions of inferred parameters -------- %
     if plotResults
-        figure;
         if strcmp(scaleflag,'log')
             supportLimits = log10(supportLimits);
             for paramCtr=1:nParams
@@ -62,6 +69,7 @@ for strainCtr = 1:num_strains
             end
         end
         for cutoffCtr = 1:length(p_cutoffs)
+            postiFig = figure;
             to_plot = squeeze(chosen_params(strainCtr,:,:,cutoffCtr));
             % Eliminate redundant rows, where all parameter values are zero
             % Occures when there are multiple cutoffs chosen
@@ -74,11 +82,14 @@ for strainCtr = 1:num_strains
             [~,AX,~,~,~] = hplotmatrix(to_plot,[],kde_weights, supportLimits);
             colormap(flipud(cmap_Blues))
             title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
-                ' for ' exp_strain_list{strainCtr}])
+                ' for ' exp_strain_list{strainCtr}],'FontWeight','normal')
             for paramCtr = 1:nParams
                 ylabel(AX(paramCtr,1),param_names(paramCtr))
                 xlabel(AX(nParams,paramCtr),param_names(paramCtr))
             end
+            formatAndExportFigure(postiFig,['figures/posteriors_' ...
+                exp_strain_list{strainCtr} '_alpha_' num2str(p_cutoffs(cutoffCtr)) '_' modelstring],...
+                exportOptions)
         end
     end
 end

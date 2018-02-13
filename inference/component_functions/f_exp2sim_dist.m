@@ -40,9 +40,6 @@ for statCtr = 1:num_statistics
             % reference - careful not to take log(0)
             expsim_dists(strainCtr,simCtr,1+statCtr) = norm((log(max(exp_data,eps)) - log(max(sim_data,eps)))./scale_factor...
                 .*normfactor).*dim_factor;
-            if any(isinf( expsim_dists(strainCtr,simCtr,1+statCtr)))
-               1; 
-            end
         end
     end
 end

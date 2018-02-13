@@ -17,12 +17,14 @@ lambda = 1e-4; % regularization parameter
 L = @(x) hellinger(x,exp_ss_array,sim_ss_array,p_cutoff,param_names,param_values,supportRange) ...
     + lambda*norm(x,1); % include regularisation
 nIter = max(10*numStats,50);
-initial_weights = rand(nIter,numStats);
+initial_weights = de2bi(1:(2^numStats - 1));% just specify the extreme values in here, the rest should be filled in by ga randomly
+initial_weights(initial_weights==0) = 1e-14; % to satisfy the optimisation bounds
+%rand(nIter,numStats);
 
 %% use the ga global optimization toolbox solver
-options = optimoptions('ga','InitialPopulationMatrix',initial_weights,'Display','iter',...
+options = optimoptions('ga','PopulationSize',nIter,'InitialPopulationMatrix',initial_weights,'Display','iter',...
     'HybridFcn',@fmincon);
-[weights_optim,min_obj] = ga(L,numStats,[],[],[],[],zeros(numStats,1),10*ones(numStats,1),[],options);
+[weights_optim,min_obj] = ga(L,numStats,[],[],[],[],eps*ones(numStats,1),100*ones(numStats,1),[],options);
 
 % normalise weights (for convenience only)
 weights_optim = weights_optim./sum(weights_optim);

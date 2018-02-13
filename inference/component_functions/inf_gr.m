@@ -16,7 +16,7 @@ if nargin<3
 end
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'simulation-test')
-    burn_in = 0.25; % specifies how much to ignore at the start of the simulation
+    burn_in = 0.5; % specifies how much to ignore at the start of the simulation
     
     % Get the dimensions of the dataframe
     dims = size(data);
@@ -56,7 +56,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         
         % Radial distribution function
         % Normalization step
-        gr_normalised = gr_raw.*L^2./(2*pi*bins(2:end)*bin_width*num_worms*(num_worms-1)/2); % normalisation by number of pairs, not double-counting
+        gr_normalised = gr_raw.*L^2./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2); % normalisation by number of pairs, not double-counting
         
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1
@@ -105,7 +105,7 @@ elseif format == 'experiment'
         
         % Radial distribution function
         % Normalization step
-        gr_normalised = gr_raw.*(pi*(8.5/2).^2)./(2*pi*bins(2:end)*bin_width*num_worms*(num_worms-1)/2);
+        gr_normalised = gr_raw.*(pi*(8.5/2).^2)./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2);
 
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1

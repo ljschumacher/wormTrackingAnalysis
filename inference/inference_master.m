@@ -22,13 +22,13 @@ switch model
         scaleflag = 'linear';
      case 'log-rods'
         num_statistics = 3;
-        load('../../../sworm-model/woidModel/paramSamples_log_nSim20000_nParam2.mat')
-        sumstat_filename = ['sumstats_15klogsamples_wlM18_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM18_15k_logsamples_' strain 'like.txt'];
+        load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
+        sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
+        sim_file_list = ['datalists/woidM18_30k_logsamples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 4;
+        num_statistics = 3; % 4th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
         sumstat_filename = ['sumstats_10ksamples_wM36_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM36_10k_samples_' strain 'like.txt'];
@@ -66,11 +66,14 @@ expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
 
 %% Perform parameter inference
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, exp_strain_list,[accept_ratio],{'r_{rev}','dk/d\rho'},param_return,true,supportRange,scaleflag);
+    expsim_dists, exp_strain_list,[accept_ratio],{'r_{rev}','dk/d\rho'},param_return,...
+    true,supportRange,scaleflag,model);
 
 %% Plot summary statistics of experiments and best samples
+exportOptions = struct('Format','eps2','Color','rgb','Width',10,...
+    'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
 for statCtr = 1:2
-    figure
+    sumStatFig = figure;
     for strainCtr = 1:length(exp_strain_list)
         semilogy(exp_ss_array{strainCtr,statCtr+1},'LineWidth',2)
         hold on
@@ -82,11 +85,13 @@ for statCtr = 1:2
     end
     title(['S_' num2str(statCtr) ', weight ' num2str(weights_optim(statCtr)./sum(weights_optim),2) ],'FontWeight','normal')
     legend([exp_strain_list{1} ' mean'],'best simulations')
+    formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) '_' ...
+                strain '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end
 
 %% test coverage
 f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1))),...
-    sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true)
+    sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)
 
 % %% plot surface of dissimilatirity
 % load ../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat

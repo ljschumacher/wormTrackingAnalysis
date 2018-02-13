@@ -62,7 +62,7 @@ for strainCtr = 1:length(strain_list)
         y_data = trajData.coord_y(filter_logInd);
         frames = trajData.frame_number(filter_logInd);
         %         relative_blob_sizes = blobData.area(filter_logInd)./mode(blobData.area(filter_logInd));
-        if num_statistics>4
+        if num_statistics>=4
             % also pass on skeleton data to compute orientational order
             skelData = h5read(filename,'/skeleton');
 %             has_skeleton = squeeze(~any(any(isnan(skelData))));

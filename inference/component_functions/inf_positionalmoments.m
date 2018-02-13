@@ -8,7 +8,7 @@ if nargin<3
 end
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'simulation-test')
-    burn_in = 0.25; % specifies how much to ignore at the start of the simulation
+    burn_in = 0.5; % specifies how much to ignore at the start of the simulation
     
     % Get the dimensions of the dataframe
     dims = size(data);
