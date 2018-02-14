@@ -14,21 +14,21 @@ param_names = {'revRateClusterEdge','dkdN_dwell'};
 
 switch model
     case 'rods'
-        num_statistics = 3;
+        num_statistics = 4;
         load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20ksamples_wlM18_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM18_20k_samples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
         scaleflag = 'linear';
      case 'log-rods'
-        num_statistics = 3;
+        num_statistics = 4;
         load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
         sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM18_30k_logsamples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 3; % 4th stat, polar order, did not seem to work well
+        num_statistics = 4; % 5th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
         sumstat_filename = ['sumstats_10ksamples_wM36_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM36_10k_samples_' strain 'like.txt'];
@@ -75,16 +75,18 @@ exportOptions = struct('Format','eps2','Color','rgb','Width',10,...
 for statCtr = 1:2
     sumStatFig = figure;
     for strainCtr = 1:length(exp_strain_list)
-        semilogy(exp_ss_array{strainCtr,statCtr+1},'LineWidth',2)
+        errorbar(mean(exp_ss_array{strainCtr,statCtr+1}),...
+            std(exp_ss_array{strainCtr,statCtr+1}),'LineWidth',2)
         hold on
     end
+    sumStatFig.Children.YScale = 'log';
     for strainCtr = 1:length(exp_strain_list)
         for ii=1
             semilogy(sim_ss_array{chosen_samples(strainCtr,ii),statCtr+1})
         end
     end
     title(['S_' num2str(statCtr) ', weight ' num2str(weights_optim(statCtr)./sum(weights_optim),2) ],'FontWeight','normal')
-    legend([exp_strain_list{1} ' mean'],'best simulations')
+    legend([exp_strain_list{1} ' mean'],'best simulation')
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) '_' ...
                 strain '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end

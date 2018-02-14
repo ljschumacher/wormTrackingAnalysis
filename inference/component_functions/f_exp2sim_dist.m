@@ -38,8 +38,12 @@ for statCtr = 1:num_statistics
             dim_factor = 1./sqrt(length(exp_data)); % correction factor for higher dimensional summary statistics
             % Compute the distance between this simulation and the
             % reference - careful not to take log(0)
-            expsim_dists(strainCtr,simCtr,1+statCtr) = norm((log(max(exp_data,eps)) - log(max(sim_data,eps)))./scale_factor...
-                .*normfactor).*dim_factor;
+            expsim_dists(strainCtr,simCtr,1+statCtr) = sum(vecnorm(...
+                (log(max(exp_data,eps)) - log(max(sim_data,eps)))./scale_factor... % take scaled difference of all observed values of this summary stat and this simulated one
+                .*normfactor... % weight summary statistic
+                ,2,2)... % take norm for each expmntl sample
+                .*dim_factor... % correct for dim of summary stat
+                );% sum this distance over expmntl samples
         end
     end
 end

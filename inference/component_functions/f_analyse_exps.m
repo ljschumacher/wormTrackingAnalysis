@@ -32,7 +32,7 @@ for strainCtr = 1:length(strain_list)
     
     num_expmnts = length(filenames);
     
-    exp_replicate_ss_array = cell(num_expmnts, 1 + num_statistics);
+    exp_replicate_ss_array = cell(num_expmnts, num_statistics);
     %% For each movie file identified in this list...
     for expCtr = 1:num_expmnts
         filename = filenames{expCtr};
@@ -78,20 +78,21 @@ for strainCtr = 1:length(strain_list)
         fraction_to_sample = 1/max(frameRate,1)/3; % specifiy fraction of frames to sample
         ss_results = f_compute_ss(in_data, 'experiment', fraction_to_sample, num_statistics);
         
-        for each_ss = 1:length(ss_results)
-            exp_replicate_ss_array{expCtr, each_ss+1} = ss_results{each_ss};
+        for statCtr = 1:num_statistics
+            exp_replicate_ss_array{expCtr, statCtr} = ss_results{statCtr};
         end
         % display progress
         disp(['analysed ' num2str(expCtr) '/' num2str(num_expmnts) ' experiments for strain ' strain_list{strainCtr}])
     end
     
-    % Combine SS from different experimental replicates, to give single
-    % reference for each strain
-    replicate_summary = cell(1,num_statistics);
-    for statCtr = 1:num_statistics
-        replicate_summary{statCtr} = mean(cell2mat(exp_replicate_ss_array(:,1+statCtr)));
-    end
+%     % Combine SS from different experimental replicates, to give single reference for each strain
+%     replicate_summary = cell(1,num_statistics);
+%     for statCtr = 1:num_statistics
+%         replicate_summary{statCtr} = mean(cell2mat(exp_replicate_ss_array(:,1+statCtr)));
+%     end
     exp_ss_array{strainCtr, 1} = strain_list{strainCtr};
-    exp_ss_array(strainCtr, 2:end) = replicate_summary;
+    for statCtr = 1:num_statistics
+        exp_ss_array{strainCtr, statCtr+1} = cat(1,exp_replicate_ss_array{:,statCtr});
+    end
 end
 end
