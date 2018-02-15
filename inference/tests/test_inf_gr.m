@@ -6,11 +6,11 @@ addpath('../component_functions')
 L = 7.5;
 numSamples = 2e4;
 numWorms = 40;
+pix2mm = 0.0051;
 
 %% test uniform random conditions
 %% test for experimental conditions
 % generate some uniform random coordinates
-pix2mm = 0.0051;
 x = L*rand(numSamples,1)/pix2mm;
 y = L*rand(numSamples,1)/pix2mm;
 frames = randi(numSamples/numWorms,numSamples,1);
@@ -36,7 +36,7 @@ num_in_cluster = round(frac_in_cluster*numSamples);
 x_cluster = (L - L_clust)*rand();
 y_cluster = (L - L_clust)*rand();
 %% test for experimental conditions
-% half the worms are in the cluster region
+% fracetion of worms are in the cluster region
 x_clustw = (x_cluster + L_clust*rand(num_in_cluster,1))/pix2mm;
 y_clustw = (y_cluster + L_clust*rand(num_in_cluster,1))/pix2mm;
 x = [x_clustw; L*rand(numSamples-num_in_cluster,1)/pix2mm];

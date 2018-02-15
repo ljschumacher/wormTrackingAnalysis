@@ -20,7 +20,7 @@ switch model
         sim_file_list = ['datalists/woidM18_20k_samples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
         scaleflag = 'linear';
-     case 'log-rods'
+    case 'log-rods'
         num_statistics = 4;
         load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
         sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
@@ -88,7 +88,7 @@ for statCtr = 1:2
     title(['S_' num2str(statCtr) ', weight ' num2str(weights_optim(statCtr)./sum(weights_optim),2) ],'FontWeight','normal')
     legend([exp_strain_list{1} ' mean'],'best simulation')
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) '_' ...
-                strain '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
+        strain '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end
 
 %% test coverage
@@ -96,6 +96,18 @@ f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1)
     sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)
 
 % %% plot surface of dissimilatirity
-% load ../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat
-% F = scatteredInterpolant(paramSamples.dkdN,paramSamples.revRateClusterEdge,expsim_dists(:,1));
+% figure
+% xq = logspace(-1,1,100);
+% yq = logspace(-3,0,100);
+% [XQ, YQ] = meshgrid(xq,yq);
+% for distCtr = 1:(num_statistics+1)
+%     subplot(1,num_statistics+1,distCtr)
+%     F = RegularizeData3D(paramSamples.revRateClusterEdge,paramSamples.dkdN,squeeze(expsim_dists(1,:,distCtr))',...
+%     xq,yq,'smoothness',2e-2,'interp','bicubic','overlap',0.2);
+%     contourf(xq,yq,F,100,'EdgeColor','none')
+%     set(gca,'XScale','log','YScale','log')
+%     if distCtr>1
+%         title(['S_' num2str(distCtr-1) ', w=' num2str(weights_optim(distCtr-1),2)], 'FontWeight', 'normal')
+%     end
+% end
 end

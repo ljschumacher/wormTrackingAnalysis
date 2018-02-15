@@ -9,7 +9,7 @@ function gr_mean = inf_gr(data, format, fraction_to_sample)
 % distribution is discretised.
 bin_width = 0.1;
 L = 7.5;
-bins = bin_width:bin_width:2;
+bins = 0:bin_width:2;
 
 if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
@@ -83,19 +83,19 @@ elseif format == 'experiment'
     for sampleCtr = 1:num_samples
         thisFrame = frames_sampled(sampleCtr);
         
-        thisFrame_logInd = find(frames==thisFrame);
+        thisFrame_ind = find(frames==thisFrame);
         
-        while length(thisFrame_logInd) < 2 % resample if less than two worms in frame
+        while length(thisFrame_ind) < 2 % resample if less than two worms in frame
             thisFrame = randi([min(frames),max(frames)],1);
             frames_sampled(sampleCtr) = thisFrame;
-            thisFrame_logInd = find(frames==thisFrame);
+            thisFrame_ind = find(frames==thisFrame);
         end
         
-        num_worms = length(thisFrame_logInd);
+        num_worms = length(thisFrame_ind);
         coords = zeros(num_worms,2);
         
-        coords(:,1) = data{1}(thisFrame_logInd).*pix2mm;
-        coords(:,2) = data{2}(thisFrame_logInd).*pix2mm;
+        coords(:,1) = data{1}(thisFrame_ind).*pix2mm;
+        coords(:,2) = data{2}(thisFrame_ind).*pix2mm;
         
         % Obtain the pairwise distances
         pair_dist = pdist(coords);
@@ -105,7 +105,8 @@ elseif format == 'experiment'
         
         % Radial distribution function
         % Normalization step
-        gr_normalised = gr_raw.*(pi*(8.5/2).^2)./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2);
+        gr_normalised = gr_raw.*(pi*(8.5/2).^2)...
+            ./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2);
 
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1
@@ -116,5 +117,8 @@ elseif format == 'experiment'
     
     % Compute the average g(r) over the sampled timepoints
     gr_mean = mean(gr_store);
+    if any(gr_mean>23)
+pl       1; 
+    end
 end
 end

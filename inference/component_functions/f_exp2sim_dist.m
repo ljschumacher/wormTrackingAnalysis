@@ -16,23 +16,15 @@ numStrains = size(exp_ss_array,1);
 expsim_dists = zeros(numStrains,numSims, 1+num_statistics);
 
 for statCtr = 1:num_statistics
-    if isempty(weights)
-        % to scale the distances for the scale of the summary
-        % statistics, one commonly scales by the standard deviation
-        % of each statistic. since we have distributions (ie binned
-        % data), we will divide by the deviation for each bin
-        normfactor = 1./std(cat(1,sim_ss_array{:,1+statCtr}));
-    else
-        normfactor = weights(statCtr);%./std(cat(1,sim_ss_array{:,1+statCtr}));
-        % for summary statistics that are made up of binned data, we may
-        % still want to normalise the scale/range across different bins
-        % (so as not to weight bins with higher counts more strongly)
-        % or log-transform?
-    end
     for strainCtr = 1:numStrains
         exp_data = exp_ss_array{strainCtr,1+statCtr};
-        scale_factor = 1;% exp_data;
-%         scale_factor(scale_factor==0) = min(scale_factor(scale_factor~=0)); % to normalise by observed summary statistic, take care not to divide by zero
+        scale_factor = 1;
+%         % to penalise for experimental variability of the summary
+%         % we could scale by the standard deviation of each statistic. 
+%         % since we also have distributions (ie binned
+%         % data), we will divide by the deviation for each bin - unclear
+%         if this works as expected with logged summary statistics
+%         scale_factor = std(exp_data);
         for simCtr = 1:numSims
             sim_data = sim_ss_array{simCtr,1+statCtr};
             dim_factor = 1./sqrt(length(exp_data)); % correction factor for higher dimensional summary statistics
@@ -40,7 +32,6 @@ for statCtr = 1:num_statistics
             % reference - careful not to take log(0)
             expsim_dists(strainCtr,simCtr,1+statCtr) = sum(vecnorm(...
                 (log(max(exp_data,eps)) - log(max(sim_data,eps)))./scale_factor... % take scaled difference of all observed values of this summary stat and this simulated one
-                .*normfactor... % weight summary statistic
                 ,2,2)... % take norm for each expmntl sample
                 .*dim_factor... % correct for dim of summary stat
                 );% sum this distance over expmntl samples
@@ -51,7 +42,7 @@ end
 % sum the distances from all summary statistics to one combined distance
 for strainCtr = 1:numStrains
     for simCtr = 1:numSims
-        expsim_dists(strainCtr,simCtr,1) = sum(expsim_dists(strainCtr,simCtr,2:num_statistics+1));
+        expsim_dists(strainCtr,simCtr,1) = sum(weights'.*squeeze(expsim_dists(strainCtr,simCtr,2:num_statistics+1))); % weight summary statistic
     end
 end
 
