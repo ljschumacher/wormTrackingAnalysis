@@ -52,7 +52,7 @@ else
 end
 
 %% optimise weightings of summary statistics for model and strain
-optimresults_filename = ['optimresults_' model '_' strain '_alpha_' num2str(accept_ratio) '.mat'];
+optimresults_filename = ['optim_results/optimresults_' model '_' strain '_alpha_' num2str(accept_ratio) '.mat'];
 if exist(optimresults_filename,'file')
     load(optimresults_filename)
 else

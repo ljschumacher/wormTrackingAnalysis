@@ -8,14 +8,15 @@ end
 % Set up cell array to store function results in
 ss_results = cell(1,num_statistics);
 
-ss_results{1} = inf_gr(in_data, expsim_classifier, fraction_to_sample);
+ss_results{1} = inf_pcf(in_data, expsim_classifier, fraction_to_sample);
 
 if num_statistics>1
     ss_results{2} = inf_hierarchicalclustering(in_data, expsim_classifier, fraction_to_sample);
     if num_statistics>2
-       [ss_results{3}, ss_results{4}] = inf_positionalmoments(in_data, expsim_classifier, fraction_to_sample); 
-        if num_statistics>4
-           ss_results{5} = inf_polarorder(in_data, expsim_classifier, fraction_to_sample); 
+       [ss_results{3}, ss_results{4},ss_results{5}, ss_results{6}] ...
+           = inf_positionalmoments(in_data, expsim_classifier, fraction_to_sample); 
+        if num_statistics>6
+           ss_results{7} = inf_polarorder(in_data, expsim_classifier, fraction_to_sample); 
         end
     end
 end

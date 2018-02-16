@@ -1,4 +1,4 @@
-% test inf_gr
+% test inf_pcf
 % test that g(r) calc behaves as expected for uniform random positions
 % in both experiment and simulation modes
 
@@ -14,8 +14,8 @@ pix2mm = 0.0051;
 x = L*rand(numSamples,1)/pix2mm;
 y = L*rand(numSamples,1)/pix2mm;
 frames = randi(numSamples/numWorms,numSamples,1);
-gr = inf_gr({x,y,frames},'experiment',1);
-plot(gr,'k-')
+pcf = inf_pcf({x,y,frames},'experiment',1);
+plot(pcf,'k-')
 hold on
 refline(0,1)
 
@@ -23,8 +23,8 @@ refline(0,1)
 % generate some uniform random coordinates
 x = reshape(L*rand(numSamples,1),numWorms,1,1,[]);
 y = reshape(L*rand(numSamples,1),numWorms,1,1,[]);
-gr = inf_gr(cat(3,x,y),'simulation-test',1);
-plot(gr,'r-')
+pcf = inf_pcf(cat(3,x,y),'simulation-test',1);
+plot(pcf,'r-')
 hold on
 refline(0,1)
 
@@ -42,8 +42,8 @@ y_clustw = (y_cluster + L_clust*rand(num_in_cluster,1))/pix2mm;
 x = [x_clustw; L*rand(numSamples-num_in_cluster,1)/pix2mm];
 y = [y_clustw; L*rand(numSamples-num_in_cluster,1)/pix2mm];
 frames = randi(numSamples/numWorms,numSamples,1);
-gr = inf_gr({x,y,frames},'experiment',1);
-plot(gr,'b-')
+pcf = inf_pcf({x,y,frames},'experiment',1);
+plot(pcf,'b-')
 hold on
 refline(0,1)
 
@@ -54,7 +54,7 @@ x_clustw = x_cluster + L_clust*rand(numSamples*frac_in_cluster,1);
 y_clustw = y_cluster + L_clust*rand(numSamples*frac_in_cluster,1);
 x = reshape([x_clustw; L*rand(numSamples-num_in_cluster,1)],numWorms,1,1,[]);
 y = reshape([y_clustw; L*rand(numSamples-num_in_cluster,1)],numWorms,1,1,[]);
-gr = inf_gr(cat(3,x,y),'simulation-test',1);
-plot(gr,'g-')
+pcf = inf_pcf(cat(3,x,y),'simulation-test',1);
+plot(pcf,'g-')
 hold on
 refline(0,1)

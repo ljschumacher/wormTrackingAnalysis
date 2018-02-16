@@ -70,7 +70,7 @@ for sim = 1:length(sim_file_names)
     sim_ss_array{sim,4} = SS3;
     
     % SS4: gr array, showing distribution of neighbours with distance
-    sim_ss_array{sim,5} = inf_gr(data, 'simulation');
+    sim_ss_array{sim,5} = inf_pcf(data, 'simulation');
     
     % Continue for all chosen summary statistics
     
@@ -214,7 +214,7 @@ for strain = 1:length(in_list)
         try
             % Continue for all chosen summary statistics
             % SS4: gr array, showing distribution of neighbours with distance
-            exp_replicate_ss_array{m,5} = inf_gr(in_data, 'experiment');
+            exp_replicate_ss_array{m,5} = inf_pcf(in_data, 'experiment');
             
         catch
             fprintf('failed SS4, but caught')

@@ -41,7 +41,7 @@ elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
 if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e4; % this filter may be too restrictive for pair correlations or hierarchical clustering
+    maxBlobSize = 1e5; 
     channelStr = 'g';
 elseif strcmp(markerType,'bodywall')
     maxBlobSize = 2.5e5;
@@ -110,7 +110,7 @@ for strainCtr = 1:nStrains
     nNbrDist= cell(numFiles,1);
     polar_order= cell(numFiles,1);
     nematic_order= cell(numFiles,1);
-    gr =cell(numFiles,1);
+    pcf =cell(numFiles,1);
     %% loop through files
     for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
@@ -140,7 +140,7 @@ for strainCtr = 1:nStrains
         end
         if strcmp(markerType,'pharynx')
             % reset skeleton flag for pharynx data
-            trajData.has_skeleton = squeeze(~any(any(isnan(skelData))));
+            trajData.has_skeleton = true(size(trajData.has_skeleton)); %squeeze(~any(any(isnan(skelData))));
         end
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds(wormnum),maxBlobSize)...
@@ -171,7 +171,7 @@ for strainCtr = 1:nStrains
         accnbrcorr{fileCtr} = cell(numFrames,1);
         pairdist{fileCtr} = cell(numFrames,1);
         nNbrDist{fileCtr}= cell(numFrames,1);
-        gr{fileCtr} = NaN(length(distBins) - 1,numFrames);
+        pcf{fileCtr} = NaN(length(distBins) - 1,numFrames);
         polar_order{fileCtr} = zeros(numFrames,1);
         nematic_order{fileCtr} = zeros(numFrames,1);
         if strcmp(markerType,'bodywall')
@@ -207,8 +207,8 @@ for strainCtr = 1:nStrains
                 %% calculate pairwise distances
                 pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
                 %% calculate pair correlation
-                gr{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
-                gr{fileCtr}(:,frameCtr) = gr{fileCtr}(:,frameCtr)'.*OverallArea ...
+                pcf{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
+                pcf{fileCtr}(:,frameCtr) = pcf{fileCtr}(:,frameCtr)'.*OverallArea ...
                     ./(2*pi*distBins(2:end)*distBinWidth*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
                 %% calculate nearest-neighbour distances
                 D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
@@ -290,11 +290,11 @@ for strainCtr = 1:nStrains
     velxcorr = velxcorr(pdistkeepIdcs);
     pairDistbinIdx = pairDistbinIdx(pdistkeepIdcs);
     %% calculate median statistics a function of distances
-    [s_med,s_ci] = grpstats(speeds,nNbrDistbinIdx,{@median,bootserr});
-    [corr_vn_med,corr_vn_ci] = grpstats(velnbrcorr,nNbrDistbinIdx,{@median,bootserr});
-    [corr_an_med,corr_an_ci] = grpstats(accnbrcorr,nNbrDistbinIdx,{@median,bootserr});
-    [corr_o_med,corr_o_ci] = grpstats(dirxcorr,pairDistbinIdx,{@median,bootserr});
-    [corr_v_med,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{@median,bootserr});
+    [s_med,s_ci] = grpstats(speeds,nNbrDistbinIdx,{@nanmedian,bootserr});
+    [corr_vn_med,corr_vn_ci] = grpstats(velnbrcorr,nNbrDistbinIdx,{@nanmedian,bootserr});
+    [corr_an_med,corr_an_ci] = grpstats(accnbrcorr,nNbrDistbinIdx,{@nanmedian,bootserr});
+    [corr_o_med,corr_o_ci] = grpstats(dirxcorr,pairDistbinIdx,{@nanmedian,bootserr});
+    [corr_v_med,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{@nanmedian,bootserr});
     %% plot data
     [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smoothdata(s_med),...
         [smoothdata(s_med - s_ci(:,1)), smoothdata(s_ci(:,2) - s_med)],...
@@ -308,9 +308,9 @@ for strainCtr = 1:nStrains
         'alpha',velnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
     boundedline(nNbrDistBins,corr_an_med,[corr_an_med - corr_an_ci(:,1), corr_an_ci(:,2) - corr_an_med],...
         'alpha',accnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
-    gr = cat(2,gr{:});
-    boundedline(distBins(2:end)-distBinWidth/2,nanmean(gr,2),...
-        [nanstd(gr,0,2) nanstd(gr,0,2)]./sqrt(nnz(sum(~isnan(gr),2))),...
+    pcf = cat(2,pcf{:});
+    boundedline(distBins(2:end)-distBinWidth/2,nanmean(pcf,2),...
+        [nanstd(pcf,0,2) nanstd(pcf,0,2)]./sqrt(nnz(sum(~isnan(pcf),2))),...
         'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
     % plot orientational order
     set(0,'CurrentFigure',orderFig)

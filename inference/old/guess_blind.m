@@ -45,7 +45,7 @@ for sim = 1:length(sim_file_names)
     sim_ss_array{sim,4} = SS3
     
     % SS4: gr array, showing distribution of neighbours with distance
-    sim_ss_array{sim,5} = inf_gr(data, 'simulation');
+    sim_ss_array{sim,5} = inf_pcf(data, 'simulation');
     
     % Continue for all chosen summary statistics
     
@@ -101,7 +101,7 @@ for sim = 1:length(blind_sim_file_names)
     blind_sim_ss_array{sim,4} = SS3;
     
     % SS4: gr array, showing distribution of neighbours with distance
-    blind_sim_ss_array{sim,5} = inf_gr(data, 'simulation');
+    blind_sim_ss_array{sim,5} = inf_pcf(data, 'simulation');
     
     % Continue for all chosen summary statistics
 end

@@ -14,7 +14,7 @@ if dataset == 1
 elseif dataset == 2
     intensityThreshold = 60;
 end
-maxBlobSize = 3e4; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
+maxBlobSize = 1e5; % chosen large as to not filter out blobs of multiple pharynxes, as we may still want to count these in pair correlation and hierarchical clustering
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels;
 
 % For each one of these list files provided i.e. for each group of videos..
@@ -35,7 +35,7 @@ for strainCtr = 1:length(strain_list)
     exp_replicate_ss_array = cell(num_expmnts, num_statistics);
     %% For each movie file identified in this list...
     for expCtr = 1:num_expmnts
-        filename = filenames{expCtr}
+        filename = filenames{expCtr};
         
         %% OBTAINING AND FILTERING DATA
         
@@ -62,7 +62,7 @@ for strainCtr = 1:length(strain_list)
         y_data = trajData.coord_y(filter_logInd);
         frames = trajData.frame_number(filter_logInd);
         %         relative_blob_sizes = blobData.area(filter_logInd)./mode(blobData.area(filter_logInd));
-        if num_statistics>=5
+        if num_statistics>=7
             % also pass on skeleton data to compute orientational order
             skelData = h5read(filename,'/skeleton');
 %             has_skeleton = squeeze(~any(any(isnan(skelData))));

@@ -51,7 +51,7 @@ for sim = 1:length(simple_sim_file_names)
     simple_sim_ss_array{sim,4} = SS3;
     
     % SS4: gr array, showing distribution of neighbours with distance
-    simple_sim_ss_array{sim,5} = inf_gr(data, 'simulation');
+    simple_sim_ss_array{sim,5} = inf_pcf(data, 'simulation');
     
 end
 
@@ -99,7 +99,7 @@ for sim = 1:length(complex_sim_file_names)
     complex_sim_ss_array{sim,4} = SS3;
     
     % SS4: gr array, showing distribution of neighbours with distance
-    complex_sim_ss_array{sim,5} = inf_gr(data, 'complexsim');
+    complex_sim_ss_array{sim,5} = inf_pcf(data, 'complexsim');
     
 end
 
@@ -251,7 +251,7 @@ for strain = 1:length(in_list)
         try
             % Continue for all chosen summary statistics
             % SS4: gr array, showing distribution of neighbours with distance
-            exp_replicate_ss_array{m,5} = inf_gr(in_data, 'experiment');
+            exp_replicate_ss_array{m,5} = inf_pcf(in_data, 'experiment');
             
         catch
             fprintf('failed SS3, but caught')
@@ -555,7 +555,7 @@ else
         full_sim_ss_array{sim,4} = SS3;
         
         % SS4: gr array, showing distribution of neighbours with distance
-        full_sim_ss_array{sim,5} = inf_gr(data, 'simulation');
+        full_sim_ss_array{sim,5} = inf_pcf(data, 'simulation');
         
     end
 end

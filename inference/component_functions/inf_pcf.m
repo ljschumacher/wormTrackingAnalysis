@@ -1,7 +1,7 @@
 
 % Function to calculate the pair correlation function over many sampled
 % frames, and return a discretised array of the resulting g(r) distribution
-function gr_mean = inf_gr(data, format, fraction_to_sample)
+function pcf_mean = inf_pcf(data, format, fraction_to_sample)
 
 % Create bins of a given width, to store the data in. The bin width
 % controls the width of the rings drawn from each reference particle during
@@ -52,21 +52,21 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         pair_dist = pdist(coords, @periodiceucdist);
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr_raw = histcounts(pair_dist,bins,'Normalization','count');
+        pcf_raw = histcounts(pair_dist,bins,'Normalization','count');
         
         % Radial distribution function
         % Normalization step
-        gr_normalised = gr_raw.*L^2./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2); % normalisation by number of pairs, not double-counting
+        pcf_normalised = pcf_raw.*L^2./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2); % normalisation by number of pairs, not double-counting
         
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1
-            gr_store = zeros(num_samples,length(gr_normalised));
+            pcf_store = zeros(num_samples,length(pcf_normalised));
         end
-        gr_store(sampleCtr,:) = gr_normalised;
+        pcf_store(sampleCtr,:) = pcf_normalised;
     end
     
     % Compute the average g(r) over the sampled timepoints
-    gr_mean = mean(gr_store);
+    pcf_mean = mean(pcf_store);
     
 elseif format == 'experiment'
     % Analagous code for obtaining the same gr output from the
@@ -101,24 +101,21 @@ elseif format == 'experiment'
         pair_dist = pdist(coords);
         
         % Get the histogram counts of the pair_dist data using the bins
-        gr_raw = histcounts(pair_dist,bins,'Normalization','count');
+        pcf_raw = histcounts(pair_dist,bins,'Normalization','count');
         
         % Radial distribution function
         % Normalization step
-        gr_normalised = gr_raw.*(pi*(8.5/2).^2)...
+        pcf_normalised = pcf_raw.*(pi*(8.5/2).^2)...
             ./(pi*(bins(2:end).^2 - (bins(2:end) - bin_width).^2)*num_worms*(num_worms-1)/2);
 
         % Store the gr information for each of the sampled timepoints
         if sampleCtr == 1
-            gr_store = zeros(num_samples,length(gr_normalised));
+            pcf_store = zeros(num_samples,length(pcf_normalised));
         end
-        gr_store(sampleCtr,:) = gr_normalised;
+        pcf_store(sampleCtr,:) = pcf_normalised;
     end
     
     % Compute the average g(r) over the sampled timepoints
-    gr_mean = mean(gr_store);
-    if any(gr_mean>23)
-pl       1; 
-    end
+    pcf_mean = mean(pcf_store);
 end
 end
