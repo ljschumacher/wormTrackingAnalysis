@@ -209,7 +209,7 @@ for strainCtr = 1:nStrains
                 %% calculate pair correlation
                 pcf{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                 pcf{fileCtr}(:,frameCtr) = pcf{fileCtr}(:,frameCtr)'.*OverallArea ...
-                    ./(pi*(distBins(2:end)^2 - (distBins(2:end) - distBinWidth)^2)*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
+                    ./(pi*(distBins(2:end).^2 - (distBins(2:end) - distBinWidth).^2)*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
                 %% calculate nearest-neighbour distances
                 D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
                 [nNbrDist{fileCtr}{frameCtr}, nNbrIndx] = min(D + max(max(D))*eye(size(D)));
