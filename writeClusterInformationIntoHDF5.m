@@ -96,7 +96,7 @@ for strainCtr = 1:length(strains)
                     disp('/num_close_neighbrs already exists')
                 end
             end
-            % calculate stats - green channel files
+            %% calculate stats - green channel files
             try
                 neighbr_distances = h5read(filename_g,'/neighbr_distances');
                 min_neighbr_dist = h5read(filename_g,'/min_neighbr_dist');

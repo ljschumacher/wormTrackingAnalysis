@@ -14,21 +14,21 @@ param_names = {'revRateClusterEdge','dkdN_dwell'};
 
 switch model
     case 'rods'
-        num_statistics = 4;
+        num_statistics = 6;
         load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20ksamples_wlM18_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM18_20k_samples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
         scaleflag = 'linear';
     case 'log-rods'
-        num_statistics = 4;
-        load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
-        sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM18_30k_logsamples_' strain 'like.txt'];
+        num_statistics = 6;
+        load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
+        sumstat_filename = ['sumstats_40klogsamples_wlM18_' strain 'like.mat'];
+        sim_file_list = ['datalists/woidM18_40k_logsamples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 4; % 5th stat, polar order, did not seem to work well
+        num_statistics = 6; % 5th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
         sumstat_filename = ['sumstats_10ksamples_wM36_' strain 'like.mat'];
         sim_file_list = ['datalists/woidM36_10k_samples_' strain 'like.txt'];
