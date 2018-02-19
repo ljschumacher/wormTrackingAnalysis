@@ -22,9 +22,9 @@ switch model
         scaleflag = 'linear';
     case 'log-rods'
         num_statistics = 6;
-        load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
-        sumstat_filename = ['sumstats_40klogsamples_wlM18_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM18_40k_logsamples_' strain 'like.txt'];
+        load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
+        sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
+        sim_file_list = ['datalists/woidM18_30k_logsamples_' strain 'like.txt'];
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'

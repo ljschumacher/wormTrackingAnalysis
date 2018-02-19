@@ -17,9 +17,8 @@ lambda = 1e-4; % regularization parameter
 L = @(x) hellinger(x,exp_ss_array,sim_ss_array,p_cutoff,param_names,param_values,supportRange) ...
     + lambda*norm(x,1); % include regularisation
 nIter = max(10*numStats,50);
-initial_weights = de2bi(1:(2^numStats - 1));% just specify the extreme values in here, the rest should be filled in by ga randomly
+initial_weights = lhdesign(nIter,numStats);% just specify the extreme values in here, the rest should be filled in by ga randomly
 initial_weights(initial_weights==0) = 1e-14; % to satisfy the optimisation bounds
-%rand(nIter,numStats);
 
 %% use the ga global optimization toolbox solver
 options = optimoptions('ga','PopulationSize',nIter,'InitialPopulationMatrix',initial_weights,'Display','iter',...
