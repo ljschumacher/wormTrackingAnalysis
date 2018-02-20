@@ -1,4 +1,4 @@
-function [weights_optim, min_obj] = inference_master(model,strain,accept_ratio)
+function [weights_optim, min_obj] = inference_master(model,accept_ratio)
 % Inference framework
 
 % issues/to-do:
@@ -16,22 +16,25 @@ switch model
     case 'rods'
         num_statistics = 6;
         load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
-        sumstat_filename = ['sumstats_20ksamples_wlM18_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM18_20k_samples_' strain 'like.txt'];
+        sumstat_filename = ['sumstats_20ksamples_wlM18.mat'];
+        sim_file_lists = {'datalists/woidM18_20k_samples_npr1like.txt';...
+                          'datalists/woidM18_20k_samples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
         scaleflag = 'linear';
     case 'log-rods'
         num_statistics = 6;
         load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
-        sumstat_filename = ['sumstats_30klogsamples_wlM18_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM18_30k_logsamples_' strain 'like.txt'];
+        sumstat_filename = ['sumstats_30klogsamples_wlM18.mat'];
+        sim_file_lists = {'datalists/woidM18_30k_logsamples_npr1like.txt';...
+                          'datalists/woidM18_20k_logsamples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
         num_statistics = 6; % 5th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
-        sumstat_filename = ['sumstats_10ksamples_wM36_' strain 'like.mat'];
-        sim_file_list = ['datalists/woidM36_10k_samples_' strain 'like.txt'];
+        sumstat_filename = ['sumstats_10ksamples_wM36.mat'];
+        sim_file_lists = {'datalists/woidM36_10k_samples_npr1like.txt';...
+                         'datalists/woidM36_10k_samples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
         scaleflag = 'linear';
 end
@@ -43,16 +46,16 @@ if exist(sumstat_filename,'file')
     load(sumstat_filename)
 else
     % analyse simulation data
-    [sim_ss_array, sim_file_names, param_return] = f_analyse_sims(sim_file_list,...
+    [sim_ss_array, sim_file_names, param_return] = f_analyse_sims(sim_file_lists,...
         filepath, param_names, num_statistics);
     % Analyse experimental data
-    [exp_ss_array, exp_strain_list] = f_analyse_exps({strain},2,num_statistics);
+    [exp_ss_array, exp_strain_list] = f_analyse_exps({'npr1','N2'},2,num_statistics);
     save(sumstat_filename,'sim_ss_array','sim_file_names','param_return',...
         'exp_ss_array','exp_strain_list','model')
 end
 
 %% optimise weightings of summary statistics for model and strain
-optimresults_filename = ['optim_results/optimresults_' model '_' strain '_alpha_' num2str(accept_ratio) '.mat'];
+optimresults_filename = ['optim_results/optimresults_' model '_alpha_' num2str(accept_ratio) '.mat'];
 if exist(optimresults_filename,'file')
     load(optimresults_filename)
 else

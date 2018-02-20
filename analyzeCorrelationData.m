@@ -56,7 +56,7 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 distBinWidth = 100; % in units of micrometers
 maxSpeed = 1500;
 maxDist = 2000;
-distBins = distBinWidth:distBinWidth:maxDist;
+distBins = 0:distBinWidth:maxDist;
 % define functions for grpstats
 % mad1 = @(x) mad(x,1); % median absolute deviation
 % % alternatively could use boxplot-style confidence intervals on the mean,
@@ -228,8 +228,8 @@ for strainCtr = 1:nStrains
                 accnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(accx,accy,dx,dy,true,false);
                 %% calculate polar and nematic global order
                 phis = atan2(orientation_y,orientation_x);
-                polar_order{fileCtr}(frameCtr) = abs(mean(exp(1i*phis)));
-                nematic_order{fileCtr}(frameCtr) = abs(mean(exp(2i*phis)));
+                polar_order{fileCtr}(frameCtr) = abs(nanmean(exp(1i*phis)));
+                nematic_order{fileCtr}(frameCtr) = abs(nanmean(exp(2i*phis)));
             end
         end
         %% pool data from frames
