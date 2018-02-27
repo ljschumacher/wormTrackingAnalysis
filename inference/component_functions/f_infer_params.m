@@ -20,6 +20,12 @@ if plotResults
     load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
     exportOptions = struct('Format','eps2','Color','rgb','Width',14,...
         'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
+    if strcmp(scaleflag,'log')
+        supportLimits = log10(supportLimits);
+        for paramCtr=1:nParams
+            param_names{paramCtr} = ['log_{10}' param_names{paramCtr}];
+        end
+    end
 end
 %Create array for storing the parameters of the top p% of simulations
 chosen_params = cell(num_strains,1);
@@ -61,12 +67,6 @@ for strainCtr = 1:num_strains
     
     % -------- Producing joint distributions of inferred parameters -------- %
     if plotResults
-        if strcmp(scaleflag,'log')
-            supportLimits = log10(supportLimits);
-            for paramCtr=1:nParams
-                param_names{paramCtr} = ['log_{10}' param_names{paramCtr}];
-            end
-        end
         for cutoffCtr = 1:length(p_cutoffs)
             postiFig = figure;
             to_plot = squeeze(chosen_params{strainCtr}(:,:,cutoffCtr));

@@ -24,9 +24,9 @@ switch model
     case 'log-rods'
         num_statistics = 6;
         load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
-        sumstat_filename = ['sumstats_30klogsamples_wlM18.mat'];
-        sim_file_lists = {'datalists/woidM18_30k_logsamples_npr1like.txt';...
-                          'datalists/woidM18_20k_logsamples_N2like.txt'};
+        sumstat_filename = ['sumstats_50klogsamples_wlM18.mat'];
+        sim_file_lists = {'datalists/woidM18_50k_logsamples_npr1like.txt';...
+                          'datalists/woidM18_50k_logsamples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
@@ -62,7 +62,7 @@ else
     disp('optimising weights...')
     [weights_optim, min_obj] = f_optim_posterior(exp_ss_array, sim_ss_array,...
         accept_ratio, param_names, param_return, supportRange,scaleflag);
-    save(optimresults_filename,'weights_optim','min_obj','strain','model','accept_ratio')
+    save(optimresults_filename,'weights_optim','min_obj','model','accept_ratio')
 end
 %% Obtain distances between each of the experiments and simulations
 expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
@@ -75,25 +75,29 @@ expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
 %% Plot summary statistics of experiments and best samples
 exportOptions = struct('Format','eps2','Color','rgb','Width',10,...
     'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
+plotColors = lines(2);
+plotbins = (0.1:0.1:2) - 0.1/2;
 for statCtr = 1:2
     sumStatFig = figure;
     for strainCtr = 1:length(exp_strain_list)
-        errorbar(mean(exp_ss_array{strainCtr,statCtr+1}),...
-            std(exp_ss_array{strainCtr,statCtr+1}),'LineWidth',2)
+        errorbar(plotbins,mean(exp_ss_array{strainCtr,statCtr+1}),...
+            std(exp_ss_array{strainCtr,statCtr+1}),':','LineWidth',2,'Color',plotColors(strainCtr,:))
         hold on
     end
     sumStatFig.Children.YScale = 'log';
     for strainCtr = 1:length(exp_strain_list)
         for ii=1
-            semilogy(sim_ss_array{chosen_samples(strainCtr,ii),statCtr+1})
+            semilogy(plotbins,sim_ss_array{strainCtr}{chosen_samples{strainCtr}(ii),statCtr+1},'LineWidth',2,'Color',plotColors(strainCtr,:))
         end
     end
+    xlabel('r (mm)')
     title(['S_' num2str(statCtr) ', weight ' num2str(weights_optim(statCtr)./sum(weights_optim),2) ],'FontWeight','normal')
-    legend([exp_strain_list{1} ' mean'],'best simulation')
-    formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) '_' ...
-        strain '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
+    legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best simulation'],[exp_strain_list{2} 'best simulation'])
+    formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
+        '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end
 
+% make table or so of summary stat weightings?
 %% test coverage
 f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1))),...
     sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)

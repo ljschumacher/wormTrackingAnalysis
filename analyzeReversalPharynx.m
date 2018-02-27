@@ -300,7 +300,7 @@ for strainCtr = 1:nStrains
             densitybins,abs(signedSpeeds),frameRate,minSpeedPerFrame,numSubSamples,sampleSizeFraction,sampleReplacement);
         %%% careful: last line uses frameRate of last files, only works if all frameRates are consistent
         plotbins = densitybins(2:end) - mean(diff(densitybins)); % convert from bin edges to centers
-                revfwdRates = mean(revfwdRateSubsamples,1);
+        revfwdRates = mean(revfwdRateSubsamples,1);
         revfwdRateErr = std(revfwdRateSubsamples,0,1).*samplingCorrectionFactor;
         [~, mindensityIdx] = min(abs(densitybins));
         revfwdRatesNormalised = revfwdRates./(revfwdRates(mindensityIdx) + eps); % divide by lowest density estimate to get relative reversal rate
@@ -420,9 +420,6 @@ for subSampleCtr = 1:numSubSamples
     sampleTkforward = sampleNkforward/frameRate; % convert frames to time
     % estimate reversal rate as number of events per time (Poisson rate estimate)
     sampleRevRate = sampleNkAtRev./(sampleTkforward);
-    if any(isnan(sampleRevRate))
-        1;
-    end
     subsamples(subSampleCtr,:) = sampleRevRate;
 end
 end
