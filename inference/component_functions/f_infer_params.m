@@ -18,6 +18,7 @@ num_strains = size(expsim_dists,1);
 nParams = length(param_names);
 if plotResults
     load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
+    load('~/Dropbox/Utilities/colormaps_ascii/increasing_warm/cmap_Oranges.txt')
     exportOptions = struct('Format','eps2','Color','rgb','Width',14,...
         'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
     if strcmp(scaleflag,'log')
@@ -68,7 +69,7 @@ for strainCtr = 1:num_strains
     % -------- Producing joint distributions of inferred parameters -------- %
     if plotResults
         for cutoffCtr = 1:length(p_cutoffs)
-            postiFig = figure;
+            postiFig{strainCtr} = figure;
             to_plot = squeeze(chosen_params{strainCtr}(:,:,cutoffCtr));
             % Eliminate redundant rows, where all parameter values are zero
             % Occures when there are multiple cutoffs chosen
@@ -78,18 +79,36 @@ for strainCtr = 1:num_strains
             end
             subplot(1,length(p_cutoffs),cutoffCtr)
             kde_weights = 1./expsim_dists{strainCtr}(chosen_samples{strainCtr}(:,cutoffCtr),1);
-            [~,AX,~,~,~] = hplotmatrix(to_plot,[],kde_weights, supportLimits);
-            colormap(flipud(cmap_Blues))
+            [h{strainCtr},AX{strainCtr},~,hhist{strainCtr},pax{strainCtr}] ...
+                = hplotmatrix(to_plot,[],kde_weights, supportLimits);
+            if strainCtr==1
+                colormap(flipud(cmap_Blues(1:16:end,:)))
+            elseif strainCtr==2
+                colormap(flipud(cmap_Oranges(1:16:end,:)))
+            end
             title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
                 ' for ' exp_strain_list{strainCtr}],'FontWeight','normal')
             for paramCtr = 1:nParams
-                ylabel(AX(paramCtr,1),param_names(paramCtr))
-                xlabel(AX(nParams,paramCtr),param_names(paramCtr))
+                ylabel(AX{strainCtr}(paramCtr,1),param_names(paramCtr))
+                xlabel(AX{strainCtr}(nParams,paramCtr),param_names(paramCtr))
             end
-            formatAndExportFigure(postiFig,['figures/posteriors_' ...
-                exp_strain_list{strainCtr} '_alpha_' num2str(p_cutoffs(cutoffCtr)) '_' modelstring],...
-                exportOptions)
         end
     end
+end
+if plotResults
+    % combine plots from both strains into 1
+   plotColors = lines(2);
+   for lineCtr = 1:2
+       hhist{2}(lineCtr).Color = plotColors(2,:); % make orange
+       copyobj(hhist{2}(lineCtr),pax{1}(lineCtr)) % transfer to plot of first strain
+   end
+   drawnow
+   freezeColors(AX{2}(2,1))
+   h{1}(2).FaceColor = 'flat'; h{2}(2).FaceColor = 'flat';
+   copyobj(h{2}(2),AX{1}(2,1))
+   formatAndExportFigure(postiFig{1},['figures/posteriors_' ...
+       '_alpha_' num2str(p_cutoffs(cutoffCtr)) '_' modelstring],...
+       exportOptions)
+   close(postiFig{2})
 end
 end
