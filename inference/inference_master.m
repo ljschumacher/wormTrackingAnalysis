@@ -8,8 +8,7 @@ addpath('component_functions');
 
 % % set overall parameters
 % model = 'log-rods'; % 'rods' or 'worms'
-% strain = 'npr1';
-% accept_ratio = 0.02;
+% accept_ratio = 0.005, 0.01, 0.02, or 0.05
 param_names = {'revRateClusterEdge','dkdN_dwell'};
 
 switch model
@@ -23,18 +22,18 @@ switch model
         scaleflag = 'linear';
     case 'log-rods'
         num_statistics = 6;
-        load('../../../sworm-model/woidModel/paramSamples_log_nSim30000_nParam2.mat')
+        load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
         sumstat_filename = ['sumstats_50klogsamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_50k_logsamples_npr1like.txt';...
                           'datalists/woidM18_50k_logsamples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 6; % 5th stat, polar order, did not seem to work well
-        load('../../../sworm-model/woidModel/paramSamples_nSim10000_nParam2.mat')
-        sumstat_filename = ['sumstats_10ksamples_wM36.mat'];
-        sim_file_lists = {'datalists/woidM36_10k_samples_npr1like.txt';...
-                         'datalists/woidM36_10k_samples_N2like.txt'};
+        num_statistics = 6; % 7th stat, polar order, did not seem to work well
+        load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
+        sumstat_filename = ['sumstats_15kish_samples_wM36.mat'];
+        sim_file_lists = {'datalists/woidM36_14k_samples_npr1like.txt';...
+                         'datalists/woidM36_18k_samples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
         scaleflag = 'linear';
 end
@@ -64,6 +63,7 @@ else
         accept_ratio, param_names, param_return, supportRange,scaleflag);
     save(optimresults_filename,'weights_optim','min_obj','model','accept_ratio')
 end
+weights_optim
 %% Obtain distances between each of the experiments and simulations
 expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
 
