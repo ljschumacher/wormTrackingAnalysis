@@ -27,8 +27,8 @@ initial_weights = lhsdesign(nIter,numStats);% just specify the extreme values in
 initial_weights(initial_weights==0) = 1e-14; % to satisfy the optimisation bounds
 
 %% use the ga global optimization toolbox solver
-options = optimoptions('ga','PopulationSize',nIter,'InitialPopulationMatrix',initial_weights,'Display','iter',...
-    'HybridFcn',@fmincon);
+options = optimoptions('ga','PopulationSize',nIter,'InitialPopulationMatrix',initial_weights,'UseParallel',true,'Display','iter',...
+    'HybridFcn',@fmincon); % 'UseParallel', true
 [weights_optim,min_obj] = ga(L,numStats,[],[],[],[],eps*ones(numStats,1),100*ones(numStats,1),[],options);
 
 % normalise weights (for convenience only)
