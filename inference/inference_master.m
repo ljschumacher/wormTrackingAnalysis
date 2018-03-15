@@ -30,7 +30,7 @@ switch model
         scaleflag = 'log';
     case 'worms'
         num_statistics = 6; % 7th stat, polar order, did not seem to work well
-        load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
+        load('../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_15kish_samples_wM36.mat'];
         sim_file_lists = {'datalists/woidM36_14k_samples_npr1like.txt';...
                          'datalists/woidM36_18k_samples_N2like.txt'};
