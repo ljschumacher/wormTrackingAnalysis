@@ -29,7 +29,7 @@ switch model
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 4; % 7th stat, polar order, did not seem to work well
+        num_statistics = 4; % 5th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20k_samples_wM36.mat'];
         sim_file_lists = {'datalists/woidM36_20k_samples_npr1like.txt';...
