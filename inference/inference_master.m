@@ -13,7 +13,7 @@ param_names = {'revRateClusterEdge','dkdN_dwell'};
 
 switch model
     case 'rods'
-        num_statistics = 6;
+        num_statistics = 4;
         load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20ksamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_20k_samples_npr1like.txt';...
@@ -21,7 +21,7 @@ switch model
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woidlinos/woidM18paramD2/';
         scaleflag = 'linear';
     case 'log-rods'
-        num_statistics = 6;
+        num_statistics = 4;
         load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
         sumstat_filename = ['sumstats_50klogsamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_50k_logsamples_npr1like.txt';...
@@ -29,11 +29,11 @@ switch model
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/paramSamplesLog/woidlinos/';
         scaleflag = 'log';
     case 'worms'
-        num_statistics = 6; % 7th stat, polar order, did not seem to work well
+        num_statistics = 4; % 7th stat, polar order, did not seem to work well
         load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
-        sumstat_filename = ['sumstats_15kish_samples_wM36.mat'];
-        sim_file_lists = {'datalists/woidM36_14k_samples_npr1like.txt';...
-                         'datalists/woidM36_18k_samples_N2like.txt'};
+        sumstat_filename = ['sumstats_20k_samples_wM36.mat'];
+        sim_file_lists = {'datalists/woidM36_20k_samples_npr1like.txt';...
+                         'datalists/woidM36_20k_samples_N2like.txt'};
         filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
         scaleflag = 'linear';
 end
@@ -99,8 +99,8 @@ end
 
 % make table or so of summary stat weightings?
 %% test coverage
-f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1))),...
-    sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)
+% f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1))),...
+%     sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)
 
 % %% plot surface of dissimilatirity
 % figure
