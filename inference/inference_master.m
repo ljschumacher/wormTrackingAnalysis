@@ -14,7 +14,7 @@ param_names = {'revRateClusterEdge','dkdN_dwell'};
 switch model
     case 'rods'
         num_statistics = 4;
-        load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
+        load('../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20ksamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_20k_samples_npr1like.txt';...
                           'datalists/woidM18_20k_samples_N2like.txt'};
@@ -22,7 +22,7 @@ switch model
         scaleflag = 'linear';
     case 'log-rods'
         num_statistics = 4;
-        load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
+        load('../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
         sumstat_filename = ['sumstats_50klogsamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_50k_logsamples_npr1like.txt';...
                           'datalists/woidM18_50k_logsamples_N2like.txt'};
@@ -30,7 +30,7 @@ switch model
         scaleflag = 'log';
     case 'worms'
         num_statistics = 4; % 5th stat, polar order, did not seem to work well
-        load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
+        load('../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20k_samples_wM36.mat'];
         sim_file_lists = {'datalists/woidM36_20k_samples_npr1like.txt';...
                          'datalists/woidM36_20k_samples_N2like.txt'};
