@@ -67,7 +67,7 @@ bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParalle
 % plotting parameters
 plotColors = lines(nStrains);
 if plotDiagnostics, visitfreqFig = figure; hold on, end
-dircorrxticks = 0:500:maxDist;
+dircorrxticks = 0:5:(maxDist/1000);
 load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
 % export fig parameters
 exportOptions = struct('Format','eps2',...
@@ -383,12 +383,12 @@ system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % correlation of acceleration with direction to neighbour
 accnbrcorrFig.Children.YLim = [-1 1];
-accnbrcorrFig.Children.XLim = [0 maxDist];
+accnbrcorrFig.Children.XLim = [0 maxDist]/1000;
 accnbrcorrFig.Children.XGrid = 'on';
 accnbrcorrFig.Children.YGrid = 'on';
 set(accnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-ylabel(accnbrcorrFig.Children,'acceleration-direction to neighbour correlation')
-xlabel(accnbrcorrFig.Children,'distance to neareast neighbour (μm)')
+ylabel(accnbrcorrFig.Children,'acceleration-neighbor corr.')
+xlabel(accnbrcorrFig.Children,'distance to neareast neighbour (mm)')
 legend(accnbrcorrFig.Children,lineHandles,strains)
 figurename = ['figures/correlation/phaseSpecific/accnbrcorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
 exportfig(accnbrcorrFig,[figurename '.eps'],exportOptions)
@@ -396,14 +396,14 @@ system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % pair-correlation function
 poscorrFig.Children.YLim(1) = 0;
-poscorrFig.Children.XLim = [0 maxDist];
-poscorrFig.Children.XTick = 0:500:maxDist;
+poscorrFig.Children.XLim = [0 maxDist]/1000;
+poscorrFig.Children.XTick = 0:5:(maxDist/1000);
 poscorrFig.Children.YTick = 0:2:round(poscorrFig.Children.YLim(2));
 poscorrFig.Children.Box = 'on';
 poscorrFig.Children.XGrid = 'on';
 poscorrFig.Children.YGrid = 'on';
 ylabel(poscorrFig.Children,'positional correlation g(r)')
-xlabel(poscorrFig.Children,'distance r (μm)')
+xlabel(poscorrFig.Children,'distance r (mm)')
 legend(poscorrFig.Children,lineHandles,strains)
 figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum '_' phase '_data' num2str(dataset) '_' markerType];
 if useJoinedTraj, figurename = [figurename '_jointraj']; end
