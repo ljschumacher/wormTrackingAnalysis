@@ -10,8 +10,10 @@ if nargin<6
     end
 end
 
-filtered = (blobFeats.area*pixelsize^2<=maxBlobSize)&...
-                    (blobFeats.intensity_mean>=intensityThreshold);
+filtered = ((blobFeats.area*pixelsize^2<=maxBlobSize)&...
+                    (blobFeats.intensity_mean>=intensityThreshold))|(isnan(blobFeats.area));
+% include NaN values, which may occur if the blob algorithm failed but the
+% pharynx skel/tracking still works fine
 
 if plotDiagnostics
     visualizeIntensitySizeFilter(blobFeats,pixelsize,...
