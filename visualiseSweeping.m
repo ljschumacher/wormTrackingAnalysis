@@ -11,7 +11,7 @@ dataset = 2;
 phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
-numMovieSlices = 10;
+numMovieSlices = 12;
 
 if numMovieSlices>1
     % frame slice: n slices of 1 minutes (9 fps * 60s)
@@ -59,7 +59,7 @@ exportOptions = struct('Format','EPS2',...
     'LineWidth',1);
 
 %% loop through strains
-for strainCtr = 1%:nStrains
+for strainCtr = 1:nStrains
     %% load file lists
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
@@ -69,7 +69,7 @@ for strainCtr = 1%:nStrains
     numFiles = length(filenames);
     if strcmp(wormnum,'40'), visitfreq = cell(numFiles,1); end
     %% loop through files
-    for fileCtr = 1%:numFiles % can be parfor
+    for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
         %% make new video
         writerObj = VideoWriter(['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited.avi']);
@@ -111,11 +111,11 @@ for strainCtr = 1%:nStrains
                 siteVisitFig = figure;
                 x = trajData.coord_x(trajData.filtered & sliceLogInd);
                 y = trajData.coord_y(trajData.filtered & sliceLogInd);
-                h=histogram2(x*pixelsize/1000,y*pixelsize/1000,...
+                h=histogram2(x*pixelsize/1000,y*pixelsize/1000,48,...
                     'DisplayStyle','tile','EdgeColor','none','Normalization','count');
                 visitfreq{fileCtr} = h.Values(:);
                 cb = colorbar; cb.Label.String = '# visited';
-                caxis([0 1500]);
+                caxis([0 750]);
                 xlim([0 12]);
                 ylim([0 12]);
                 xlabel('x (mm)'), ylabel('y (mm)')
@@ -128,7 +128,6 @@ for strainCtr = 1%:nStrains
                 image = imread([figurename '.tif']);
                 frame = im2frame(image);
                 writeVideo(writerObj,frame)
-                system(['rm ' figurename '.tif']);
             end
         end
         close(writerObj);
