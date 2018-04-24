@@ -1,5 +1,5 @@
 function [revStartInd, revDuration, untrackedRevEnds, interRevTime, incompleteInterRev] =...
-    findReversals(signedSpeed, worm_index, minPathLength, frameRate)
+    findReversals(signedSpeed, worm_index, minPathLength, frameRate,minSpeedPerFrame)
 % finds reversals based on worm tracking data features file
 if nargin<4
     frameRate = 9;
@@ -7,11 +7,12 @@ if nargin<4
         minPathLength = eps(0);
     end
 end
+minSpeed = minSpeedPerFrame*frameRate;
 % define reversal starting events as when sign of speed changes from + to -
-revStartInd = find(signedSpeed(1:end-1)>0&signedSpeed(2:end)<0);
+revStartInd = find(signedSpeed(1:end-1)>minSpeed&signedSpeed(2:end)<-minSpeed);
 % reversals end when sign of speed changes from - to + (but there could
 % be more or fewer of these than reversal start times)
-revEndInd = 1+find(signedSpeed(1:end-1)<0&signedSpeed(2:end)>0);
+revEndInd = 1+find(signedSpeed(1:end-1)<-minSpeed&signedSpeed(2:end)>minSpeed);
 % match up reversal end times with starts
 revEndIndMatched = NaN(size(revStartInd));
 untrackedRevEnds = false(size(revStartInd));
