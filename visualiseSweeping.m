@@ -67,7 +67,7 @@ exportOptions = struct('Format','EPS2',...
     'LineWidth',1);
 
 %% loop through strains
-for strainCtr = 1%:nStrains
+for strainCtr = 1:nStrains
     %% load file lists
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
@@ -172,6 +172,7 @@ for strainCtr = 1%:nStrains
                     writeVideo(writerObj,frame)
                 end
                 system(['rm ' figurename '.tif']);
+
             end
         end
         if makeVideo
