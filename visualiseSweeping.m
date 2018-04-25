@@ -4,6 +4,9 @@
 % markerType: 'pharynx', or 'bodywall'
 % plotDiagnostics: true (default) or false
 
+%%%% try: normalise by number of tracked objects in order to set better
+%%%% thresholding value?
+
 close all
 clear
 
@@ -11,7 +14,12 @@ dataset = 2;
 phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
-numMovieSlices = 10;
+numMovieSlices = 12;
+blobThresholdValue = 200;
+makeVideo = true;
+useBlobThreshold = true;
+colorMap = gray;
+colorMap = flipud(colorMap);
 
 if numMovieSlices>1
     % frame slice: n slices of 1 minutes (9 fps * 60s)
@@ -69,12 +77,18 @@ for strainCtr = 1%:nStrains
     numFiles = length(filenames);
     if strcmp(wormnum,'40'), visitfreq = cell(numFiles,1); end
     %% loop through files
-    for fileCtr = 1%:numFiles % can be parfor
+    for fileCtr = 1:numFiles % can be parfor
         filename = filenames{fileCtr};
         %% make new video
-        writerObj = VideoWriter(['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited.avi']);
-        writerObj.FrameRate = 2;
-        open(writerObj);
+        if makeVideo
+            if useBlobThreshold
+                writerObj = VideoWriter(['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited_blobs.avi']);
+            else
+                writerObj = VideoWriter(['figures/individualRecordings/' strains{strainCtr} '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited.avi']);
+            end
+            writerObj.FrameRate = 2;
+            open(writerObj);
+        end
         %% load tracking data
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
@@ -111,26 +125,57 @@ for strainCtr = 1%:nStrains
                 siteVisitFig = figure;
                 x = trajData.coord_x(trajData.filtered & sliceLogInd);
                 y = trajData.coord_y(trajData.filtered & sliceLogInd);
-                h=histogram2(x*pixelsize/1000,y*pixelsize/1000,...
+                h=histogram2(x*pixelsize/1000,y*pixelsize/1000,48,...
                     'DisplayStyle','tile','EdgeColor','none','Normalization','count');
-                visitfreq{fileCtr} = h.Values(:);
+                colormap(colorMap);
+                caxis([0 600/15000*nnz(trajData.filtered & sliceLogInd)]); % normalise intensity based on number of tracked objects in each slice
                 cb = colorbar; cb.Label.String = '# visited';
-                caxis([0 1500]);
+                xlabel('x (mm)'), ylabel('y (mm)')
                 xlim([0 12]);
                 ylim([0 12]);
-                xlabel('x (mm)'), ylabel('y (mm)')
-                title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
+                visitfreq{fileCtr} = h.Values(:);
                 set(siteVisitFig,'PaperUnits','centimeters')
                 figurename = ['figures/individualRecordings/' strains{strainCtr}...
-                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited' '_' phase '_slice' num2str(sliceCtr) '_data' num2str(dataset)];
-                saveas(gcf,[figurename '.tif'])
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited' '_' phase '_slice' num2str(round((sliceCtr-1)*60/numMovieSlices)) '_data' num2str(dataset)];
+
+                if useBlobThreshold
+                    axis off
+                    colorbar off
+                    saveas(gcf,[figurename '.tif'])
+                    image = imread([figurename '.tif']);
+                    image = rgb2gray(image);
+                    thresImage = image < blobThresholdValue;
+                    thresImage = imfill(thresImage, 'holes');
+                    imshow(thresImage)
+                    set(gcf,'PaperUnits','centimeters')
+                    %xlim([0 12]);
+                    %ylim([0 12]);
+                    cb = colorbar; cb.Label.String = '# visited';
+                    xlabel('x (mm)'), ylabel('y (mm)')
+                    title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
+                    axis on
+                    %set(gca,'Ydir','Normal')
+                    colorbar off
+                    colormap(colorMap)
+                    saveas(gcf,[figurename '.tif'])
+                end
+                
+                if ~useBlobThreshold
+                    title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
+                    saveas(gcf,[figurename '.tif'])
+                end
+                
                 % write heatmap to video
-                image = imread([figurename '.tif']);
-                frame = im2frame(image);
-                writeVideo(writerObj,frame)
+                if makeVideo
+                    image = imread([figurename '.tif']);                                
+                    frame = im2frame(image);
+                    writeVideo(writerObj,frame)
+                end
                 system(['rm ' figurename '.tif']);
             end
         end
-        close(writerObj);
+        if makeVideo
+            close(writerObj);
+        end
     end
 end
