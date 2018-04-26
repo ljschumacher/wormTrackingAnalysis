@@ -2,24 +2,24 @@
 % 1. phase-specific histogram of sites visited based on trajData (plot): makeVideo = false; useBlobThreshold = false;
 % 2. time-lapse histogram of sites visited based on trajData (movie): makeVideo = true; useBlobThreshold = false;
 % 3. time-lapse, binary intensity thresholding of site visit histograms based on trajData (movie): makeVideo = true; useBlobThreshold = true;
-% 4. intensity and area thresholding of site visit histograms based on trajData (plot): makeVideo = true; useBlobThreshold = true; plotClusters = true;
+% 4. intensity and area thresholding of site visit histograms based on trajData (plot): makeVideo = false; useBlobThreshold = true; plotClusters = true;
 
 close all
 clear
 
 %% set analysis parameters
-dataset = 2;
+dataset = 1;
 phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
 numMovieSlices = 12;
-useBlobIntensityThreshold = true;
-makeVideo = false;
+useBlobIntensityThreshold = false;
+makeVideo = true;
 
 if useBlobIntensityThreshold
     blobHeatMapIntensityThreshold = 200; %255 is white, 0 is black on grayscale
     blobAreaThreshold = 750;
-    plotClusters = true;
+    plotClusters = false;
 end
 
 %% set fixed parameters
@@ -39,7 +39,7 @@ elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
 if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e5; 
+    maxBlobSize = 1e5;
     channelStr = 'g';
 else
     error('unknown marker type specified, should be pharynx or bodywall')
@@ -61,14 +61,6 @@ addpath('visualisation/')
 
 colorMap = gray;
 colorMap = flipud(colorMap);
-
-if numMovieSlices>1
-    % frame slice: n slices of 1 minutes (9 fps * 60s)
-    frameSlices = zeros(numMovieSlices,2);
-    for sliceCtr = 1:numMovieSlices
-        frameSlices(sliceCtr,:) = [round(32400/numMovieSlices*(sliceCtr-1)) round(32400/numMovieSlices*(sliceCtr-1)+540)];
-    end
-end
 
 if useBlobIntensityThreshold
     plotColors = parula(numMovieSlices);
@@ -99,9 +91,17 @@ for strainCtr = 1:length(strains)
         %% load tracking data
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
-        %% sample which frames to analyze
+        %% get which frames to analyze
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
+        %% generate movie slices
+        if numMovieSlices>1
+            % frame slice: n slices of 1 minutes (9 fps * 60s)
+            frameSlices = zeros(numMovieSlices,2);
+            for sliceCtr = 1:numMovieSlices
+                frameSlices(sliceCtr,:) = [round(max(trajData.frame_number)/numMovieSlices*(sliceCtr-1)) round(max(trajData.frame_number)/numMovieSlices*(sliceCtr-1)+frameRate*60)];
+            end
+        end
         %% filter data for worms
         if strcmp(markerType,'pharynx')
             % reset skeleton flag for pharynx data
@@ -119,9 +119,11 @@ for strainCtr = 1:length(strains)
         phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         trajData.filtered(~phaseFilter_logInd)=false;
         % create figure to hold cluster outline plots
-        if plotClusters
-            clusterOutlineFig = figure; hold on
-            blobAreas.(strains{strainCtr}){fileCtr} = NaN(numMovieSlices,10);
+        if useBlobIntensityThreshold
+            if plotClusters
+                clusterOutlineFig = figure; hold on
+                blobAreas.(strains{strainCtr}){fileCtr} = NaN(numMovieSlices,10);
+            end
         end
         % select frame slices
         for sliceCtr = 1:size(frameSlices,1)
@@ -147,7 +149,7 @@ for strainCtr = 1:length(strains)
                 set(siteVisitFig,'PaperUnits','centimeters')
                 figurename = ['figures/sweeping/' strains{strainCtr}...
                     '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited' '_' phase '_slice' num2str(round((sliceCtr-1)*60/numMovieSlices)) '_data' num2str(dataset)];
-
+                
                 if useBlobIntensityThreshold
                     axis off
                     colorbar off
@@ -176,7 +178,7 @@ for strainCtr = 1:length(strains)
                                     'Color', plotColors(sliceCtr,:),'LineWidth',0.5) % reset the size of the plot to 12x12 cm
                             end
                         end
-                    else 
+                    else
                         cb = colorbar; cb.Label.String = '# visited';
                         xlabel('x (pixels)'), ylabel('y (pixels)') % binary images are 1167x875 pixels
                         title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
@@ -194,7 +196,7 @@ for strainCtr = 1:length(strains)
                 
                 % write heatmap to video
                 if makeVideo
-                    image = imread([figurename '.tif']);                                
+                    image = imread([figurename '.tif']);
                     frame = im2frame(image);
                     writeVideo(writerObj,frame)
                 end
@@ -202,21 +204,23 @@ for strainCtr = 1:length(strains)
             end
         end
         % format and export cluster plot from this recording
-        if plotClusters
-            set(0,'CurrentFigure',clusterOutlineFig)
-            set(gca,'Ydir','reverse')
-            xlim([0 12])
-            ylim([0 12])
-            xticks([0:2:12])
-            yticks([0:2:12])
-            xlabel('x (mm)'), ylabel('y (mm)')
-            title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
-            colorbar
-            caxis([0 60])
-            cb = colorbar; cb.Label.String = 'minutes'; 
-            figurename = ['figures/sweeping/' strains{strainCtr}...
-                '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' phase '_data' num2str(dataset)];
-            exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
+        if useBlobIntensityThreshold
+            if plotClusters
+                set(0,'CurrentFigure',clusterOutlineFig)
+                set(gca,'Ydir','reverse')
+                xlim([0 12])
+                ylim([0 12])
+                xticks([0:2:12])
+                yticks([0:2:12])
+                xlabel('x (mm)'), ylabel('y (mm)')
+                title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','')])
+                colorbar
+                caxis([0 60])
+                cb = colorbar; cb.Label.String = 'minutes';
+                figurename = ['figures/sweeping/' strains{strainCtr}...
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' phase '_data' num2str(dataset)];
+                exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
+            end
         end
         % close videos made from this recording
         if makeVideo
