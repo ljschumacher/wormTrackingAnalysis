@@ -13,13 +13,13 @@ phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
 numMovieSlices = 12;
-useBlobIntensityThreshold = false;
-makeVideo = true;
+makeVideo = false;
+useBlobIntensityThreshold = true;
 
 if useBlobIntensityThreshold
-    blobHeatMapIntensityThreshold = 200; %255 is white, 0 is black on grayscale
-    blobAreaThreshold = 750;
-    plotClusters = false;
+    blobHeatMapIntensityThreshold = 500;
+    blobAreaThreshold = 15;
+    plotClusters = true;
 end
 
 %% set fixed parameters
@@ -59,9 +59,6 @@ exportOptions = struct('Format','EPS2',...
 addpath('auxiliary/')
 addpath('visualisation/')
 
-colorMap = gray;
-colorMap = flipud(colorMap);
-
 if useBlobIntensityThreshold
     plotColors = parula(numMovieSlices);
 end
@@ -74,9 +71,8 @@ for strainCtr = 1:length(strains)
     elseif dataset == 2
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list.xlsx'],1,'A1:E15','basic');
     end
-    numFiles = length(filenames);
     %% loop through files
-    for fileCtr = 1:numFiles % can be parfor
+    for fileCtr = 1:length(filenames) % can be parfor
         filename = filenames{fileCtr};
         %% make new video
         if makeVideo
@@ -91,15 +87,15 @@ for strainCtr = 1:length(strains)
         %% load tracking data
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
-        %% get which frames to analyze
         frameRate = double(h5readatt(filename,'/plate_worms','expected_fps'));
+        %% get phase restriction frames
         [firstFrame, lastFrame] = getPhaseRestrictionFrames(phaseFrames,phase,fileCtr);
         %% generate movie slices
         if numMovieSlices>1
-            % frame slice: n slices of 1 minutes (9 fps * 60s)
             frameSlices = zeros(numMovieSlices,2);
             for sliceCtr = 1:numMovieSlices
-                frameSlices(sliceCtr,:) = [round(max(trajData.frame_number)/numMovieSlices*(sliceCtr-1)) round(max(trajData.frame_number)/numMovieSlices*(sliceCtr-1)+frameRate*60)];
+                frameSlices(sliceCtr,:) = [round((lastFrame-firstFrame+1)/numMovieSlices*(sliceCtr-1))...
+                    round((lastFrame-firstFrame+1)/numMovieSlices*(sliceCtr-1)+(lastFrame-firstFrame+1)/numMovieSlices)];
             end
         end
         %% filter data for worms
@@ -118,13 +114,21 @@ for strainCtr = 1:length(strains)
         % apply phase restriction
         phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
         trajData.filtered(~phaseFilter_logInd)=false;
-        % create figure to hold cluster outline plots
+        
         if useBlobIntensityThreshold
+            % adjust intensity thresholding values for 3 Hz movies
+            if dataset == 1
+                if frameRate == 3
+                    blobHeatMapIntensityThreshold = blobHeatMapIntensityThreshold/3;
+                end
+            end
+            % create figure to hold cluster outline plots
             if plotClusters
                 clusterOutlineFig = figure; hold on
                 blobAreas.(strains{strainCtr}){fileCtr} = NaN(numMovieSlices,10);
             end
         end
+        
         % select frame slices
         for sliceCtr = 1:size(frameSlices,1)
             sliceStart = frameSlices(sliceCtr,1);
@@ -140,7 +144,6 @@ for strainCtr = 1:length(strains)
                 y = trajData.coord_y(trajData.filtered & sliceLogInd);
                 h=histogram2(x*pixelsize/1000,y*pixelsize/1000,48,...
                     'DisplayStyle','tile','EdgeColor','none','Normalization','count');
-                colormap(colorMap);
                 caxis([0 600/15000*nnz(trajData.filtered & sliceLogInd)]); % normalise intensity based on number of tracked objects in each slice
                 cb = colorbar; cb.Label.String = '# visited';
                 xlabel('x (mm)'), ylabel('y (mm)')
@@ -151,14 +154,9 @@ for strainCtr = 1:length(strains)
                     '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_sitesVisited' '_' phase '_slice' num2str(round((sliceCtr-1)*60/numMovieSlices)) '_data' num2str(dataset)];
                 
                 if useBlobIntensityThreshold
-                    axis off
-                    colorbar off
-                    saveas(gcf,[figurename '.tif']) % save black and white heat map image without labels for blob thresholding
-                    image = imread([figurename '.tif']);
-                    image = rgb2gray(image);
-                    binaryImage = image < blobHeatMapIntensityThreshold; % apply blob heat map intensity threshold values
+                    binaryImage = h.Values > blobHeatMapIntensityThreshold; % apply blob heat map intensity threshold values
                     binaryImage = imfill(binaryImage, 'holes');
-                    imshow(binaryImage)
+                    binaryFig = figure; imshow(binaryImage)
                     set(gcf,'PaperUnits','centimeters')
                     %xlim([0 12]);
                     %ylim([0 12]);
@@ -173,12 +171,13 @@ for strainCtr = 1:length(strains)
                         blobBoundaries = bwboundaries(binaryImage);
                         for blobCtr = 1:numel(blobLogInd) % plot individual blob boundaries that meet area threshold requirements
                             if blobLogInd(blobCtr)
-                                plot(blobBoundaries{blobCtr}(:,2)/size(binaryImage,2)*12,...
-                                    blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,...
+                                plot(blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,...
+                                    blobBoundaries{blobCtr}(:,2)/size(binaryImage,2)*12,...
                                     'Color', plotColors(sliceCtr,:),'LineWidth',0.5) % reset the size of the plot to 12x12 cm
                             end
                         end
                     else
+                        set(0,'CurrentFigure',binaryFig)
                         cb = colorbar; cb.Label.String = '# visited';
                         xlabel('x (pixels)'), ylabel('y (pixels)') % binary images are 1167x875 pixels
                         title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
@@ -200,14 +199,15 @@ for strainCtr = 1:length(strains)
                     frame = im2frame(image);
                     writeVideo(writerObj,frame)
                 end
-                system(['rm ' figurename '.tif']);
+                if exist([ figurename '.tif'])
+                    system(['rm ' figurename '.tif']);
+                end
             end
         end
         % format and export cluster plot from this recording
         if useBlobIntensityThreshold
             if plotClusters
                 set(0,'CurrentFigure',clusterOutlineFig)
-                set(gca,'Ydir','reverse')
                 xlim([0 12])
                 ylim([0 12])
                 xticks([0:2:12])
@@ -218,8 +218,14 @@ for strainCtr = 1:length(strains)
                 caxis([0 60])
                 cb = colorbar; cb.Label.String = 'minutes';
                 figurename = ['figures/sweeping/' strains{strainCtr}...
-                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' phase '_data' num2str(dataset)];
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime2_' phase '_data' num2str(dataset)];
                 exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
+            end
+            % reset parameter from 3Hz movies, if necessary
+            if dataset == 1
+                if frameRate == 3
+                    blobHeatMapIntensityThreshold = blobHeatMapIntensityThreshold*3;
+                end
             end
         end
         % close videos made from this recording
