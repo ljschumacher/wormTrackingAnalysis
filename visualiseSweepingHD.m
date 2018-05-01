@@ -1,38 +1,43 @@
-% script visualises sweeping in 40 worm pharynx datasets in several ways.
-% 1. phase-specific histogram of sites visited based on trajData (plot): makeVideo = false; useBlobThreshold = false;
-% 2. time-lapse histogram of sites visited based on trajData (movie): makeVideo = true; useBlobThreshold = false;
-% 3. time-lapse, binary intensity thresholding of site visit histograms based on trajData (movie): makeVideo = true; useBlobThreshold = true;
-% 4. intensity and area thresholding of site visit histograms based on trajData (plot): makeVideo = false; useBlobThreshold = true; plotClusters = true;
+% script visualises sweeping in high density worm pharynx datasets in several ways. (adapted from visualiseSweeping.m)
+% 1. phase-specific histogram of sites visited based on trajData (plot): makeVideo = false; useBlobThreshold = false; (untested)
+% 2. time-lapse histogram of sites visited based on trajData (movie): makeVideo = true; useBlobThreshold = false; (untested)
+% 3. time-lapse, binary intensity thresholding of site visit histograms based on trajData (movie): makeVideo = true; useBlobThreshold = true; (untested)
+% 4. intensity and area thresholding of site visit histograms based on trajData (plot): makeVideo = false; useBlobThreshold = true; plotClusters = true; (tested)
 
 close all
 clear
 
 %% set analysis parameters
-dataset = 2;
+dataset = 1;
 phase = 'fullMovie';
 wormnum = 'HD'; % only works when phase = 'fullMovie'
 markerType = 'pharynx';
 makeVideo = false;
 useBlobIntensityThreshold = true;
 
-if useBlobIntensityThreshold
-    blobHeatMapIntensityThreshold = 650; %500;
-    blobAreaThreshold = 8;
-    plotClusters = true;
+if strcmp(wormnum,'HD')
+    minPerSlice = 5; % 5 works best
+    if minPerSlice == 5
+        minContiniousDuration = 10; % time in minutes of continous FOV required for a plot to be generated.
+    elseif minPerSlice == 2.5
+        minContiniousDuration = 7.5;
+    end
 end
 
-if strcmp(wormnum,'HD')
-    minContiniousDuration = 7.5; % time in minutes of continous FOV required for a plot to be generated
-    minPerSlice = 2.5;
-elseif strcmp(wormnum, '40')
-    numMovieSlices = 12; % gets overriden for HD movies
-    minPerSlice = 5;
+if useBlobIntensityThreshold
+    if minPerSlice == 5
+        blobHeatMapIntensityThreshold = 1300;
+    elseif minPerSlice == 2.5
+        blobHeatMapIntensityThreshold = 650;
+    end
+    blobAreaThreshold = 8;
+    plotClusters = true;
 end
 
 %% set fixed parameters
 
 if dataset ==1
-    strains = {'npr1','N2'};%{'npr1','HA','N2'}
+    strains = {'npr1','N2','HA'};%{'npr1','HA','N2'}
     assert(~strcmp(markerType,'bodywall'),'Bodywall marker for dataset 1 not available')
 elseif dataset ==2
     strains = {'npr1','N2'};
@@ -68,25 +73,29 @@ addpath('visualisation/')
 
 
 %% loop through strains
-for strainCtr = 1:length(strains)
+for strainCtr = 3%1:length(strains)
     %% load file lists
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
     elseif dataset == 2
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list.xlsx'],1,'A1:E15','basic');
-        if strcmp(wormnum, 'HD')
-            if strcmp(phase,'fullMovie')
-                % load continuous frames list
+    end
+    if strcmp(wormnum, 'HD')
+        if strcmp(phase,'fullMovie')
+            % load continuous frames list
+            if dataset == 1
+                [~,~,continuousFrames] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'G1:P15','basic');
+            elseif dataset == 2
                 [~,~,continuousFrames] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list.xlsx'],1,'G1:P15','basic');
-                % replace NaN's with empty cells
-                for k = 1:numel(continuousFrames)
-                    if isnan(continuousFrames{k})
-                        continuousFrames{k} = '';
-                    end
-                end
-            else
-                error('high density movies cannot be phase-restricted for this analysis. Set phase to "fullMovie".')
             end
+            % replace NaN's with empty cells
+            for k = 1:numel(continuousFrames)
+                if isnan(continuousFrames{k})
+                    continuousFrames{k} = '';
+                end
+            end
+        else
+            error('high density movies cannot be phase-restricted for this analysis. Set phase to "fullMovie".')
         end
     end
     %% loop through files
@@ -133,13 +142,6 @@ for strainCtr = 1:length(strains)
                     blobHeatMapIntensityThreshold = blobHeatMapIntensityThreshold/3;
                 end
             end
-            % create figure to hold cluster outline plots
-            %             if plotClusters
-            %                 if ~strcmp(wormnum,'HD')
-            %                     clusterOutlineFig = figure; hold on
-            %                     blobAreas.(strains{strainCtr}){fileCtr} = NaN(numMovieSlices,10);
-            %                 end
-            %             end
         end
         
         %% get continuous frames
@@ -156,7 +158,7 @@ for strainCtr = 1:length(strains)
                     end
                     if lastFrame-firstFrame+1>minContiniousDuration*60*frameRate
                         numMovieSlices = floor((lastFrame-firstFrame+1)/60/frameRate/minPerSlice);
-                        if numMovieSlices<3 %
+                        if numMovieSlices<2
                             error('something wrong with continuous movie run slicing. Slice number should be 3 or more!')
                         else
                             plotColors = parula(numMovieSlices);
@@ -179,7 +181,7 @@ for strainCtr = 1:length(strains)
                                     sliceLogInd(frameCtr==trajData.frame_number)=true;
                                 end
                                 
-                                %% heat map of sites visited - this only makes sense for 40 worm dataset where we don't move the camera
+                                %% heat map of sites visited 
                                 siteVisitFig = figure;
                                 x = trajData.coord_x(trajData.filtered & sliceLogInd);
                                 y = trajData.coord_y(trajData.filtered & sliceLogInd);
@@ -206,9 +208,6 @@ for strainCtr = 1:length(strains)
                                         set(0,'CurrentFigure',clusterOutlineFig)
                                         labeledImage = bwlabel(binaryImage, 8); % label each blob so we can make measurements of it
                                         blobMeasurements = regionprops(binaryImage, 'Area');
-                                        %                                             if numel([blobMeasurements.Area])>0
-                                        %                                                 blobAreas.(strains{strainCtr}){fileCtr}(sliceCtr,1:numel([blobMeasurements.Area])) = [blobMeasurements.Area];
-                                        %                                             end
                                         blobLogInd = [blobMeasurements.Area] > blobAreaThreshold; % apply blob area threshold values
                                         blobBoundaries = bwboundaries(binaryImage);
                                         for blobCtr = 1:numel(blobLogInd) % plot individual blob boundaries that meet area threshold requirements
@@ -259,8 +258,11 @@ for strainCtr = 1:length(strains)
                                     caxis([round(firstFrame/60/frameRate) round(lastFrame/60/frameRate)])
                                     cb = colorbar; cb.Label.String = 'minutes';
                                     figurename = ['figures/sweeping/' strains{strainCtr}...
-                                        '_' wormnum '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' num2str(round(firstFrame/60/frameRate)) '-' num2str(round(lastFrame/60/frameRate)) ' min_' phase '_data' num2str(dataset)];
+                                        '_' wormnum '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_'...
+                                        num2str(round(firstFrame/60/frameRate)) '-' num2str(round(lastFrame/60/frameRate)) ' min_' ...
+                                        num2str(minPerSlice) 'minSlices_' phase '_data' num2str(dataset)];
                                     exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
+                                    plot2svg([figurename '.svg'],clusterOutlineFig)
                                 end
                                 % reset parameter from 3Hz movies, if necessary
                                 if dataset == 1
@@ -269,7 +271,7 @@ for strainCtr = 1:length(strains)
                                     end
                                 end
                             end
-                            % close videos made from this recording
+                            % close the videos made from this recording
                             if makeVideo
                                 close(writerObj);
                             end

@@ -12,12 +12,18 @@ dataset = 1;
 phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
-numMovieSlices = 12;
+numMovieSlices = 6; % 6 works best
 makeVideo = false;
 useBlobIntensityThreshold = true;
 
 if useBlobIntensityThreshold
-    blobHeatMapIntensityThreshold = 500;
+    if numMovieSlices == 6
+        blobHeatMapIntensityThreshold = 1000;
+    elseif numMovieSlices == 12
+        blobHeatMapIntensityThreshold = 500;
+    elseif numMovieSlices == 24
+        blobHeatMapIntensityThreshold = 250;
+    end
     blobAreaThreshold = 15;
     plotClusters = true;
 end
@@ -25,7 +31,7 @@ end
 %% set fixed parameters
 
 if dataset ==1
-    strains = {'npr1','N2'};%{'npr1','HA','N2'}
+    strains = {'npr1','N2','HA'};%{'npr1','HA','N2'}
     assert(~strcmp(markerType,'bodywall'),'Bodywall marker for dataset 1 not available')
 elseif dataset ==2
     strains = {'npr1','N2'};
@@ -168,7 +174,7 @@ for strainCtr = 1:length(strains)
                             blobAreas.(strains{strainCtr}){fileCtr}(sliceCtr,1:numel([blobMeasurements.Area])) = [blobMeasurements.Area];
                         end
                         blobLogInd = [blobMeasurements.Area] > blobAreaThreshold; % apply blob area threshold values
-                        blobBoundaries = bwboundaries(binaryImage);
+                        blobBoundaries = bwboundaries(binaryImage,8,'noholes');
                         for blobCtr = 1:numel(blobLogInd) % plot individual blob boundaries that meet area threshold requirements
                             if blobLogInd(blobCtr)
                                 plot(blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,...
@@ -218,8 +224,9 @@ for strainCtr = 1:length(strains)
                 caxis([0 60])
                 cb = colorbar; cb.Label.String = 'minutes';
                 figurename = ['figures/sweeping/' strains{strainCtr}...
-                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime2_' phase '_data' num2str(dataset)];
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' num2str(round(60/numMovieSlices)) 'minSlices_' phase '_data' num2str(dataset)];
                 exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
+                plot2svg([figurename '.svg'],clusterOutlineFig) % export svg for object filling in illustrator
             end
             % reset parameter from 3Hz movies, if necessary
             if dataset == 1

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 19.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 612 792" style="enable-background:new 0 0 612 792;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FFFFFF;}
+	.st1{fill:#262626;}
+	.st2{font-family:'Helvetica';}
+	.st3{font-size:9.0161px;}
+	.st4{font-family:'Helvetica-Bold';}
+	.st5{clip-path:url(#SVGID_2_);}
+	.st6{opacity:0.3;fill:#3D26A8;}
+	.st7{clip-path:url(#SVGID_4_);}
+	.st8{clip-path:url(#SVGID_6_);}
+	.st9{clip-path:url(#SVGID_8_);}
+	.st10{clip-path:url(#SVGID_10_);}
+	.st11{opacity:0.3;fill:#F9FA14;}
+	.st12{clip-path:url(#SVGID_12_);}
+	.st13{clip-path:url(#SVGID_14_);}
+	.st14{clip-path:url(#SVGID_16_);}
+	.st15{fill:none;stroke:#262626;stroke-width:0.5;stroke-linecap:square;}
+	.st16{font-size:8.1964px;}
+</style>
+<desc>Matlab Figure Converted by PLOT2SVG written by Juerg Schwizer</desc>
+<g id="topgroup">
+	<rect class="st0" width="612" height="459"/>
+	<g id="ID000000">
+		<polygon class="st0" points="71.6,408.5 498.5,408.5 498.5,34.4 71.6,34.4 		"/>
+		<polygon class="st0" points="71.6,34.4 498.5,34.4 498.5,34.4 		"/>
+		<polygon class="st0" points="71.6,408.5 71.6,408.5 71.6,34.4 71.6,34.4 		"/>
+		<g>
+			<g id="ID000002">
+				<g transform="translate(61.988,270.200)">
+					<g transform="rotate(-90.000)">
+						<text transform="matrix(1 0 0 1 34.7132 -11.1799)" class="st1 st2 st3">y (mm)</text>
+					</g>
+				</g>
+			</g>
+			<g id="ID000003">
+				<g transform="translate(347.760,522.421)">
+					<g transform="rotate(-0.000)">
+						<text transform="matrix(1 0 0 1 -76.7406 -94.2228)" class="st1 st2 st3">x (mm)</text>
+					</g>
+				</g>
+			</g>
+			<g id="ID000004">
+				<g transform="translate(347.760,38.330)">
+					<g transform="rotate(-0.000)">
+						<text transform="matrix(1 0 0 1 -129.3621 -6.913)" class="st4 st3">npr1 recording54.1g, 30-44 min</text>
+					</g>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_1_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_2_">
+					<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000005" class="st5">
+					<polyline class="st6" points="267.3,338.4 258.4,330.6 249.5,322.8 249.5,315 249.5,307.2 249.5,299.4 249.5,291.6 
+						240.6,283.8 249.5,291.6 258.4,291.6 267.3,299.4 267.3,307.2 267.3,315 276.1,322.8 276.1,330.6 267.3,338.4 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_3_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_4_">
+					<use xlink:href="#SVGID_3_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000006" class="st7">
+					<polyline class="st6" points="382.9,276 374,268.2 374,260.4 382.9,252.6 382.9,244.8 391.8,237.1 391.8,229.3 391.8,221.5 
+						391.8,213.7 400.6,213.7 391.8,221.5 391.8,229.3 391.8,237.1 391.8,244.8 391.8,252.6 391.8,260.4 400.6,268.2 400.6,276 
+						391.8,276 382.9,276 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_5_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_6_">
+					<use xlink:href="#SVGID_5_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000007" class="st8">
+					<polyline class="st6" points="302.8,244.8 293.9,237.1 285,229.3 276.1,221.5 267.3,213.7 258.4,221.5 249.5,229.3 
+						258.4,221.5 258.4,213.7 267.3,205.9 276.1,205.9 285,205.9 293.9,205.9 302.8,213.7 302.8,221.5 311.7,229.3 311.7,237.1 
+						311.7,244.8 302.8,244.8 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_7_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_8_">
+					<use xlink:href="#SVGID_7_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000008" class="st9">
+					<polyline class="st6" points="338.4,182.5 338.4,174.7 338.4,166.9 347.3,159.1 356.2,166.9 356.2,174.7 356.2,182.5 
+						347.3,182.5 338.4,182.5 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_9_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_10_">
+					<use xlink:href="#SVGID_9_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000009" class="st10">
+					<polyline class="st11" points="240.6,338.4 240.6,330.6 231.7,322.8 231.7,315 222.8,307.2 222.8,299.4 222.8,291.6 
+						231.7,291.6 240.6,291.6 249.5,299.4 249.5,307.2 258.4,315 267.3,322.8 267.3,330.6 267.3,338.4 258.4,338.4 249.5,338.4 
+						240.6,338.4 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_11_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_12_">
+					<use xlink:href="#SVGID_11_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000010" class="st12">
+					<polyline class="st11" points="374,283.8 365.1,276 365.1,268.2 365.1,260.4 365.1,252.6 374,244.8 374,237.1 382.9,237.1 
+						391.8,237.1 391.8,244.8 391.8,252.6 391.8,260.4 391.8,268.2 391.8,276 382.9,283.8 374,283.8 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_13_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_14_">
+					<use xlink:href="#SVGID_13_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000011" class="st13">
+					<polyline class="st11" points="285,244.8 276.1,237.1 267.3,229.3 258.4,221.5 249.5,221.5 249.5,213.7 249.5,205.9 
+						258.4,205.9 267.3,205.9 276.1,198.1 285,198.1 285,205.9 293.9,213.7 293.9,221.5 293.9,229.3 293.9,237.1 293.9,244.8 
+						285,244.8 					"/>
+				</g>
+			</g>
+			<g>
+				<defs>
+					<rect id="SVGID_15_" x="71.6" y="15.9" width="463.2" height="392.6"/>
+				</defs>
+				<clipPath id="SVGID_16_">
+					<use xlink:href="#SVGID_15_"  style="overflow:visible;"/>
+				</clipPath>
+				<g id="ID000012" class="st14">
+					<polyline class="st11" points="338.4,182.5 329.5,174.7 329.5,166.9 329.5,159.1 338.4,159.1 347.3,159.1 356.2,166.9 
+						347.3,174.7 347.3,182.5 338.4,182.5 					"/>
+				</g>
+			</g>
+		</g>
+		<g>
+			<line class="st15" x1="71.6" y1="408.5" x2="71.6" y2="404.2"/>
+			<line class="st15" x1="142.7" y1="408.5" x2="142.7" y2="404.2"/>
+			<line class="st15" x1="213.9" y1="408.5" x2="213.9" y2="404.2"/>
+			<line class="st15" x1="285" y1="408.5" x2="285" y2="404.2"/>
+			<line class="st15" x1="356.2" y1="408.5" x2="356.2" y2="404.2"/>
+			<line class="st15" x1="427.3" y1="408.5" x2="427.3" y2="404.2"/>
+			<line class="st15" x1="498.5" y1="408.5" x2="498.5" y2="404.2"/>
+			<line class="st15" x1="71.6" y1="408.5" x2="498.5" y2="408.5"/>
+			<g transform="translate(87.360,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.0353 -91.5359)" class="st1 st2 st16">0</text>
+				</g>
+			</g>
+			<g transform="translate(174.160,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -33.6903 -91.5359)" class="st1 st2 st16">2</text>
+				</g>
+			</g>
+			<g transform="translate(260.960,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -49.3453 -91.5359)" class="st1 st2 st16">4</text>
+				</g>
+			</g>
+			<g transform="translate(347.760,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -65.0004 -91.5359)" class="st1 st2 st16">6</text>
+				</g>
+			</g>
+			<g transform="translate(434.560,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -80.6558 -91.5359)" class="st1 st2 st16">8</text>
+				</g>
+			</g>
+			<g transform="translate(521.360,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -98.5894 -91.5359)" class="st1 st2 st16">10</text>
+				</g>
+			</g>
+			<g transform="translate(608.160,507.528)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -114.245 -91.5359)" class="st1 st2 st16">12</text>
+				</g>
+			</g>
+			<line class="st15" x1="71.6" y1="408.5" x2="75.9" y2="408.5"/>
+			<line class="st15" x1="71.6" y1="346.2" x2="75.9" y2="346.2"/>
+			<line class="st15" x1="71.6" y1="283.8" x2="75.9" y2="283.8"/>
+			<line class="st15" x1="71.6" y1="221.5" x2="75.9" y2="221.5"/>
+			<line class="st15" x1="71.6" y1="159.1" x2="75.9" y2="159.1"/>
+			<line class="st15" x1="71.6" y1="96.8" x2="75.9" y2="96.8"/>
+			<line class="st15" x1="71.6" y1="34.4" x2="75.9" y2="34.4"/>
+			<line class="st15" x1="71.6" y1="408.5" x2="71.6" y2="34.4"/>
+			<g transform="translate(76.944,498.400)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.4357 -89.8902)" class="st1 st2 st16">0</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,422.333)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.4357 -76.1709)" class="st1 st2 st16">2</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,346.267)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.4357 -62.4516)" class="st1 st2 st16">4</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,270.200)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.4357 -48.7323)" class="st1 st2 st16">6</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,194.133)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -18.4357 -35.0129)" class="st1 st2 st16">8</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,118.067)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -22.9943 -21.2941)" class="st1 st2 st16">10</text>
+				</g>
+			</g>
+			<g transform="translate(76.944,42.000)">
+				<g transform="rotate(-0.000)">
+					<text transform="matrix(1 0 0 1 -22.9943 -7.5747)" class="st1 st2 st16">12</text>
+				</g>
+			</g>
+			<line class="st15" x1="71.6" y1="408.5" x2="71.6" y2="408.5"/>
+		</g>
+	</g>
+</g>
+</svg>
