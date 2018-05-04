@@ -8,23 +8,23 @@ close all
 clear
 
 %% set analysis parameters
-dataset = 1;
+dataset = 2;
 phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
-numMovieSlices = 6; % 6 works best
+numMovieSlices = 24; % 6 works best
 makeVideo = false;
 useBlobIntensityThreshold = true;
 
 if useBlobIntensityThreshold
     if numMovieSlices == 6
-        blobHeatMapIntensityThreshold = 1000;
+        blobHeatMapIntensityThreshold = 125; %1000
     elseif numMovieSlices == 12
         blobHeatMapIntensityThreshold = 500;
     elseif numMovieSlices == 24
         blobHeatMapIntensityThreshold = 250;
     end
-    blobAreaThreshold = 15;
+    blobAreaThreshold = 8; %15
     plotClusters = true;
 end
 
@@ -177,15 +177,17 @@ for strainCtr = 1:length(strains)
                         blobBoundaries = bwboundaries(binaryImage,8,'noholes');
                         for blobCtr = 1:numel(blobLogInd) % plot individual blob boundaries that meet area threshold requirements
                             if blobLogInd(blobCtr)
-                                plot(blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,...
-                                    blobBoundaries{blobCtr}(:,2)/size(binaryImage,2)*12,...
-                                    'Color', plotColors(sliceCtr,:),'LineWidth',0.5) % reset the size of the plot to 12x12 cm
+                                %plot(blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,...
+                                %    blobBoundaries{blobCtr}(:,2)/size(binaryImage,2)*12,...
+                                %    'Color', plotColors(sliceCtr,:),'LineWidth',0.5) % reset the size of the plot to 12x12 cm
+                                fill(blobBoundaries{blobCtr}(:,1)/size(binaryImage,1)*12,blobBoundaries{blobCtr}(:,2)/size(binaryImage,2)*12,plotColors(sliceCtr,:),'edgecolor','none')
+                                alpha 0.5
                             end
                         end
                     else
                         set(0,'CurrentFigure',binaryFig)
                         cb = colorbar; cb.Label.String = '# visited';
-                        xlabel('x (pixels)'), ylabel('y (pixels)') % binary images are 1167x875 pixels
+                        xlabel('x (pixels)'), ylabel('y (pixels)')
                         title([strains{strainCtr} ' ' strrep(filename(end-32:end-18),'/','') ', ' num2str(round((sliceCtr-1)*60/numMovieSlices)) 'min'])
                         axis on
                         colorbar off
@@ -224,9 +226,9 @@ for strainCtr = 1:length(strains)
                 caxis([0 60])
                 cb = colorbar; cb.Label.String = 'minutes';
                 figurename = ['figures/sweeping/' strains{strainCtr}...
-                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTime_' num2str(round(60/numMovieSlices)) 'minSlices_' phase '_data' num2str(dataset)];
+                    '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimeFill_' num2str(60/numMovieSlices) 'minSlices_' phase '_data' num2str(dataset)];
                 exportfig(clusterOutlineFig,[figurename '.eps'],exportOptions)
-                plot2svg([figurename '.svg'],clusterOutlineFig) % export svg for object filling in illustrator
+                %plot2svg([figurename '.svg'],clusterOutlineFig) % export svg for object filling in illustrator
             end
             % reset parameter from 3Hz movies, if necessary
             if dataset == 1

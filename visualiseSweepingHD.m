@@ -73,7 +73,7 @@ addpath('visualisation/')
 
 
 %% loop through strains
-for strainCtr = 3%1:length(strains)
+for strainCtr = 1:length(strains)
     %% load file lists
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
