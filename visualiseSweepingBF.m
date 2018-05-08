@@ -8,10 +8,6 @@ close all
 clear
 
 %% set analysis parameters
-dataset = 2;
-phase = 'fullMovie';
-wormnum = '40';
-markerType = 'pharynx';
 blobAreaThreshold = 8000;
 sampleEveryNSec = 30; 
 dilateBinaryImage = true;
@@ -23,27 +19,7 @@ if dilateBinaryImage
 end
 
 %% set fixed parameters
-
-if dataset ==1
-    strains = {'npr1','N2','HA'};%{'npr1','HA','N2'}
-    assert(~strcmp(markerType,'bodywall'),'Bodywall marker for dataset 1 not available')
-elseif dataset ==2
     strains = {'npr1','N2'};
-end
-pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
-% filtering parameters
-if dataset == 1
-    intensityThresholds = containers.Map({'40','HD','1W'},{50, 40, 100});
-elseif dataset ==2
-    intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
-end
-if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e5;
-    channelStr = 'g';
-else
-    error('unknown marker type specified, should be pharynx or bodywall')
-end
 
 % export fig parameters
 exportOptions = struct('Format','EPS2',...
