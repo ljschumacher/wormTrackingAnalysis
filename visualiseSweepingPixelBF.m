@@ -91,10 +91,10 @@ for fileCtr = 1:6 % go through each recording replicate (6 in total)
     colorbar
     caxis([0 ceil(totalFrames/25/60)])
     cb = colorbar; cb.Label.String = 'minutes';
-    xlim([0 16])
-    ylim([0 16])
-    xticks([0:4:16])
-    yticks([0:4:16])
+    xlim([0 20])
+    ylim([0 20])
+    xticks([0:5:20])
+    yticks([0:5:20])
     xlabel('x (mm)')
     ylabel('y (mm)')
     if plotCentroid
@@ -104,15 +104,16 @@ for fileCtr = 1:6 % go through each recording replicate (6 in total)
     end
     exportfig(clusterVisFig,[figurename '.eps'],exportOptions)
     % calculate centroid speed (in microns per minute)
-    for frameCtr = 1:numel(movieFrames)-10
-        if ~isnan(blobCentroidCoords(1,cumFrame+frameCtr))
+    clusterCentroidSpeed{fileCtr} = NaN(1,totalSampleFrames);
+    for frameCtr = 1:totalSampleFrames-10
+        if ~isnan(blobCentroidCoords(1,frameCtr))
             for stepCtr = 1:10 % in case the next sample frame has no cluster, go up to 10 time steps away
-                if ~isnan(blobCentroidCoords(1,cumFrame+frameCtr+stepCtr))
+                if ~isnan(blobCentroidCoords(1,frameCtr+stepCtr))
                     break
                 end
             end
-            clusterCentroidSpeed{fileCtr}(cumFrame+frameCtr) = sqrt((blobCentroidCoords(1,cumFrame+frameCtr+stepCtr)-blobCentroidCoords(1,cumFrame+frameCtr))^2 +...
-                (blobCentroidCoords(2,cumFrame+frameCtr+stepCtr)-blobCentroidCoords(2,cumFrame+frameCtr))^2)...
+            clusterCentroidSpeed{fileCtr}(frameCtr) = sqrt((blobCentroidCoords(1,frameCtr+stepCtr)-blobCentroidCoords(1,frameCtr))^2 +...
+                (blobCentroidCoords(2,frameCtr+stepCtr)-blobCentroidCoords(2,frameCtr))^2)...
                 /stepCtr*pixelsize*60/sampleEveryNSec;
         end
     end
@@ -129,7 +130,7 @@ exportfig(clusterCentroidSpeedFig,[figurename '.eps'],exportOptions)
 % save cluster centroid speednumbers
 save('figures/sweeping/npr1_clusterCentroidSpeed_dataBF.mat','clusterCentroidSpeed');
 % calculate average speed
-for fileCtr = 1:6 %[1,2,3,4,6] %
+for fileCtr = [1,2,3,6]%1:6 %[1,2,3,4,6] %
     averageSpeed(fileCtr) = nanmedian(clusterCentroidSpeed{fileCtr});
 end
 averageSpeed = median(averageSpeed)
