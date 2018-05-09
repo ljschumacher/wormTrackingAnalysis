@@ -96,7 +96,7 @@ for strainCtr = 1:length(strains)
         clusterCentroidSpeed{fileCtr} = NaN(1,numel(movieFrames)-1);
         % read each movie frame from masked images
         for frameCtr = 1:numel(movieFrames)
-            imageFrame = h5read(skeletonfilename,'/mask',[1,1,movieFrames(frameCtr)],[dims(1), dims(2), 1]);
+            imageFrame = h5read(skeletonfilename,'/mask',[1,1,movieFrames(frameCtr)],[dims(1),dims(2),1]);
             % generate binary segmentation based on black/white contrast
             binaryImage = imageFrame > intensityThresholds(wormnum); % apply blob heat map intensity threshold values
             binaryImage = imfill(binaryImage, 'holes');
@@ -151,15 +151,14 @@ for strainCtr = 1:length(strains)
                 '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimePixel_blobArea'  num2str(blobAreaThreshold) '_totalFrames' num2str(numMovieFrames) '_dilateR' num2str(dilationRadius) '_'  phase '_data' num2str(dataset)];
         end
         exportfig(clusterVisFig,[figurename '.eps'],exportOptions)
-        % calculate centroid speed 
+        % calculate centroid speed (in microns per minute)
         for frameCtr = 1:numel(movieFrames)-10
             if ~isnan(blobCentroidCoords(1,frameCtr))
-                for stepCtr = 1:10
+                for stepCtr = 1:10 % in case the next sample frame has no cluster, go up to 10 time steps away
                     if ~isnan(blobCentroidCoords(1,frameCtr+stepCtr))
                         break
                     end
                 end
-                % calculate speed (in microns per minute)
                 clusterCentroidSpeed{fileCtr}(frameCtr) = sqrt((blobCentroidCoords(1,frameCtr+stepCtr)-blobCentroidCoords(1,frameCtr))^2 +...
                     (blobCentroidCoords(2,frameCtr+stepCtr)-blobCentroidCoords(2,frameCtr))^2)/stepCtr*pixelsize*60/sampleEveryNSec;
             end
