@@ -13,9 +13,9 @@ phase = 'fullMovie';
 wormnum = '40';
 markerType = 'pharynx';
 blobAreaThreshold = 8000;
-sampleEveryNSec = 30; 
+sampleEveryNSec = 120; 
 dilateBinaryImage = true;
-plotCentroid = true;
+plotCentroid = false;
 
 numMovieFrames = 3600/sampleEveryNSec;
 if dilateBinaryImage
@@ -62,7 +62,7 @@ addpath('visualisation/')
 plotColors = parula(numMovieFrames);
 
 %% loop through strains
-for strainCtr = 1:length(strains)
+for strainCtr = 1%:length(strains)
     % load file lists
     if dataset == 1
         [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
@@ -145,10 +145,10 @@ for strainCtr = 1:length(strains)
         cb = colorbar; cb.Label.String = 'minutes';
         if plotCentroid
             figurename = ['figures/sweeping/' strains{strainCtr}...
-                '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimePixelCentroid_blobArea'  num2str(blobAreaThreshold) '_totalFrames' num2str(numMovieFrames) '_dilateR' num2str(dilationRadius) '_'  phase '_data' num2str(dataset)];
+                '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimePixelCentroid_blobArea'  num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dilateR' num2str(dilationRadius) '_'  phase '_data' num2str(dataset)];
         else
             figurename = ['figures/sweeping/' strains{strainCtr}...
-                '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimePixel_blobArea'  num2str(blobAreaThreshold) '_totalFrames' num2str(numMovieFrames) '_dilateR' num2str(dilationRadius) '_'  phase '_data' num2str(dataset)];
+                '_' strrep(strrep(filename(end-32:end-18),' ',''),'/','') '_blobsOverTimePixel_blobArea'  num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dilateR' num2str(dilationRadius) '_'  phase '_data' num2str(dataset)];
         end
         exportfig(clusterVisFig,[figurename '.eps'],exportOptions)
         % calculate centroid speed (in microns per minute)
@@ -164,7 +164,14 @@ for strainCtr = 1:length(strains)
             end
         end
         set(0,'CurrentFigure',clusterCentroidSpeedFig)
-        plot(1:sampleEveryNSec/60:60,smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+        recordingsPlotX = 1:sampleEveryNSec/60:60;
+        if numel(recordingsPlotX) == numel(clusterCentroidSpeed{fileCtr})
+            plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+        elseif numel(recordingsPlotX) < numel(clusterCentroidSpeed{fileCtr})
+            plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr}(1:recordingsPlotX)),'Color',recordingColors(fileCtr,:))
+        elseif numel(recordingsPlotX) > numel(clusterCentroidSpeed{fileCtr})
+            plot(recordingsPlotX(1:numel(clusterCentroidSpeed{fileCtr})),smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+        end
     end
     % export cluster centroid speed figure
     set(0,'CurrentFigure',clusterCentroidSpeedFig)

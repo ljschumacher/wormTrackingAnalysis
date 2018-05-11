@@ -1,9 +1,10 @@
 close all
 clear
 
-sampleEveryNSec = 120; % in seconds
+sampleEveryNSec = 30; % in seconds
 blobAreaThreshold = 3000; % single worm area ~ 500 
-plotCentroid = true;
+plotCentroid = false;
+plotFoodContour = true;
 
 exportOptions = struct('Format','EPS2',...
     'Color','rgb',...
@@ -16,6 +17,8 @@ exportOptions = struct('Format','EPS2',...
 addpath('auxiliary/')
 
 [annotationNum,annotationFilenames,~] = xlsread('datalists/BFLongSweeping.xlsx',1,'A1:E40','basic');
+% xy coordinates and radius of food contour obtained by hand annotation using VGG
+foodCtnCoords_xyr = [1203,914,379;1057,867,348;997,810,328;1328,881,338;988,711,335;1006,683,327]; 
 
 clusterCentroidSpeedFig = figure; hold on
 recordingColors = distinguishable_colors(6);
@@ -91,14 +94,24 @@ for fileCtr = 1:6 % go through each recording replicate (6 in total)
     colorbar
     caxis([0 ceil(totalFrames/25/60)])
     cb = colorbar; cb.Label.String = 'minutes';
-    xlim([0 20])
-    ylim([0 20])
-    xticks([0:5:20])
-    yticks([0:5:20])
+    xmax = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000+5);
+    xmin = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000-5);
+    ymax = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000+5);
+    ymin = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000-5);
+    xlim([xmin xmax])
+    ylim([ymin ymax])
+    xticks(xmin:2:xmax)
+    yticks(ymin:2:ymax)
     xlabel('x (mm)')
     ylabel('y (mm)')
+    if plotFoodContour
+        viscircles([foodCtnCoords_xyr(fileCtr,2),foodCtnCoords_xyr(fileCtr,1)]*pixelsize/1000,foodCtnCoords_xyr(fileCtr,3)*pixelsize/1000,'Color','k','LineStyle','--','LineWidth',1);
+    end
+    % export figure
     if plotCentroid
         figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroid_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
+    elseif plotFoodContour
+        figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelFood_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
     else
         figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixel_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
     end
@@ -118,7 +131,14 @@ for fileCtr = 1:6 % go through each recording replicate (6 in total)
         end
     end
     set(0,'CurrentFigure',clusterCentroidSpeedFig)
-    plot(1:sampleEveryNSec/60:ceil(totalFrames/25/60),smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+    recordingsPlotX = 1:sampleEveryNSec/60:ceil(totalFrames/25/60);
+    if numel(recordingsPlotX) == numel(clusterCentroidSpeed{fileCtr})
+        plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+    elseif numel(recordingsPlotX) < numel(clusterCentroidSpeed{fileCtr})
+        plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr}(1:recordingsPlotX)),'Color',recordingColors(fileCtr,:))
+    elseif numel(recordingsPlotX) > numel(clusterCentroidSpeed{fileCtr})
+        plot(recordingsPlotX(1:numel(clusterCentroidSpeed{fileCtr})),smoothdata(clusterCentroidSpeed{fileCtr}),'Color',recordingColors(fileCtr,:))
+    end
 end
 % export cluster centroid speed figure
 set(0,'CurrentFigure',clusterCentroidSpeedFig)
