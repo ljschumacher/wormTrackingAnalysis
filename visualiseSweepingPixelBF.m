@@ -5,20 +5,19 @@
 % step 3: dilate image to "connect" loose pharynxes and apply area thresholding to binary image to pick up clusters
 % step 4: draw clusters over time (optional: plot centroid)
 % step 5: plot food contour on top of the image (optional)
-% script also calculates cluster centroid speed.
+% script also calculates cluster centroid speed and plots them as timeseries and box plot.
 
-%%%% issues to deal with: run rep 1 for N2 (track to get skeleton files after it finishes copying), change blobAreaThreshold for
-%%%% N2 and all, and look at median cluser speeds plot for npr-1 (moving
-%%%% avg etc.)
 
 close all
 clear
 
 strains = {'npr1','N2'};
-sampleEveryNSec = 120; % in seconds
-blobAreaThreshold = 8000; % single worm area ~ 500
+sampleEveryNSec = 30; % in seconds
+blobAreaThreshold = 3000; % single worm area ~ 500
 plotCentroid = true;
 plotFoodContour = true;
+smoothWindow = 20; % number of sampled frames for smoothing i.e. smoothWindow = 20x sampleEveryNSec = 30 means smoothing over 600 seconds
+plotFileList = [1,2,3,4,6]; % the replicates to plot for overall cluster speed - ignore rep 5 with two converging clusters
 
 exportOptions = struct('Format','EPS2',...
     'Color','rgb',...
@@ -27,6 +26,14 @@ exportOptions = struct('Format','EPS2',...
     'FontMode','fixed',...
     'FontSize',12,...
     'LineWidth',1);
+
+exportOptions2 = struct('Format','EPS2',...
+    'Color','rgb',...
+    'Width',25,...
+    'Resolution',300,...
+    'FontMode','fixed',...
+    'FontSize',12,...
+    'LineWidth',1); % for individual rep timeseries only
 
 addpath('auxiliary/')
 
@@ -39,10 +46,8 @@ for strainCtr = 1%:length(strains)
         foodCtnCoords_xyr = [1055,800,380;1194,754,356;714,783,322;1328,881,338;1022,678,328;905,786,330];
     end
     
-    clusterCentroidSpeedFig = figure; hold on
-    recordingColors = distinguishable_colors(6);
-    
-    for fileCtr = 1:6 % go through each recording replicate (6 in total)
+    % go through each recording replicate (6 in total)
+    for fileCtr = 1:6
         clusterVisFig = figure; hold on
         totalFrames = 0;
         totalSegs = 0;
@@ -161,28 +166,103 @@ for strainCtr = 1%:length(strains)
                 end
             end
         end
-        set(0,'CurrentFigure',clusterCentroidSpeedFig)
-        recordingsPlotX = 1:sampleEveryNSec/60:ceil(totalFrames/25/60);
-        if numel(recordingsPlotX) == numel(clusterCentroidSpeed{fileCtr})
-            plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr},'movmedian',6,'omitnan'),'Color',recordingColors(fileCtr,:))
-        elseif numel(recordingsPlotX) < numel(clusterCentroidSpeed{fileCtr})
-            plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileCtr}(1:numel(recordingsPlotX)),'movmedian',6,'omitnan'),'Color',recordingColors(fileCtr,:))
-        elseif numel(recordingsPlotX) > numel(clusterCentroidSpeed{fileCtr})
-            plot(recordingsPlotX(1:numel(clusterCentroidSpeed{fileCtr})),smoothdata(clusterCentroidSpeed{fileCtr},'movmedian',6,'omitnan'),'Color',recordingColors(fileCtr,:))
+    end
+    % save cluster centroid speednumbers
+    save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterCentroidSpeed');
+end
+
+%% plot median speeds for different replicates (npr-1 only)
+load(['/Users/sding/Documents/trackingAnalysis/figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'])
+if sampleEveryNSec == 30;
+    smoothSpeeds = NaN(numel(plotFileList),599); % initialise
+elseif sampleEveryNSec == 120;
+    smoothSpeeds = NaN(numel(plotFileList),150); % initialise
+end
+recordingColors = distinguishable_colors(numel(plotFileList));
+legends = cell(1,numel(plotFileList));
+
+clusterCentroidSpeedFig = figure; hold on % show each replicate individually
+poolRepFig = figure; % shaded error bars showing average across each specified replicate
+smoothedBoxPlotFig = figure; % show each replicate as a box plot
+unsmoothedBlotPlotFig = figure; % show each replicate as a box plot
+
+for fileCtr = 1:length(plotFileList)
+    fileIdx = plotFileList(fileCtr);
+    totalFrames = 0;
+    totalSegs = 0;
+    for segCtr = 1:5 % go through each hour of the recording replicate (5 hours maximum)
+        recIdx = find(annotationNum(:,1) == fileCtr & annotationNum(:,2) == segCtr);
+        firstFrame{segCtr} = annotationNum(recIdx,4)+1; % +1 to adjust for python 0 indexing
+        lastFrame{segCtr} = annotationNum(recIdx,5)+1;
+        filename{segCtr} = annotationFilenames{recIdx};
+        if lastFrame{segCtr} - firstFrame{segCtr} > 0 % if this recording has any valid frames
+            totalFrames = totalFrames+lastFrame{segCtr}-firstFrame{segCtr}+1;
+            totalSegs = totalSegs+1;
         end
     end
-    % export cluster centroid speed figure
+    recordingsPlotX = 1:sampleEveryNSec/60:ceil(totalFrames/25/60);
     set(0,'CurrentFigure',clusterCentroidSpeedFig)
-    xlabel('Time (min)'), ylabel('Cluster Speed (microns/min)')
-    legend({'1','2','3','4','5','6'},'Location','eastoutside')
-    xlim([0 300])
-    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_dataBF'];
-    %exportfig(clusterCentroidSpeedFig,[figurename '.eps'],exportOptions)
-    % save cluster centroid speednumbers
-    %save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_dataBF.mat'],'clusterCentroidSpeed');
-    % calculate average speed
-    for fileCtr = 1:6 %[1,2,3,4,6]
-        averageSpeed(fileCtr) = nanmedian(clusterCentroidSpeed{fileCtr});
+    if numel(recordingsPlotX) == numel(clusterCentroidSpeed{fileIdx})
+        plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileIdx},'movmedian',smoothWindow,'omitnan'),'Color',recordingColors(fileCtr,:))
+    elseif numel(recordingsPlotX) < numel(clusterCentroidSpeed{fileIdx})
+        plot(recordingsPlotX,smoothdata(clusterCentroidSpeed{fileIdx}(1:numel(recordingsPlotX)),'movmedian',smoothWindow,'omitnan'),'Color',recordingColors(fileCtr,:))
+    elseif numel(recordingsPlotX) > numel(clusterCentroidSpeed{fileIdx})
+        plot(recordingsPlotX(1:numel(clusterCentroidSpeed{fileIdx})),smoothdata(clusterCentroidSpeed{fileIdx},'movmedian',smoothWindow,'omitnan'),'Color',recordingColors(fileCtr,:))
     end
-    averageSpeed = nanmedian(averageSpeed)
+    legends{fileCtr} = num2str(fileIdx);
+    
+    if fileIdx ==2
+        speedY = smoothdata(clusterCentroidSpeed{fileIdx},'movmedian',smoothWindow,'omitnan');
+        smoothSpeeds(fileCtr,1:numel(speedY)-20)=speedY(21:end);
+    else
+        smoothSpeeds(fileCtr,1:numel(clusterCentroidSpeed{fileIdx}))=...
+            smoothdata(clusterCentroidSpeed{fileIdx},'movmedian',smoothWindow,'omitnan');
+    end
 end
+
+set(0,'CurrentFigure',clusterCentroidSpeedFig)
+xlabel('Time (min)'), ylabel('Cluster Speed (microns/min)')
+legend(legends,'Location','eastoutside')
+xlim([0 300])
+set(gca,'Xtick',[0:50:300])
+figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '_smoothWindow' num2str(smoothWindow) '_individualReps'];
+exportfig(clusterCentroidSpeedFig,[figurename '.eps'],exportOptions2)
+
+set(0,'CurrentFigure',poolRepFig)
+recordingsPlotX = 1:sampleEveryNSec/60:300;
+shadedErrorBar(recordingsPlotX,nanmedian(smoothSpeeds,1),nanstd(smoothSpeeds),'k');
+xlabel('Time (min)'), ylabel('Cluster Speed (microns/min)')
+xlim([0 250])
+set(gca,'Xtick',[0:50:250])
+figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '_smoothWindow' num2str(smoothWindow) '_pooledReps'];
+exportfig(poolRepFig,[figurename '.eps'],exportOptions)
+
+set(0,'CurrentFigure',smoothedBoxPlotFig)
+boxGroups = [];
+for fileCtr = 1:length(plotFileList)
+    fileIdx = plotFileList(fileCtr);
+    if sampleEveryNSec == 30
+        boxGroups = [boxGroups fileIdx*ones(1,599)];
+    elseif sampleEveryNSec ==120
+        boxGroups = [boxGroups fileIdx*ones(1,150)];
+    end
+end
+boxplot(smoothSpeeds(:),boxGroups(:))
+set(0,'CurrentFigure',smoothedBoxPlotFig)
+xlabel('Replicate'), ylabel('Cluster Speed (microns/min)')
+set(gca,'XTickLabel',legends)
+figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '_smoothWindow' num2str(smoothWindow) '_smoothedBoxPlot'];
+exportfig(smoothedBoxPlotFig,[figurename '.eps'],exportOptions)
+
+set(0,'CurrentFigure',unsmoothedBlotPlotFig)
+unsmoothedSpeeds = [];
+unsmoothedGroups = [];
+for fileCtr = 1:length(plotFileList)
+    fileIdx = plotFileList(fileCtr);
+    unsmoothedSpeeds = [unsmoothedSpeeds clusterCentroidSpeed{fileIdx}];
+    unsmoothedGroups = [unsmoothedGroups fileIdx*ones(1,numel(clusterCentroidSpeed{fileIdx}))];
+end
+boxplot(unsmoothedSpeeds(:),unsmoothedGroups(:))
+xlabel('Replicate'), ylabel('Cluster Speed (microns/min)')
+figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '_unsmoothedBlotPlot'];
+exportfig(unsmoothedBlotPlotFig,[figurename '.eps'],exportOptions)
