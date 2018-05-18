@@ -543,9 +543,8 @@ for strainCtr = 1:length(strains)
                         clear afterEndFrameNum
                         % write event number to legend
                         exitLegend{exitCtr} = num2str(eventCtr);
-                        
-                        %% calculate head angles
 
+                        %% calculate head angles
                         % calculate head angle changes per frame
                         [headAngleDiff, framesElapsed] = getHeadAngleDiff(xcoordsSorted,ycoordsSorted, 'bodywall', true, frameRate);
                         % calculate total head turn over full trajectory
@@ -695,7 +694,6 @@ for strainCtr = 1:length(strains)
                 save(filename,'allSmoothEntrySpeeds','allSmoothExitSpeeds','allEntrySpeeds','allExitSpeeds','timeSeries')
             end
         end
-        
         
         if useManualEvents
             

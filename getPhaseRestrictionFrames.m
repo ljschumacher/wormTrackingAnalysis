@@ -28,4 +28,7 @@ elseif strcmp(phase,'joining')
 elseif strcmp(phase,'sweeping')
     firstFrame = phaseFrames(fileCtr,3);
     lastFrame = phaseFrames(fileCtr,4);
+elseif strcmp(phase,'nontransient')
+    firstFrame = 0;
+    lastFrame = phaseFrames(fileCtr,4);
 end

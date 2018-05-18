@@ -5,7 +5,6 @@ clear
 close all
 
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
-
 strains = {'N2','npr1'};
 wormnums = {'40'};
 intensityThresholds_g = containers.Map({'40','HD','1W'},{60, 40, 100});
