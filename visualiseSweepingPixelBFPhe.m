@@ -12,12 +12,13 @@
 close all
 clear
 
-strains = {'npr1','N2'};
+strains = {'daf22_npr1','daf22','npr1','N2'};
 sampleEveryNSec = 30;  % in seconds
-blobAreaThreshold = 3000; % single worm area ~ 500
-plotVisualisation = false;
+dafblobAreaThreshold = 2000;
+nondafBlobAreaThreshold = 3000; % single worm area ~ 500
+plotVisualisation = true;
 saveCentroidValues = false;
-plotCentroidSpeeds = true;
+plotCentroidSpeeds = false;
 plotMeanSquaredDisplacement = false;
 makeDownSampledVideo = false;
 
@@ -55,28 +56,26 @@ exportOptions2 = struct('Format','EPS2',...
 
 addpath('auxiliary/')
 
-for strainCtr = 1:length(strains)
-    [annotationNum,annotationFilenames,~] = xlsread('datalists/BFLongSweeping.xlsx',strainCtr,'A1:E30','basic');
-    % xy coordinates and radius of food contour obtained by hand annotation using VGG
-    if strcmp(strains{strainCtr},'npr1')
-        foodCtnCoords_xyr = [1203,914,379;1057,867,348;997,810,328;1007,790,334;988,711,335;1006,683,327];
-    elseif strcmp(strains{strainCtr},'N2')
-        foodCtnCoords_xyr = [1055,800,380;1194,754,356;714,783,322;1328,881,338;1022,678,328;905,786,330];
-    end
+for strainCtr = 1%:length(strains)
+    [annotationNum,annotationFilenames,~] = xlsread('/Users/sding/Documents/pheromone/datalist/pheromoneTwoHours.xlsx',strainCtr,'A1:E12','basic');
+        % xy coordinates and radius of food contour obtained by hand annotation using VGG
+        if strcmp(strains{strainCtr},'daf22_npr1')
+            foodCtnCoords_xyr = [1015,986,362;1006,963,367;1272,1013,371;942,988,363;1062,961,359];
+        end
     
-    % go through each recording replicate (6 in total)
-    for fileCtr = 1:6
+    % go through each recording replicate
+    for fileCtr = 1:numel(annotationFilenames)/2
         if plotVisualisation
             clusterVisFig = figure; hold on
         end
         if makeDownSampledVideo
-            video = VideoWriter([strains{strainCtr} '_rep' num2str(fileCtr) '_timeStep' num2str(sampleEveryNSec) '.avi']); % create the video object
+            video = VideoWriter(['pheromone_' strains{strainCtr} '_rep' num2str(fileCtr) '_timeStep' num2str(sampleEveryNSec) '.avi']); % create the video object
             video.FrameRate = 15;% set the frame rate
             open(video); % open the file for writing
         end
         totalFrames = 0;
         totalSegs = 0;
-        for segCtr = 1:5 % go through each hour of the recording replicate (5 hours maximum)
+        for segCtr = 1:2 % go through each hour of the recording replicate (2 hours maximum)
             fileIdx = find(annotationNum(:,1) == fileCtr & annotationNum(:,2) == segCtr);
             firstFrame{segCtr} = annotationNum(fileIdx,4)+1; % +1 to adjust for python 0 indexing
             lastFrame{segCtr} = annotationNum(fileIdx,5)+1;
@@ -121,11 +120,17 @@ for strainCtr = 1:length(strains)
                 % filter by blob size
                 blobMeasurements = regionprops(binaryImage, 'Area','Centroid','Solidity');
                 blobCentroidsCoords = reshape([blobMeasurements.Centroid],[2, numel([blobMeasurements.Centroid])/2]);
-                blobLogInd = [blobMeasurements.Area] > blobAreaThreshold; % apply blob area threshold values
+                if strainCtr >2
+                    blobLogInd = [blobMeasurements.Area] > nondafBlobAreaThreshold; % apply blob area threshold values
+                else
+                    blobLogInd = [blobMeasurements.Area] > dafblobAreaThreshold;
+                end
                 blobLogInd = blobLogInd & blobCentroidsCoords(2,:) > 250; % get rid of the annoying box at the edge
                 % restrict to blobs near the food patch centre (within 500 pixels or 5 mm)
-                blobLogInd = blobLogInd & blobCentroidsCoords(1,:)<foodCtnCoords_xyr(fileCtr,1)+500 & blobCentroidsCoords(1,:)>foodCtnCoords_xyr(fileCtr,1)-500;
-                blobLogInd = blobLogInd & blobCentroidsCoords(2,:)<foodCtnCoords_xyr(fileCtr,2)+500 & blobCentroidsCoords(2,:)>foodCtnCoords_xyr(fileCtr,2)-500;
+                if strcmp(strains{strainCtr},'daf22_npr1')
+                    blobLogInd = blobLogInd & blobCentroidsCoords(1,:)<foodCtnCoords_xyr(fileCtr,1)+500 & blobCentroidsCoords(1,:)>foodCtnCoords_xyr(fileCtr,1)-500;
+                    blobLogInd = blobLogInd & blobCentroidsCoords(2,:)<foodCtnCoords_xyr(fileCtr,2)+500 & blobCentroidsCoords(2,:)>foodCtnCoords_xyr(fileCtr,2)-500;
+                end
                 blobBoundaries = bwboundaries(binaryImage,8,'noholes');
                 if plotVisualisation
                     % plot individual blob boundaries that meet area threshold requirements
@@ -142,8 +147,8 @@ for strainCtr = 1:length(strains)
                     [~,maxAreaIdx] = max([blobMeasurements.Area].*blobLogInd);
                     clusterCentroidCoords{fileCtr}(1,cumFrame+frameCtr) = blobCentroidsCoords(1,maxAreaIdx);
                     clusterCentroidCoords{fileCtr}(2,cumFrame+frameCtr) = blobCentroidsCoords(2,maxAreaIdx);
-                    area = [blobMeasurements.Area]; 
-                    solidity = [blobMeasurements.Solidity]; 
+                    area = [blobMeasurements.Area];
+                    solidity = [blobMeasurements.Solidity];
                     clusterSolidity{fileCtr}(cumFrame+frameCtr) = solidity(maxAreaIdx);
                     clusterArea{fileCtr}(cumFrame+frameCtr) = area(maxAreaIdx);
                     if plotVisualisation & plotCentroid
@@ -162,30 +167,54 @@ for strainCtr = 1:length(strains)
             colorbar
             caxis([0 ceil(totalFrames/25/60)])
             cb = colorbar; cb.Label.String = 'minutes';
-            xmax = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000+5);
-            xmin = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000-5);
-            ymax = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000+5);
-            ymin = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000-5);
-            xlim([xmin xmax])
-            ylim([ymin ymax])
-            xticks(xmin:2:xmax)
-            yticks(ymin:2:ymax)
+            xlim([0 20]);
+            ylim([0 20]);
+            xticks([0:4:20])
+            yticks([0:4:20])
+            if strcmp(strains{strainCtr},'daf22_npr1')
+                xmax = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000+5);
+                xmin = round(foodCtnCoords_xyr(fileCtr,2)*pixelsize/1000-5);
+                ymax = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000+5);
+                ymin = round(foodCtnCoords_xyr(fileCtr,1)*pixelsize/1000-5);
+                xlim([xmin xmax])
+                ylim([ymin ymax])
+                xticks(xmin:2:xmax)
+                yticks(ymin:2:ymax)
+            end
             xlabel('x (mm)')
             ylabel('y (mm)')
-            if plotFoodContour
-                viscircles([foodCtnCoords_xyr(fileCtr,2),foodCtnCoords_xyr(fileCtr,1)]*pixelsize/1000,foodCtnCoords_xyr(fileCtr,3)*pixelsize/1000,'Color','k','LineStyle','--','LineWidth',1);
+            if strcmp(strains{strainCtr},'daf22_npr1')
+                if plotFoodContour
+                    viscircles([foodCtnCoords_xyr(fileCtr,2),foodCtnCoords_xyr(fileCtr,1)]*pixelsize/1000,foodCtnCoords_xyr(fileCtr,3)*pixelsize/1000,'Color','k','LineStyle','--','LineWidth',1);
+                end
             end
             % export figure
             if plotCentroid
                 if plotFoodContour
-                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroidFood_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
+                    if strainCtr <=2
+                        figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroidFood_blobArea' num2str(dafblobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                    else
+                        figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroidFood_blobArea' num2str(nondafBlobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                    end
                 else
-                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroid_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
+                    if strainCtr <=2
+                        figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroid_blobArea' num2str(dafblobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                    else
+                        figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelCentroid_blobArea' num2str(nondafBlobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                    end
                 end
             elseif plotFoodContour
-                figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelFood_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
+                if strainCtr<=2
+                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelFood_blobArea' num2str(dafblobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                else
+                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixelFood_blobArea' num2str(nondafBlobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                end
             else
-                figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixel_blobArea' num2str(blobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBF'];
+                if strainCtr<=2
+                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixel_blobArea' num2str(dafblobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                else
+                    figurename = ['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_rep' num2str(fileCtr) '_blobsOverTimePixel_blobArea' num2str(nondafBlobAreaThreshold) '_timeStep' num2str(sampleEveryNSec) '_dataBFPhe'];
+                end
             end
             exportfig(clusterVisFig,[figurename '.eps'],exportOptions)
         end
@@ -213,12 +242,12 @@ for strainCtr = 1:length(strains)
     end
     
     % save cluster centroid coordinates and speeds
-
+    
     if saveCentroidValues
-        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterCentroidSpeed');
-        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidCoords_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterCentroidCoords');
-        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSolidity_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterSolidity');
-        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidArea_dataBF_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterArea');
+        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSpeed_dataBFPhe_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterCentroidSpeed');
+        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidCoords_dataBFPhe_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterCentroidCoords');
+        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidSolidity_dataBFPhe_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterSolidity');
+        save(['figures/sweeping/' strains{strainCtr} '_clusterCentroidArea_dataBFPhe_timeStep' num2str(sampleEveryNSec) '.mat'],'clusterArea');
     end
 end
 
@@ -320,7 +349,7 @@ if plotCentroidSpeeds
     xlabel('Replicate'), ylabel('Cluster Speed (microns/min)')
     figurename = ['figures/sweeping/npr1_clusterCentroidSpeed_dataBF_timeStep' num2str(sampleEveryNSec) '_unsmoothedBlotPlot'];
     exportfig(unsmoothedBlotPlotFig,[figurename '.eps'],exportOptions)
-
+    
 end
 
 if plotMeanSquaredDisplacement
