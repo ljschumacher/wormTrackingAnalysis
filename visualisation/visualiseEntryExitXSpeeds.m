@@ -1,7 +1,7 @@
 clear
 close all
 
-addpath('../auxiliary/')
+addpath('auxiliary/')
 
 %% to improve the script: limit how far to linearly interpolate within naninterp i.e. maybe specify maxinum interpolation window to be 9 or something and leave values NaN if no values nearby;
 %% also turn analysis needs debugging
@@ -21,7 +21,7 @@ postExitDuration = 20; % duration (in seconds) after a worm exits a cluster to b
 smoothWindow = 9; % number of frames to smooth over for later trajectory-specific midbody speed calculations
 saveResults = false;
 alignExitWithStart = true;
-addSampleSingleTraj = false;
+addSampleSingleTraj = true;
 
 useManualEvents = true; % manual events only available for joining phase
 if useManualEvents
@@ -42,10 +42,10 @@ inClusterNeighbourNum = 3;
 
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...
-    'Width',20,...
+    'Width',10,...
     'Resolution',300,...
     'FontMode','fixed',...
-    'FontSize',15,...
+    'FontSize',12,...
     'LineWidth',3);
 
 %% go through strains, densities, movies
@@ -807,8 +807,7 @@ for strainCtr = 1:length(strains)
             allSmoothEntrySpeeds = abs(allSmoothEntrySpeeds);
             shadedErrorBar(timeSeries.entry,nanmean(allSmoothEntrySpeeds,1),nanstd(allSmoothEntrySpeeds,1),'k');
             if addSampleSingleTraj
-                load('event45.mat')
-                plot(timeSeries.entry,thisEventSpeeds,'r');
+                plot(timeSeries.entry,smoothdata(abs(allEntrySpeeds(14,:)),'movmean',smoothWindow,'includenan'),'r'); % plot event 45
             end 
               % this is currently causing issues with y axis scale
             title('cluster entry')
@@ -819,15 +818,17 @@ for strainCtr = 1:length(strains)
             ylabel('speed (\mum/s)')
             legend(['n=' num2str(totalEntry)])
             vline(0,'k')
+            box on
+            set(avgEntrySpeedFig,'PaperUnits','centimeters')
             if addSampleSingleTraj
                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_avgEntryGraph_plusEvent45_smoothWindow' num2str(smoothWindow)]);
             else
                 figurename = (['figures/entryExitSpeeds/entrySpeedsManualEvents_' strain '_' phase '_avgEntryGraph_smoothWindow' num2str(smoothWindow)]);
             end
             if saveResults
-                exportfig(avgEntrySpeedFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+                exportfig(avgEntrySpeedFig,figurename,exportOptions)
+                %system(['epstopdf ' figurename '.eps']);
+                %system(['rm ' figurename '.eps']);
             end
             
             % exit stand-alone plot
@@ -835,8 +836,7 @@ for strainCtr = 1:length(strains)
             allSmoothExitSpeeds = abs(allSmoothExitSpeeds);
             shadedErrorBar(timeSeries.exit,nanmean(allSmoothExitSpeeds,1),nanstd(allSmoothExitSpeeds,1),'k');
             if addSampleSingleTraj
-                load('/data2/shared/data/twoColour/event36.mat')
-                plot(timeSeries.exit,thisEventSpeeds,'r');
+                plot(timeSeries.exit,smoothdata(abs(allSmoothExitSpeeds(15,:)),'movmean',smoothWindow,'includenan'),'r'); % plot event 36
             end 
             title('cluster exit')
             xlim([-preExitDuration postExitDuration])
@@ -846,6 +846,8 @@ for strainCtr = 1:length(strains)
             ylabel('speed (\mum/s)')
             legend(['n=' num2str(totalExit)])
             vline(0,'k')
+            box on
+            set(avgExitSpeedFig,'PaperUnits','centimeters')
             if ~alignExitWithStart
                 exitDuration = median(exitDurations);
                 vline(-exitDuration,'g') % draw a reference exit start line based on median exit duration before worms fully exiting cluster
@@ -863,8 +865,8 @@ for strainCtr = 1:length(strains)
             end
             if saveResults
                 exportfig(avgExitSpeedFig,[figurename '.eps'],exportOptions)
-                system(['epstopdf ' figurename '.eps']);
-                system(['rm ' figurename '.eps']);
+                %system(['epstopdf ' figurename '.eps']);
+                %system(['rm ' figurename '.eps']);
             end
             
             % entry and exit head angular speed plots
