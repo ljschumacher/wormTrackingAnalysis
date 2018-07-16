@@ -14,7 +14,7 @@ param_names = {'revRateClusterEdge','dkdN_dwell'};
 switch model
     case 'rods'
         num_statistics = 4;
-        load('../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
+        load('../../../sworm-model/woidModel/paramSamples_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20ksamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_20k_samples_npr1like.txt';...
                           'datalists/woidM18_20k_samples_N2like.txt'};
@@ -22,7 +22,7 @@ switch model
         scaleflag = 'linear';
     case 'log-rods'
         num_statistics = 4;
-        load('../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
+        load('../../../sworm-model/woidModel/paramSamples_log_nSim50000_nParam2.mat')
         sumstat_filename = ['sumstats_50klogsamples_wlM18.mat'];
         sim_file_lists = {'datalists/woidM18_50k_logsamples_npr1like.txt';...
                           'datalists/woidM18_50k_logsamples_N2like.txt'};
@@ -30,7 +30,7 @@ switch model
         scaleflag = 'log';
     case 'worms'
         num_statistics = 4; % 5th stat, polar order, did not seem to work well
-        load('../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
+        load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
         sumstat_filename = ['sumstats_20k_samples_wM36.mat'];
         sim_file_lists = {'datalists/woidM36_20k_samples_npr1like.txt';...
                          'datalists/woidM36_20k_samples_N2like.txt'};
@@ -91,8 +91,8 @@ for statCtr = 1:2
         end
     end
     xlabel('r (mm)')
-    title(['S_' num2str(statCtr) ', weight ' num2str(weights_optim(statCtr)./sum(weights_optim),2) ],'FontWeight','normal')
-    legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best simulation'],[exp_strain_list{2} 'best simulation'])
+    title(['S_' num2str(statCtr) ', weight ' num2str(100*weights_optim(statCtr)./sum(weights_optim),2) '%'])
+    legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best sim.'],[exp_strain_list{2} ' best sim.'])
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
         '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end

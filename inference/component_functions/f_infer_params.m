@@ -86,8 +86,8 @@ for strainCtr = 1:num_strains
             elseif strainCtr==2
                 colormap(flipud(cmap_Oranges(1:16:end,:)))
             end
-            title(['Top ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'...
-                ' for ' exp_strain_list{strainCtr}],'FontWeight','normal')
+            title(['Approximate posterior from ' num2str(p_cutoffs(cutoffCtr)*100) '% of simulations'],...
+                'FontWeight','normal')
             for paramCtr = 1:nParams
                 ylabel(AX{strainCtr}(paramCtr,1),param_names(paramCtr))
                 xlabel(AX{strainCtr}(nParams,paramCtr),param_names(paramCtr))

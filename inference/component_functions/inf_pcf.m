@@ -1,4 +1,3 @@
-
 % Function to calculate the pair correlation function over many sampled
 % frames, and return a discretised array of the resulting g(r) distribution
 function pcf_mean = inf_pcf(data, format, fraction_to_sample)

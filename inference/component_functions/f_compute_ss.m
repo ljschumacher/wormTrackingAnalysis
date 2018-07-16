@@ -5,7 +5,7 @@ if nargin<3
     fraction_to_sample = 0.1;
 end
 
-% Set up cell array to store function results in
+% Set up cell array to store results in
 ss_results = cell(1,num_statistics);
 
 ss_results{1} = inf_pcf(in_data, expsim_classifier, fraction_to_sample);
