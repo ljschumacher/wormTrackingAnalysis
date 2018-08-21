@@ -1,5 +1,5 @@
 function [weights_optim,min_obj] = f_optim_posterior(exp_ss_array, sim_ss_array,...
-    p_cutoff, param_names, param_values, supportRange,scaleflag)
+    p_cutoff, param_names, param_values, prior, supportRange,scaleflag)
 % Optimise the weights of summary statistics to maximise the Hellinger
 % distance between the prior and posterior, and return the the appropriate distances
 % between each of the simulations and the experimental references
@@ -20,7 +20,8 @@ numStats = size(exp_ss_array,2) - 1;
 % set up objecive function distance
 lambda = 1e-4; % regularization parameter
 % define the objective function for joint optimisation over both strains
-L = @(x) hellinger(x,exp_ss_array,sim_ss_array,p_cutoff,param_names,param_values,supportRange) ...
+L = @(x) hellinger(x,exp_ss_array,sim_ss_array,p_cutoff,param_names,...
+    param_values,prior,supportRange) ...
     + lambda*norm(x,1); % include regularisation
 nIter = max(10*numStats,50);
 initial_weights = lhsdesign(nIter,numStats);% just specify the extreme values in here, the rest should be filled in by ga randomly
@@ -44,27 +45,27 @@ weights_optim = weights_optim./sum(weights_optim);
 % [wsa,Lsa] = simulannealbnd(L,mean(initial_weights),zeros(numStats,1),[],options);
 end
 
-function L = hellinger(weights,exp_ss_array,sim_ss_array,p_cutoff,param_names,param_values,supportRange)
+function L = hellinger(weights,exp_ss_array,sim_ss_array,p_cutoff,...
+    param_names,param_values,prior,supportRange)
 % for given weights, compute the distances
 expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, weights);
 % for these distances, select fraction of closest parameters
 [chosen_params, chosen_samples] = f_infer_params(...
     expsim_dists, [], p_cutoff, param_names, param_values, false, supportRange);
 % construct a kernel density estimate of the posterior
-nStrains = size(exp_ss_array,1);
+nStrains = size(sim_ss_array,1);
+nParams = length(param_names);
 H = 0;
 for strainCtr = 1:nStrains
     kde_weights = 1./expsim_dists{strainCtr}(chosen_samples{strainCtr},1);
-    [posti,posti_query_points] = ksdensity(chosen_params{strainCtr},...
-        'Support',supportRange,'BoundaryCorrection','reflection','Weights',kde_weights);
-    % construct a kernel density estimate of the prior at the same sample points
-    [prior, prior_query_points] = ksdensity(param_values{strainCtr},posti_query_points,...
-        'Support',supportRange,'BoundaryCorrection','reflection');
-    % check that density estimates are evaluated at the same points - shouldn't
-    % be necessary
-    assert(all(all(prior_query_points==posti_query_points)))
+    % construct a gmmodel (because ksdensity doesn't work with more
+    % than two parameter dimensions)
+    bandWidth = std(chosen_params{strainCtr}).*(4 + (nParams + 2)...
+        ./size(chosen_params{strainCtr},1)).^(1./(nParams + 4)); %Silverman's rule of thumb for the bandwidth
+    posti = gmdistribution(chosen_params{strainCtr},bandWidth.^2,kde_weights);
     % calculate the hellinger distance between the prior and posterior distributions
-    H = H + 1./sqrt(2).*norm(sqrt(posti) - sqrt(prior));
+    H = H + 1./sqrt(2).*norm(sqrt(pdf(posti,param_values{strainCtr}))...
+        - sqrt(pdf(prior{strainCtr},param_values{strainCtr})));
 end
 % give back the negative of the distance, as this is the objective to
 % minimize

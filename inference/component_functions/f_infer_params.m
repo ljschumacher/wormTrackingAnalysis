@@ -79,6 +79,11 @@ for strainCtr = 1:num_strains
             end
             subplot(1,length(p_cutoffs),cutoffCtr)
             kde_weights = 1./expsim_dists{strainCtr}(chosen_samples{strainCtr}(:,cutoffCtr),1);
+%             % construct a gmmodel (because ksdensity doesn't work with more
+%             % than two parameter dimensions)
+%             bandWidth = std(to_plot).*(4 + (nParams + 2)./size(to_plot,1)).^(1./(nParams + 4)); %Silverman's rule of thumb for the bandwidth
+%             posti = gmdistribution(to_plot,bandWidth.^2,kde_weights);
+            % plot marginals of posterior
             [h{strainCtr},AX{strainCtr},~,hhist{strainCtr},pax{strainCtr}] ...
                 = hplotmatrix(to_plot,[],kde_weights, supportLimits);
             if strainCtr==1
@@ -95,17 +100,21 @@ for strainCtr = 1:num_strains
         end
     end
 end
-if plotResults
+if plotResults&&num_strains>1
     % combine plots from both strains into 1
    plotColors = lines(2);
-   for lineCtr = 1:2
+   for lineCtr = 1:nParams
        hhist{2}(lineCtr).Color = plotColors(2,:); % make orange
        copyobj(hhist{2}(lineCtr),pax{1}(lineCtr)) % transfer to plot of first strain
    end
    drawnow
-   freezeColors(AX{2}(2,1))
-   h{1}(2).FaceColor = 'flat'; h{2}(2).FaceColor = 'flat';
-   copyobj(h{2}(2),AX{1}(2,1))
+   for ii = 2:nParams
+       for jj = 1:(ii-1)
+   freezeColors(AX{2}(ii,jj))
+   h{1}(ii,jj).FaceColor = 'flat'; h{2}(ii,jj).FaceColor = 'flat';
+   copyobj(h{2}(ii,jj),AX{1}(ii,jj))
+       end
+   end
    formatAndExportFigure(postiFig{1},['figures/posteriors_' ...
        '_alpha_' num2str(p_cutoffs(cutoffCtr)) '_' modelstring],...
        exportOptions)
