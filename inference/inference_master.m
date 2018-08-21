@@ -23,10 +23,10 @@ switch model
             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
         prior{2} = prior_N2;
         sumstat_filename = 'sumstats_PRW_4D_wa_r1.mat';
-        sim_file_lists = {'datalists/PRW_4D_wa_r1_146_samples_npr1like.txt'}...; 
-%             'datalists/PRW_4D_w_r1_3949_samples_N2like.txt'};
-        filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'}...; ...
-%                 '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
+        sim_file_lists = {'datalists/PRW_4D_wa_r1_1927_samples_npr1like.txt'; 
+            'datalists/PRW_4D_wa_r1_124_samples_N2like.txt'};
+        filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'; ...
+                '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
         scaleflag = 'linear';
     case 'worms'
         param_names = {'revRateClusterEdge','dkdN_dwell'};
@@ -74,11 +74,16 @@ expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
 for strainCtr = 1:length(sim_ss_array)
     figure
 for paramCtr = 1:nParams
-    subplot(1,nParams,paramCtr)
-    scatter(param_return{strainCtr}(:,paramCtr),expsim_dists{strainCtr}(:,paramCtr+1),'k.')
-    refline
-    ylabel('distance')
-    xlabel(param_names{paramCtr})
+    for statCtr =1:num_statistics
+    subplot(num_statistics,nParams,paramCtr + (statCtr - 1)*nParams)
+    scatter(param_return{strainCtr}(:,paramCtr),expsim_dists{strainCtr}(:,statCtr+1),'k.')
+    hl = refline;
+    hl.LineWidth = 2;
+    hl.Color = [1 0 0];
+    if paramCtr==1, ylabel('distance'), end
+    title(['S_' num2str(statCtr)])
+    if statCtr==num_statistics, xlabel(param_names{paramCtr}), end
+    end
 end
 end
 %% Perform parameter inference
@@ -118,7 +123,7 @@ for statCtr = 3:4
         subplot(1,2,strainCtr)
         violinplot(cat(1,sim_ss_array{strainCtr}{chosen_samples{strainCtr}(:),statCtr+1}),...
             strainCtr,'ViolinColor',plotColors(strainCtr,:),'ViolinAlpha',1,...
-            'BoxColor',plotColors(strainCtr,:),'ShowData',false,'Width',0.1)
+            'BoxColor',plotColors(strainCtr,:),'ShowData',false,'Width',0.1);
         hold on
     end
     for strainCtr = 1:length(exp_strain_list)
