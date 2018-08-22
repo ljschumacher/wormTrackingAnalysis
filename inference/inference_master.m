@@ -23,11 +23,19 @@ switch model
             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
         prior{2} = prior_N2;
         sumstat_filename = 'sumstats_PRW_4D_wa_r1.mat';
-        sim_file_lists = {'datalists/PRW_4D_wa_r1_1927_samples_npr1like.txt'; 
-            'datalists/PRW_4D_wa_r1_124_samples_N2like.txt'};
+        sim_file_lists = {'datalists/PRW_4D_wa_r1_2061_samples_npr1like.txt'; 
+            'datalists/PRW_4D_wa_r1_368_samples_N2like.txt'};
         filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'; ...
                 '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
         scaleflag = 'linear';
+    case 'PRW_2D_pilot'
+        param_names = {'drdN_rev','dkdN_dwell'};
+        num_statistics = 4;
+        sumstat_filename = 'sumstats_PRW_2D_pilot.mat';
+        sim_file_lists = {'datalists/PRW_2D_pilot.txt'};
+        filepath = {'../../../sworm-model/woidModel/results/woidlinos/floppy/'};
+        scaleflag = 'linear';
+        supportLimits = [0 0; 1 1];
     case 'worms'
         param_names = {'revRateClusterEdge','dkdN_dwell'};
         num_statistics = 4; % 5th stat, polar order, did not seem to work well
@@ -88,9 +96,11 @@ end
 end
 %% Perform parameter inference
 [chosen_params, chosen_samples] = f_infer_params(...
-    expsim_dists, exp_strain_list,[accept_ratio],{'r_{rev}','dk_-/d\rho','dk_+/d\rho','f_hapt'},param_return,...
+    expsim_dists, exp_strain_list,[accept_ratio],{'r_{rev}','dk_s/d\rho','dk_f/d\rho','f_hapt'},param_return,...
     true,supportLimits,scaleflag,model);
-
+% [chosen_params, chosen_samples] = f_infer_params(...
+%     expsim_dists, exp_strain_list,[accept_ratio],{'r_{rev}','dk/d\rho'},param_return,...
+%     true,supportLimits,scaleflag,model);
 %% Plot summary statistics of experiments and best samples
 exportOptions = struct('Format','eps2','Color','rgb','Width',10,...
     'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
@@ -112,8 +122,15 @@ for statCtr = 1:2
         end
     end
     xlabel('r (mm)')
-    title(['S_' num2str(statCtr) ', weight ' num2str(100*weights_optim(statCtr)./sum(weights_optim),3) '%'])
+    if statCtr==2
+        xlim([0 1.6])
+    end
+    if statCtr==1
+        ylim([0.5 100])
+    end
+    title(['S_' num2str(statCtr) ])%', weight ' num2str(100*weights_optim(statCtr)./sum(weights_optim),3) '%'])
     legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best sim.'],[exp_strain_list{2} ' best sim.'])
+%     legend([exp_strain_list{1} ' mean'],['simulation'])
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
         '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end
