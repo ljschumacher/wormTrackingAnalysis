@@ -9,6 +9,7 @@ end
 
 if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'simulation-test')
     burn_in = 0.5; % specifies how much to ignore at the start of the simulation
+    L = 7.5;
     
     % Get the dimensions of the dataframe
     dims = size(data);
@@ -44,8 +45,20 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         coords(:,1) = thisFrameData(:,:,1);
         coords(:,2) = thisFrameData(:,:,2);
         
-        std_pos(frameCtr) = sqrt(sum(var(coords)));
-        kurt_pos(frameCtr) = mean(kurtosis(coords,0));
+        % center each frame on center of mass - needed for periodic boundary conditions
+    % this calculates the centre of mass for periodic boundaries
+    c_x = mean(cos(coords(:,1)/L*2*pi));
+    s_x = mean(sin(coords(:,1)/L*2*pi));
+    xmean = L/2/pi*(atan2(-s_x,-c_x) + pi) - L/2;
+    c_y = mean(cos(coords(:,2)/L*2*pi));
+    s_y = mean(sin(coords(:,2)/L*2*pi));
+    ymean = L/2/pi*(atan2(-s_y,-c_y) + pi) - L/2;
+    
+    distanceFromMean = periodiceucdist(coords,[xmean, ymean]);
+    thisN = size(coords,1);
+    std_pos(frameCtr) = sqrt(sum(distanceFromMean.^2)./(thisN-1));
+    kurt_pos(frameCtr) = mean(distanceFromMean.^4)./(mean(distanceFromMean.^2)).^2;
+
 %         c0 = coords - mean(coords);
 %         rad_gyr(frameCtr) = sum(sum(c0.*c0))/num_worms; % this gives the same as the variane above
     end
