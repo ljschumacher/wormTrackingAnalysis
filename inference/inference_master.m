@@ -23,8 +23,8 @@ switch model
             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
         prior{2} = prior_N2;
         sumstat_filename = 'sumstats_PRW_4D_wa_r1.mat';
-        sim_file_lists = {'datalists/PRW_4D_wa_r1_2654_samples_npr1like.txt'; 
-            'datalists/PRW_4D_wa_r1_640_samples_N2like.txt'};
+        sim_file_lists = {'datalists/PRW_4D_wa_r1_3107_samples_npr1like.txt'; 
+            'datalists/PRW_4D_wa_r1_837_samples_N2like.txt'};
         filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'; ...
                 '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
         scaleflag = 'linear';

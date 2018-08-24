@@ -32,7 +32,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     % initialise matrix to store spread of points
     std_pos = zeros(num_samples,1);
     kurt_pos = zeros(num_samples,1);
-
+    
     for frameCtr=1:num_samples
         thisFrame = sampled_frames(frameCtr);
         
@@ -46,21 +46,26 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         coords(:,2) = thisFrameData(:,:,2);
         
         % center each frame on center of mass - needed for periodic boundary conditions
-    % this calculates the centre of mass for periodic boundaries
-    c_x = mean(cos(coords(:,1)/L*2*pi));
-    s_x = mean(sin(coords(:,1)/L*2*pi));
-    xmean = L/2/pi*(atan2(-s_x,-c_x) + pi) - L/2;
-    c_y = mean(cos(coords(:,2)/L*2*pi));
-    s_y = mean(sin(coords(:,2)/L*2*pi));
-    ymean = L/2/pi*(atan2(-s_y,-c_y) + pi) - L/2;
-    
-    distanceFromMean = periodiceucdist(coords,[xmean, ymean]);
-    thisN = size(coords,1);
-    std_pos(frameCtr) = sqrt(sum(distanceFromMean.^2)./(thisN-1));
-    kurt_pos(frameCtr) = mean(distanceFromMean.^4)./(mean(distanceFromMean.^2)).^2;
-
-%         c0 = coords - mean(coords);
-%         rad_gyr(frameCtr) = sum(sum(c0.*c0))/num_worms; % this gives the same as the variane above
+        % this calculates the centre of mass for periodic boundaries
+        c_x = mean(cos(coords(:,1)/L*2*pi));
+        s_x = mean(sin(coords(:,1)/L*2*pi));
+        xmean = L/2/pi*(atan2(-s_x,-c_x) + pi);
+        c_y = mean(cos(coords(:,2)/L*2*pi));
+        s_y = mean(sin(coords(:,2)/L*2*pi));
+        ymean = L/2/pi*(atan2(-s_y,-c_y) + pi);
+        
+        xdistanceFromMean = periodiceucdist(coords(:,1),xmean);
+        ydistanceFromMean = periodiceucdist(coords(:,2),ymean);
+        thisN = size(coords,1);
+        varPbc = [sum(xdistanceFromMean.^2), sum(ydistanceFromMean.^2)]./(thisN-1);
+        std_pos(frameCtr) = sqrt(sum(varPbc));
+        
+        kurtx = mean(xdistanceFromMean.^4)./(mean(xdistanceFromMean.^2)).^2;
+        kurty = mean(ydistanceFromMean.^4)./(mean(ydistanceFromMean.^2)).^2;
+        kurt_pos(frameCtr) = mean([kurtx kurty]);
+        
+        %         c0 = coords - mean(coords);
+        %         rad_gyr(frameCtr) = sum(sum(c0.*c0))/num_worms; % this gives the same as the variane above
     end
     
 elseif format == 'experiment'
@@ -95,11 +100,11 @@ elseif format == 'experiment'
         
         coords(:,1) = data{1}(thisFrame_logInd).*pix2mm;
         coords(:,2) = data{2}(thisFrame_logInd).*pix2mm;
- 
+        
         std_pos(frameCtr) = sqrt(sum(var(coords))); % this is like the radius of gyration
         kurt_pos(frameCtr) = mean(kurtosis(coords,0));
     end
-   
+    
 end
 
 sig_x = mean(std_pos);
