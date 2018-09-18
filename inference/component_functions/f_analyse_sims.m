@@ -40,7 +40,7 @@ for strainCtr = 1:nStrains
     % For each simulation file in the list, compute the appropriate summary
     % statistics using supplied functions
     for simCtr = 1:numSims
-        load([filepath sim_file_names{strainCtr}{simCtr}]);
+        load([filepath{strainCtr} sim_file_names{strainCtr}{simCtr}]);
         
         % Extract desired parameters if extract_params is a cell array
         if iscell(param_names)

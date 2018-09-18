@@ -1,4 +1,3 @@
-
 % Function to calculate the pair correlation function over many sampled
 % frames, and return a discretised array of the resulting g(r) distribution
 function pcf_mean = inf_pcf(data, format, fraction_to_sample)
@@ -9,7 +8,7 @@ function pcf_mean = inf_pcf(data, format, fraction_to_sample)
 % distribution is discretised.
 bin_width = 0.1;
 L = 7.5;
-bins = 0:bin_width:2;
+bins = 0:bin_width:1.2;
 
 if nargin<3
     fraction_to_sample = 0.1; % specify the proportion of frames to be sampled
@@ -33,7 +32,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     final_frame = dims(4);
     
     % Sample fraction of the frames in the video
-    num_samples = round(final_frame * (1 - burn_in) * fraction_to_sample);
+    num_samples = max(3,ceil(final_frame * (1 - burn_in) * fraction_to_sample));
     sampled_frames = randi([round(burn_in*final_frame) final_frame],1,num_samples); % could also sample without replacement, or regularly, but it doesn't seem to make a difference
     for sampleCtr = 1:num_samples
         
@@ -77,7 +76,7 @@ elseif format == 'experiment'
     
     % Randomly sample fraction of the frames in the video
     frames = data{3};
-    num_samples = floor(length(unique(frames)) * fraction_to_sample);
+    num_samples = max(3,ceil(length(unique(frames)) * fraction_to_sample));
     frames_sampled = randi([min(frames),max(frames)], 1, num_samples);
     
     for sampleCtr = 1:num_samples

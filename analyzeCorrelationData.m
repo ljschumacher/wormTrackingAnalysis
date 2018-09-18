@@ -67,7 +67,7 @@ bootserr = @(x) bootci(1e2,{@median,x},'alpha',0.05,'Options',struct('UseParalle
 % plotting parameters
 plotColors = lines(nStrains);
 if plotDiagnostics, visitfreqFig = figure; hold on, end
-dircorrxticks = 0:5:(maxDist/1000);
+dircorrxticks = 0:0.5:(maxDist/1000);
 load('~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt')
 % export fig parameters
 exportOptions = struct('Format','eps2',...
@@ -296,26 +296,26 @@ for strainCtr = 1:nStrains
     [corr_o_med,corr_o_ci] = grpstats(dirxcorr,pairDistbinIdx,{@nanmedian,bootserr});
     [corr_v_med,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{@nanmedian,bootserr});
     %% plot data
-    [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins,smoothdata(s_med),...
+    [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins/1000,smoothdata(s_med),...
         [smoothdata(s_med - s_ci(:,1)), smoothdata(s_ci(:,2) - s_med)],...
         'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
     % correlations
-    boundedline(pairDistBins,corr_o_med,[corr_o_med - corr_o_ci(:,1), corr_o_ci(:,2) - corr_o_med],...
+    boundedline(pairDistBins/1000,corr_o_med,[corr_o_med - corr_o_ci(:,1), corr_o_ci(:,2) - corr_o_med],...
         'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(pairDistBins,corr_v_med,[corr_v_med - corr_v_ci(:,1), corr_v_ci(:,2) - corr_v_med],...
+    boundedline(pairDistBins/1000,corr_v_med,[corr_v_med - corr_v_ci(:,1), corr_v_ci(:,2) - corr_v_med],...
         'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(nNbrDistBins,corr_vn_med,[corr_vn_med - corr_vn_ci(:,1), corr_vn_ci(:,2) - corr_vn_med],...
+    boundedline(nNbrDistBins/1000,corr_vn_med,[corr_vn_med - corr_vn_ci(:,1), corr_vn_ci(:,2) - corr_vn_med],...
         'alpha',velnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(nNbrDistBins,corr_an_med,[corr_an_med - corr_an_ci(:,1), corr_an_ci(:,2) - corr_an_med],...
+    boundedline(nNbrDistBins/1000,corr_an_med,[corr_an_med - corr_an_ci(:,1), corr_an_ci(:,2) - corr_an_med],...
         'alpha',accnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
     pcf = cat(2,pcf{:});
-    boundedline(distBins(2:end)-distBinWidth/2,nanmean(pcf,2),...
+    boundedline((distBins(2:end)-distBinWidth/2)/1000,nanmean(pcf,2),...
         [nanstd(pcf,0,2) nanstd(pcf,0,2)]./sqrt(nnz(sum(~isnan(pcf),2))),...
         'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
     % plot orientational order
     set(0,'CurrentFigure',orderFig)
     subplot(1,2,strainCtr)
-    violinplot([polar_order, nematic_order],{'polar','nematic'});
+    violinplot([polar_order, nematic_order],{'p','n'});
     title(strains{strainCtr})
     ylim([0 1]), box on
     % plot frequency of visited sites
@@ -329,8 +329,8 @@ for figHandle = [speedFig, dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig,
 end
 % speeds v distance
 speedFig.Children.YLim = [0 400];
-speedFig.Children.XLim = [0 maxDist];
-speedFig.Children.XTick = 0:500:maxDist;
+speedFig.Children.XLim = [0 maxDist]/1000;
+speedFig.Children.XTick = (0:500:maxDist)/1000;
 speedFig.Children.XGrid = 'on';
 speedFig.Children.YGrid = 'on';
 speedFig.Children.Box = 'on';
@@ -344,7 +344,7 @@ system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % directional correlation
 dircorrFig.Children.YLim = [-1 1];
-dircorrFig.Children.XLim = [0 maxDist];
+dircorrFig.Children.XLim = [0 maxDist]/1000;
 dircorrFig.Children.XGrid = 'on';
 dircorrFig.Children.YGrid = 'on';
 set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
@@ -357,7 +357,7 @@ system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % velocity correlation
 velcorrFig.Children.YLim = [-1 1];
-velcorrFig.Children.XLim = [0 maxDist];
+velcorrFig.Children.XLim = [0 maxDist]/1000;
 velcorrFig.Children.XGrid = 'on';
 velcorrFig.Children.YGrid = 'on';
 set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
@@ -370,7 +370,7 @@ system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 % correlation of velocity with direction to neighbour
 velnbrcorrFig.Children.YLim = [-1 1];
-velnbrcorrFig.Children.XLim = [0 maxDist];
+velnbrcorrFig.Children.XLim = [0 maxDist]/1000;
 velnbrcorrFig.Children.XGrid = 'on';
 velnbrcorrFig.Children.YGrid = 'on';
 set(velnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
@@ -386,6 +386,7 @@ accnbrcorrFig.Children.YLim = [-1 1];
 accnbrcorrFig.Children.XLim = [0 maxDist]/1000;
 accnbrcorrFig.Children.XGrid = 'on';
 accnbrcorrFig.Children.YGrid = 'on';
+accnbrcorrFig.Children.Box = 'on';
 set(accnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
 ylabel(accnbrcorrFig.Children,'acceleration-neighbor corr.')
 xlabel(accnbrcorrFig.Children,'distance to neareast neighbour (mm)')
@@ -397,15 +398,15 @@ system(['rm ' figurename '.eps']);
 % pair-correlation function
 poscorrFig.Children.YLim(1) = 0;
 poscorrFig.Children.XLim = [0 maxDist]/1000;
-poscorrFig.Children.XTick = 0:5:(maxDist/1000);
-poscorrFig.Children.YTick = 0:2:round(poscorrFig.Children.YLim(2));
+poscorrFig.Children.XTick = 0:0.5:(maxDist/1000);
+% poscorrFig.Children.YTick = 0:2:round(poscorrFig.Children.YLim(2));
 poscorrFig.Children.Box = 'on';
 poscorrFig.Children.XGrid = 'on';
 poscorrFig.Children.YGrid = 'on';
-ylabel(poscorrFig.Children,'positional correlation g(r)')
+ylabel(poscorrFig.Children,'pair correlation')
 xlabel(poscorrFig.Children,'distance r (mm)')
 legend(poscorrFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/radialdistributionfunction_' wormnum '_' phase '_data' num2str(dataset) '_' markerType];
+figurename = ['figures/correlation/phaseSpecific/paircorrelationfunction_' wormnum '_' phase '_data' num2str(dataset) '_' markerType];
 if useJoinedTraj, figurename = [figurename '_jointraj']; end
 exportfig(poscorrFig,[figurename '.eps'],exportOptions)
 system(['epstopdf ' figurename '.eps']);

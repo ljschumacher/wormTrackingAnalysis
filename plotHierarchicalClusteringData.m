@@ -12,7 +12,7 @@ function [] = plotHierarchicalClusteringData(dataset,phase,wormnum,linkageMethod
 %% set other parameters
 exportOptions = struct('Format','eps2',...
     'Color','rgb',...
-    'Width',14,...
+    'Width',20,...
     'Resolution',300,...
     'FontMode','fixed',...
     'FontSize',12,...
@@ -90,7 +90,7 @@ for strainCtr = 1:nStrains
                     subplot(1,2,1)
                     dendrogram(clustTree,0,'Reorder',optimalleaforder(clustTree,pairDists));
                     ax = gca;
-                    ax.XTick=[];ax.YLabel.String=[linkageMethod 'linkage distance (mm)'];
+                    ax.XTick=[];ax.YLabel.String=[linkageMethod ' linkage distance (mm)'];
                     ax.Box = 'on';
 %                     % make inset with scatter plot of positions
 %                     ax = axes('Position',[0.6 0.6 0.25 0.25]);
@@ -100,7 +100,12 @@ for strainCtr = 1:nStrains
                     ax.XTick = []; ax.YTick = [];
                     ax.Box = 'on';
                     axis equal
+                    ax.XLim = ax.XLim.*[0.95 1.05];
                     set(gcf,'PaperUnits','centimeters')
+                    % resize figure
+                    pos = get(gcf,'Position');
+                    pos(3) = 2*pos(4); % change aspect ratio
+                    set(gcf,'Position',pos)
                     figurename = ['figures/clustering/trees/clusterTree_' ...
                         linkageMethod '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'...
                         '_' strains{strainCtr} '_' strrep(filename(end-22:end-17),'_','') '_frame' num2str(frame)];
@@ -120,15 +125,17 @@ for strainCtr = 1:nStrains
     histogram(branchHeights,'Normalization','probability','EdgeColor','none','BinWidth',0.05)
 end
 %% format and export figures
+exportOptions.Width = 10;
 set(clustFig,'PaperUnits','centimeters')
 set(0,'CurrentFigure',clustFig)
 box on
-xlim([0 6])
+grid on
+xlim([0 4])
 ylim([0 0.1])
 legend(strains)
-ylabel('P')
+ylabel('relative frequency')
 xlabel('inter-cluster distance (mm)')
-title([linkageMethod ' linkage'],'FontWeight','normal')
+title(['hierarchical clustering'],'FontWeight','normal')
 figurename = ['figures/clustering/branchHeights_' linkageMethod '_' wormnum '_' phase '_data' num2str(dataset) '_jointraj'];
 exportfig(clustFig,[figurename '.eps'],exportOptions)
 system(['epstopdf ' figurename '.eps']);
