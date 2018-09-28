@@ -60,7 +60,7 @@ for strainCtr = 1:nStrains
     kde_weights = 1./expsim_dists{strainCtr}(chosen_samples{strainCtr},1);
     % construct a gmmodel (because ksdensity doesn't work with more
     % than two parameter dimensions)
-    bandWidth = std(chosen_params{strainCtr}).*(4 + (nParams + 2)...
+    bandWidth = std(chosen_params{strainCtr}).*(4./(nParams + 2)...
         ./size(chosen_params{strainCtr},1)).^(1./(nParams + 4)); %Silverman's rule of thumb for the bandwidth
     posti = gmdistribution(chosen_params{strainCtr},bandWidth.^2,kde_weights);
     % calculate the hellinger distance between the prior and posterior distributions
