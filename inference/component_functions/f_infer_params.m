@@ -101,25 +101,28 @@ for strainCtr = 1:num_strains
     end
 end
 if plotResults&&num_strains>1
-    % adjust scales for 4th parameter to log
-    for strainCtr=1:num_strains
-        for parCtr = 1:nParams-1
-        AX{strainCtr}(4,parCtr).YScale = 'log';
+    if strcmp(modelstring,'PRW_4D_wa_r1')
+        % adjust scales for 4th parameter to log
+        for strainCtr=1:num_strains
+            for parCtr = 1:nParams-1
+                AX{strainCtr}(4,parCtr).YScale = 'log';
+            end
+            pax{strainCtr}(4).XScale = 'log';
         end
-        pax{strainCtr}(4).XScale = 'log';
+        s1p4ylim = pax{1}(4).YLim;
     end
-    s1p4ylim = pax{1}(4).YLim;
     % combine plots from both strains into 1
     plotColors = lines(2);
     for lineCtr = 1:nParams
         hhist{2}(lineCtr).Color = plotColors(2,:); % make orange
         copyobj(hhist{2}(lineCtr),pax{1}(lineCtr)) % transfer to plot of first strain
     end
-    % restore ylim for 4th parameter
-    pax{1}(4).YLim(2) = s1p4ylim(2);
-    pax{1}(4).XLim(1) = 1e-3;
-    % change x-ticks to log
-    
+    if strcmp(modelstring,'PRW_4D_wa_r1')
+        % restore ylim for 4th parameter
+        pax{1}(4).YLim(2) = s1p4ylim(2);
+        pax{1}(4).XLim(1) = 1e-3;
+        % change x-ticks to log
+    end
     drawnow
     for ii = 2:nParams
         for jj = 1:(ii-1)
@@ -127,6 +130,12 @@ if plotResults&&num_strains>1
             h{1}(ii,jj).FaceColor = 'flat'; h{2}(ii,jj).FaceColor = 'flat';
             copyobj(h{2}(ii,jj),AX{1}(ii,jj))
         end
+    end
+    if strcmp(modelstring,'PRW_4D_wa_r2')
+        for parCtr = 1:nParams-1
+           AX{1}(4,parCtr).YLim(2) = -1;
+        end
+        pax{1}(4).XLim(2) = -1;
     end
     formatAndExportFigure(postiFig{1},['figures/posteriors_' ...
         '_alpha_' num2str(p_cutoffs(cutoffCtr)) '_' modelstring],...

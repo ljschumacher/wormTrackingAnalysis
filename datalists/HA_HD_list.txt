@@ -1,9 +1,0 @@
-/data2/shared/data/Results/recording31.4g100-350/recording31.4g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording34.1g100-350/recording34.1g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording38.1g100-350/recording38.1g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording38.7g100-350/recording38.7g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording39.5g100-350/recording39.5g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording39.9g100-350/recording39.9g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording43.1g100-350/recording43.1g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording44.1g100-350/recording44.1g_X1_skeletons.hdf5
-/data2/shared/data/Results/recording45.3g100-350/recording45.3g_X1_skeletons.hdf5
