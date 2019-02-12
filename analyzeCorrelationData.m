@@ -14,6 +14,7 @@ function [] = analyzeCorrelationData(dataset,phase,wormnum,markerType,plotDiagno
 % - calculate red-green correlations as well as red-red
 
 addpath('auxiliary/')
+addpath('filters/')
 
 %% set fixed parameters
 
@@ -30,7 +31,7 @@ if dataset ==1
 elseif dataset ==2
     strains = {'npr1','N2'};
 end
-useJoinedTraj = true;
+useJoinedTraj = false;
 
 nStrains = length(strains);
 
@@ -41,7 +42,7 @@ elseif dataset ==2
     intensityThresholds = containers.Map({'40','HD','1W'},{60, 40, 100});
 end
 if strcmp(markerType,'pharynx')
-    maxBlobSize = 1e5; 
+    maxBlobSize = 1e5;
     channelStr = 'g';
 elseif strcmp(markerType,'bodywall')
     maxBlobSize = 2.5e5;
@@ -54,7 +55,7 @@ end
 % analysis parameters
 pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 distBinWidth = 100; % in units of micrometers
-maxSpeed = 1500;
+maxSpeed = 1000;
 maxDist = 2000;
 distBins = 0:distBinWidth:maxDist;
 % define functions for grpstats
@@ -78,21 +79,21 @@ exportOptions = struct('Format','eps2',...
     'FontSize',12,...
     'LineWidth',1);
 %% initialize figures
-speedFig = figure; hold on
-dircorrFig = figure; hold on
-velcorrFig = figure; hold on
-velnbrcorrFig = figure; hold on
-accnbrcorrFig = figure; hold on
+
 poscorrFig = figure; hold on
 orderFig = figure; hold on
 lineHandles = NaN(nStrains,1);
 %% loop through strains
 for strainCtr = 1:nStrains
+    dircorrFig = figure; hold on
+    velcorrFig = figure; hold on
+    velnbrcorrFig = figure; hold on
+    accnbrcorrFig = figure; hold on
     %% load file lists
     if dataset == 1
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_list_lslx.xlsx'],1,'A1:E15','basic');
     elseif dataset == 2
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strains{strainCtr} '_' wormnum '_' channelStr '_list_lslx.xlsx'],1,'A1:E15','basic');
     end
     if ~useJoinedTraj
         filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
@@ -101,13 +102,12 @@ for strainCtr = 1:nStrains
     numFiles = length(filenames);
     if strcmp(wormnum,'40'), visitfreq = cell(numFiles,1); end
     %% intialise variables to store results
-    speeds = cell(numFiles,1);
     dirxcorr = cell(numFiles,1); % for calculating directional cross-correlation
     velxcorr = cell(numFiles,1); % for calculating velocity cross-correlation
     velnbrcorr = cell(numFiles,1); % for calculating velocity correlation with nearest neighbour position
     accnbrcorr = cell(numFiles,1);
     pairdist = cell(numFiles,1);
-    nNbrDist= cell(numFiles,1);
+    nbrDist= cell(numFiles,1); % for the weighted neighbour distances
     polar_order= cell(numFiles,1);
     nematic_order= cell(numFiles,1);
     pcf =cell(numFiles,1);
@@ -118,9 +118,6 @@ for strainCtr = 1:nStrains
         trajData = h5read(filename,'/trajectories_data');
         blobFeats = h5read(filename,'/blob_features');
         skelData = h5read(filename,'/skeleton');
-        %         min_neighbr_dist = h5read(filename,'/min_neighbr_dist');
-%         num_close_neighbrs = h5read(filename,'/num_close_neighbrs');
-%         neighbr_dist = h5read(filename,'/neighbr_distances');
         % check formats
         assert(size(skelData,1)==2,['Wrong skeleton size for ' filename])
         assert(size(skelData,2)==2,['Wrong skeleton size for ' filename])
@@ -145,7 +142,7 @@ for strainCtr = 1:nStrains
         trajData.filtered = filterIntensityAndSize(blobFeats,pixelsize,...
             intensityThresholds(wormnum),maxBlobSize)...
             &trajData.has_skeleton; % careful: we may not want to filter for skeletonization for
-            %clustering statistics
+        %clustering statistics
         if strcmp(markerType,'bodywall')
             % filter red data by skeleton length
             trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
@@ -164,13 +161,12 @@ for strainCtr = 1:nStrains
             disp(['overall background area estimated as ' num2str(OverallArea)])
         end
         % initialise variables to store results for this file
-        speeds{fileCtr} = cell(numFrames,1);
         dirxcorr{fileCtr} = cell(numFrames,1); % for calculating directional cross-correlation
         velxcorr{fileCtr} = cell(numFrames,1); % for calculating velocity cross-correlation
         velnbrcorr{fileCtr} = cell(numFrames,1);
         accnbrcorr{fileCtr} = cell(numFrames,1);
         pairdist{fileCtr} = cell(numFrames,1);
-        nNbrDist{fileCtr}= cell(numFrames,1);
+        nbrDist{fileCtr}= cell(numFrames,1);
         pcf{fileCtr} = NaN(length(distBins) - 1,numFrames);
         polar_order{fileCtr} = zeros(numFrames,1);
         nematic_order{fileCtr} = zeros(numFrames,1);
@@ -186,23 +182,34 @@ for strainCtr = 1:nStrains
             if N>1 % need at least two worms in frame
                 frameLogInd = trajData.frame_number==frame&trajData.filtered;
                 if strcmp(markerType,'pharynx')
-                    vx = double(blobFeats.velocity_x(frameLogInd));
-                    vy = double(blobFeats.velocity_y(frameLogInd));
-                    accx = double(blobFeats.acceleration_x(frameLogInd));
+                    vx = double(blobFeats.velocity_x(frameLogInd))*pixelsize*frameRate;
+                    vy = double(blobFeats.velocity_y(frameLogInd))*pixelsize*frameRate;
+                    accx = double(blobFeats.acceleration_x(frameLogInd)); % units may need correcting
                     accy = double(blobFeats.acceleration_y(frameLogInd));
                     orientation_x = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,2,frameLogInd)));
                     orientation_y = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,2,frameLogInd)));
                 elseif strcmp(markerType,'bodywall')
-                    vx = velocities_x(frameLogInd);
-                    vy = velocities_y(frameLogInd);
-                    accx = acceleration_x(frameLogInd);
+                    vx = velocities_x(frameLogInd)*pixelsize*frameRate;
+                    vy = velocities_y(frameLogInd)*pixelsize*frameRate;
+                    accx = acceleration_x(frameLogInd); % units may need correcting
                     accy = acceleration_y(frameLogInd);
                     orientation_x = double(squeeze(skelData(1,1,frameLogInd) - skelData(1,8,frameLogInd)));
                     orientation_y = double(squeeze(skelData(2,1,frameLogInd) - skelData(2,8,frameLogInd)));
                 end
-                %% calculate speeds and correlations
-                speeds{fileCtr}{frameCtr} = sqrt(vx.^2 + vy.^2)*pixelsize*frameRate; % speed of every worm in frame, in mu/s
-                dirxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(orientation_x,orientation_y,true,false); % directional correlation
+                % normalise orientation for head/pharynx size
+                headSize = sqrt(orientation_x.^2 + orientation_y.^2);
+                orientation_x = orientation_x./headSize;
+                orientation_y = orientation_y./headSize;
+                % assume speeds>maxSpeed are tracking errors
+                speedOutlierLogIdcs = sqrt(vx.^2 + vy.^2)>maxSpeed;
+                if any(speedOutlierLogIdcs)
+                    vx(speedOutlierLogIdcs) = NaN;
+                    vy(speedOutlierLogIdcs) = NaN;
+                    accx(speedOutlierLogIdcs) = NaN;
+                    accy(speedOutlierLogIdcs) = NaN;
+                end
+                %% calculate dir-dir and vel-vel correlations
+                dirxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(orientation_x,orientation_y,false,false); % directional correlation
                 velxcorr{fileCtr}{frameCtr} = vectorCrossCorrelation2D(vx,vy,true,false); % velocity correlation
                 %% calculate pairwise distances
                 pairdist{fileCtr}{frameCtr} = pdist([x y]).*pixelsize; % distance between all pairs, in micrometer
@@ -210,22 +217,28 @@ for strainCtr = 1:nStrains
                 pcf{fileCtr}(:,frameCtr) = histcounts(pairdist{fileCtr}{frameCtr},distBins,'Normalization','count'); % radial distribution function
                 pcf{fileCtr}(:,frameCtr) = pcf{fileCtr}(:,frameCtr)'.*OverallArea ...
                     ./(pi*(distBins(2:end).^2 - (distBins(2:end) - distBinWidth).^2)*N*(N-1)/2); % normalisation by N(N-1)/2 as pdist doesn't double-count pairs
-                %% calculate nearest-neighbour distances
-                D = squareform(pairdist{fileCtr}{frameCtr}); % distance of every worm to every other
-                [nNbrDist{fileCtr}{frameCtr}, nNbrIndx] = min(D + max(max(D))*eye(size(D)));
-                % check consistency of outputs
-                if (numel(speeds{fileCtr}{frameCtr})~=numel(nNbrDist{fileCtr}{frameCtr}))||...
+                % keep only pair-distances below maxDist
+                pairDistKeepLogInd = pairdist{fileCtr}{frameCtr}<=maxDist;
+                pairdist{fileCtr}{frameCtr} = pairdist{fileCtr}{frameCtr}(pairDistKeepLogInd);
+                dirxcorr{fileCtr}{frameCtr} = dirxcorr{fileCtr}{frameCtr}(pairDistKeepLogInd);
+                velxcorr{fileCtr}{frameCtr} = velxcorr{fileCtr}{frameCtr}(pairDistKeepLogInd);
+                %% calculate direction towards neighbour(s) for each worm
+                dx = (x - x')*pixelsize; dy = (y - y')*pixelsize;
+                dD = sqrt(dx.^2 + dy.^2);
+                % keep only nbr-distances below maxDist
+                nbrKeepLogIdcs = dD(:)<=maxDist;
+                
+                nbrDist{fileCtr}{frameCtr} = dD(nbrKeepLogIdcs);
+                velnbrcorr{fileCtr}{frameCtr} = reshape(double(vectorPairedCorrelation2D(vx,vy,dx./dD,dy./dD,true,false)),[],1); % reshape to column-vector
+                velnbrcorr{fileCtr}{frameCtr} = velnbrcorr{fileCtr}{frameCtr}(nbrKeepLogIdcs);
+                % calculate correlation between change in direction and nbr positions
+                accnbrcorr{fileCtr}{frameCtr} = reshape(double(vectorPairedCorrelation2D(accx,accy,dx./dD,dy./dD,true,false)),[],1); % reshape to column-vector
+                accnbrcorr{fileCtr}{frameCtr} = accnbrcorr{fileCtr}{frameCtr}(nbrKeepLogIdcs);
+                %% check consistency of outputs
+                if (numel(velnbrcorr{fileCtr}{frameCtr})~=numel(nbrDist{fileCtr}{frameCtr}))||...
                         (numel(dirxcorr{fileCtr}{frameCtr})~=numel(pairdist{fileCtr}{frameCtr}))
                     error(['Inconsistent number of variables in frame ' num2str(frame) ' of ' filename ])
                 end
-                %% calculate direction towards nearest (few) neighbour(s) for each worm
-                dx = double(x(nNbrIndx) - x); dy = double(y(nNbrIndx) - y);
-                velnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(vx,vy,dx,dy,true,false);
-                %% calculate correlation between change in direction and neareas nbr positiob
-                % calculate change in velocity vectors
-                % would have to loop through each worm here, might be
-                % easier to pre-calculate the acceleration in x,y in python
-                accnbrcorr{fileCtr}{frameCtr} = vectorPairedCorrelation2D(accx,accy,dx,dy,true,false);
                 %% calculate polar and nematic global order
                 phis = atan2(orientation_y,orientation_x);
                 polar_order{fileCtr}(frameCtr) = abs(nanmean(exp(1i*phis)));
@@ -233,13 +246,12 @@ for strainCtr = 1:nStrains
             end
         end
         %% pool data from frames
-        speeds{fileCtr} = vertcat(speeds{fileCtr}{:});
         dirxcorr{fileCtr} = horzcat(dirxcorr{fileCtr}{:});
         velxcorr{fileCtr} = horzcat(velxcorr{fileCtr}{:});
         velnbrcorr{fileCtr} = vertcat(velnbrcorr{fileCtr}{:});
         accnbrcorr{fileCtr} = vertcat(accnbrcorr{fileCtr}{:});
         pairdist{fileCtr} = horzcat(pairdist{fileCtr}{:});
-        nNbrDist{fileCtr} = horzcat(nNbrDist{fileCtr}{:});
+        nbrDist{fileCtr} = vertcat(nbrDist{fileCtr}{:});
         %% heat map of sites visited - this only makes sense for 40 worm dataset where we don't move the camera
         if strcmp(wormnum,'40')&& plotDiagnostics
             siteVisitFig = figure;
@@ -259,8 +271,7 @@ for strainCtr = 1:nStrains
         end
     end
     %% combine data from multiple files
-    nNbrDist = horzcat(nNbrDist{:});
-    speeds = vertcat(speeds{:});
+    nbrDist = vertcat(nbrDist{:});
     pairdist = horzcat(pairdist{:});
     dirxcorr = horzcat(dirxcorr{:});
     velxcorr = horzcat(velxcorr{:});
@@ -268,50 +279,23 @@ for strainCtr = 1:nStrains
     accnbrcorr = vertcat(accnbrcorr{:});
     polar_order = vertcat(polar_order{:});
     nematic_order = vertcat(nematic_order{:});
-    %% bin distance data
-    [nNbrDistcounts,nNbrDistBins,nNbrDistbinIdx]  = histcounts(nNbrDist,...
-        'BinWidth',distBinWidth,'BinLimits',[min(nNbrDist) maxDist]);
-    [pairDistcounts,pairDistBins,pairDistbinIdx]  = histcounts(pairdist,...
-        'BinWidth',distBinWidth,'BinLimits',[min(pairdist) maxDist]);
-    % convert bin edges to centres (for plotting)
-    nNbrDistBins = double(nNbrDistBins(1:end-1) + diff(nNbrDistBins)/2);
-    pairDistBins = double(pairDistBins(1:end-1) + diff(pairDistBins)/2);
-    % ignore larger distance values and bins with only one element, as this will cause bootsci to fault
-    nNdistkeepIdcs = nNbrDistbinIdx>0&ismember(nNbrDistbinIdx,find(nNbrDistcounts>1))...
-        &speeds'<=maxSpeed; % also ignore outlier speed values
-    nNbrDistBins = nNbrDistBins(nNbrDistcounts>1);
-    speeds = speeds(nNdistkeepIdcs);
-    velnbrcorr = velnbrcorr(nNdistkeepIdcs);
-    accnbrcorr = accnbrcorr(nNdistkeepIdcs);
-    nNbrDistbinIdx = nNbrDistbinIdx(nNdistkeepIdcs);
-    pdistkeepIdcs = pairDistbinIdx>0&ismember(pairDistbinIdx,find(pairDistcounts>1));
-    pairDistBins = pairDistBins(pairDistcounts>1);
-    dirxcorr = dirxcorr(pdistkeepIdcs);
-    velxcorr = velxcorr(pdistkeepIdcs);
-    pairDistbinIdx = pairDistbinIdx(pdistkeepIdcs);
-    %% calculate median statistics a function of distances
-    [s_med,s_ci] = grpstats(speeds,nNbrDistbinIdx,{@nanmedian,bootserr});
-    [corr_vn_med,corr_vn_ci] = grpstats(velnbrcorr,nNbrDistbinIdx,{@nanmedian,bootserr});
-    [corr_an_med,corr_an_ci] = grpstats(accnbrcorr,nNbrDistbinIdx,{@nanmedian,bootserr});
-    [corr_o_med,corr_o_ci] = grpstats(dirxcorr,pairDistbinIdx,{@nanmedian,bootserr});
-    [corr_v_med,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{@nanmedian,bootserr});
+    
     %% plot data
-    [lineHandles(strainCtr), ~] = boundedline(nNbrDistBins/1000,smoothdata(s_med),...
-        [smoothdata(s_med - s_ci(:,1)), smoothdata(s_ci(:,2) - s_med)],...
-        'alpha',speedFig.Children,'cmap',plotColors(strainCtr,:));
     % correlations
-    boundedline(pairDistBins/1000,corr_o_med,[corr_o_med - corr_o_ci(:,1), corr_o_ci(:,2) - corr_o_med],...
-        'alpha',dircorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(pairDistBins/1000,corr_v_med,[corr_v_med - corr_v_ci(:,1), corr_v_ci(:,2) - corr_v_med],...
-        'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(nNbrDistBins/1000,corr_vn_med,[corr_vn_med - corr_vn_ci(:,1), corr_vn_ci(:,2) - corr_vn_med],...
-        'alpha',velnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
-    boundedline(nNbrDistBins/1000,corr_an_med,[corr_an_med - corr_an_ci(:,1), corr_an_ci(:,2) - corr_an_med],...
-        'alpha',accnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
+    set(0,'CurrentFigure',dircorrFig)
+    histogram2conditional(pairdist/1000,dirxcorr,2)
+    set(0,'CurrentFigure',velcorrFig)
+    histogram2conditional(pairdist/1000,velxcorr,2)
+    set(0,'CurrentFigure',velnbrcorrFig)
+    histogram2conditional(nbrDist/1000,velnbrcorr,2)
+    set(0,'CurrentFigure',accnbrcorrFig)
+    histogram2conditional(nbrDist/1000,accnbrcorr,2)
+    
+    % plot pair-correlation
     pcf = cat(2,pcf{:});
-    boundedline((distBins(2:end)-distBinWidth/2)/1000,nanmean(pcf,2),...
+    [lineHandles(strainCtr), ~] = boundedline((distBins(2:end)-distBinWidth/2)/1000,nanmean(pcf,2),...
         [nanstd(pcf,0,2) nanstd(pcf,0,2)]./sqrt(nnz(sum(~isnan(pcf),2))),...
-        'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:))
+        'alpha',poscorrFig.Children,'cmap',plotColors(strainCtr,:));
     % plot orientational order
     set(0,'CurrentFigure',orderFig)
     subplot(1,2,strainCtr)
@@ -322,79 +306,56 @@ for strainCtr = 1:nStrains
     if  strcmp(wormnum,'40')&& plotDiagnostics
         histogram(visitfreqFig.Children,vertcat(visitfreq{:}),'DisplayStyle','stairs','Normalization','pdf')
     end
+    %% format and export figures for this strain
+    for figHandle = [dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig] % common formating for all figures
+        set(figHandle,'PaperUnits','centimeters')
+    end
+    % directional correlation
+    dircorrFig.Children.YLim = [-1 1];
+    dircorrFig.Children.XLim = [0 maxDist]/1000;
+    set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(dircorrFig.Children,'orientational correlation')
+    xlabel(dircorrFig.Children,'distance between pair (mm)')
+    figurename = ['figures/correlation/phaseSpecific/dircrosscorr_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+    exportfig(dircorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    % velocity correlation
+    velcorrFig.Children.YLim = [-1 1];
+    velcorrFig.Children.XLim = [0 maxDist]/1000;
+    set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(velcorrFig.Children,'velocity correlation')
+    xlabel(velcorrFig.Children,'distance between pair (mm)')
+    figurename = ['figures/correlation/phaseSpecific/velcrosscorr_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+    exportfig(velcorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    % correlation of velocity with direction to neighbour
+    velnbrcorrFig.Children.YLim = [-1 1];
+    velnbrcorrFig.Children.XLim = [0 maxDist]/1000;
+    set(velnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(velnbrcorrFig.Children,'velocity-nbr corr.')
+    xlabel(velnbrcorrFig.Children,'neighbour distance (mm)')
+    figurename = ['figures/correlation/phaseSpecific/velnbrcorr_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+    exportfig(velnbrcorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
+    % correlation of acceleration with direction to neighbour
+    accnbrcorrFig.Children.YLim = [-1 1];
+    accnbrcorrFig.Children.XLim = [0 maxDist]/1000;
+    accnbrcorrFig.Children.Box = 'on';
+    set(accnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
+    ylabel(accnbrcorrFig.Children,'acceleration-nbr corr.')
+    xlabel(accnbrcorrFig.Children,'neighbour distance (mm)')
+    figurename = ['figures/correlation/phaseSpecific/accnbrcorr_' strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+    exportfig(accnbrcorrFig,[figurename '.eps'],exportOptions)
+    system(['epstopdf ' figurename '.eps']);
+    system(['rm ' figurename '.eps']);
 end
 %% format and export figures
-for figHandle = [speedFig, dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig, poscorrFig] % common formating for both figures
+for figHandle = [poscorrFig] % common formating for all figures
     set(figHandle,'PaperUnits','centimeters')
 end
-% speeds v distance
-speedFig.Children.YLim = [0 400];
-speedFig.Children.XLim = [0 maxDist]/1000;
-speedFig.Children.XTick = (0:500:maxDist)/1000;
-speedFig.Children.XGrid = 'on';
-speedFig.Children.YGrid = 'on';
-speedFig.Children.Box = 'on';
-speedFig.Children.XDir = 'reverse';
-ylabel(speedFig.Children,'speed (μm/s)')
-xlabel(speedFig.Children,'distance to nearest neighbour (μm)')
-legend(speedFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/speedvsneighbrdistance_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-exportfig(speedFig,[figurename '.eps'],exportOptions)
-system(['epstopdf ' figurename '.eps']);
-system(['rm ' figurename '.eps']);
-% directional correlation
-dircorrFig.Children.YLim = [-1 1];
-dircorrFig.Children.XLim = [0 maxDist]/1000;
-dircorrFig.Children.XGrid = 'on';
-dircorrFig.Children.YGrid = 'on';
-set(dircorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-ylabel(dircorrFig.Children,'orientational correlation')
-xlabel(dircorrFig.Children,'distance between pair (μm)')
-legend(dircorrFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/dircrosscorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-exportfig(dircorrFig,[figurename '.eps'],exportOptions)
-system(['epstopdf ' figurename '.eps']);
-system(['rm ' figurename '.eps']);
-% velocity correlation
-velcorrFig.Children.YLim = [-1 1];
-velcorrFig.Children.XLim = [0 maxDist]/1000;
-velcorrFig.Children.XGrid = 'on';
-velcorrFig.Children.YGrid = 'on';
-set(velcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-ylabel(velcorrFig.Children,'velocity correlation')
-xlabel(velcorrFig.Children,'distance between pair (μm)')
-legend(velcorrFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/velcrosscorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-exportfig(velcorrFig,[figurename '.eps'],exportOptions)
-system(['epstopdf ' figurename '.eps']);
-system(['rm ' figurename '.eps']);
-% correlation of velocity with direction to neighbour
-velnbrcorrFig.Children.YLim = [-1 1];
-velnbrcorrFig.Children.XLim = [0 maxDist]/1000;
-velnbrcorrFig.Children.XGrid = 'on';
-velnbrcorrFig.Children.YGrid = 'on';
-set(velnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-ylabel(velnbrcorrFig.Children,'velocity-direction to neighbour correlation')
-xlabel(velnbrcorrFig.Children,'distance to neareast neighbour (μm)')
-legend(velnbrcorrFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/velnbrcorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-exportfig(velnbrcorrFig,[figurename '.eps'],exportOptions)
-system(['epstopdf ' figurename '.eps']);
-system(['rm ' figurename '.eps']);
-% correlation of acceleration with direction to neighbour
-accnbrcorrFig.Children.YLim = [-1 1];
-accnbrcorrFig.Children.XLim = [0 maxDist]/1000;
-accnbrcorrFig.Children.XGrid = 'on';
-accnbrcorrFig.Children.YGrid = 'on';
-accnbrcorrFig.Children.Box = 'on';
-set(accnbrcorrFig.Children,'XTick',dircorrxticks,'XTickLabel',num2str(dircorrxticks'))
-ylabel(accnbrcorrFig.Children,'acceleration-neighbor corr.')
-xlabel(accnbrcorrFig.Children,'distance to neareast neighbour (mm)')
-legend(accnbrcorrFig.Children,lineHandles,strains)
-figurename = ['figures/correlation/phaseSpecific/accnbrcorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
-exportfig(accnbrcorrFig,[figurename '.eps'],exportOptions)
-system(['epstopdf ' figurename '.eps']);
-system(['rm ' figurename '.eps']);
 % pair-correlation function
 poscorrFig.Children.YLim(1) = 0;
 poscorrFig.Children.XLim = [0 maxDist]/1000;
