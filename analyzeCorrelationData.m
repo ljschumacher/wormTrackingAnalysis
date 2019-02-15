@@ -82,6 +82,7 @@ exportOptions = struct('Format','eps2',...
 dircorrFig = figure; hold on
 velcorrFig = figure; hold on
 velnbrcorrFig = figure; hold on
+absvelnbrcorrFig = figure; hold on
 accnbrcorrFig = figure; hold on
 poscorrFig = figure; hold on
 orderFig = figure; hold on
@@ -289,6 +290,7 @@ for strainCtr = 1:nStrains
     pairDistBins = double(pairDistBins(1:end-1) + diff(pairDistBins)/2);
     
     [corr_vn_mean,corr_vn_ci] = grpstats(velnbrcorr,nbrDistbinIdx,{'mean','meanci'});
+    [corr_absvn_mean,corr_absvn_ci] = grpstats(abs(velnbrcorr),nbrDistbinIdx,{'mean','meanci'});
     [corr_an_mean,corr_an_ci] = grpstats(accnbrcorr,nbrDistbinIdx,{'mean','meanci'});
     [corr_dir_mean,corr_dir_ci] = grpstats(dirxcorr,pairDistbinIdx,{'mean','meanci'});
     [corr_v_mean,corr_v_ci] = grpstats(velxcorr,pairDistbinIdx,{'mean','meanci'});
@@ -300,25 +302,29 @@ for strainCtr = 1:nStrains
         'alpha',velcorrFig.Children,'cmap',plotColors(strainCtr,:))
     boundedline(nbrDistBins/1000,corr_vn_mean,[corr_vn_mean - corr_vn_ci(:,1), corr_vn_ci(:,2) - corr_vn_mean],...
         'alpha',velnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
+    boundedline(nbrDistBins/1000,corr_absvn_mean,[corr_absvn_mean - corr_absvn_ci(:,1), corr_absvn_ci(:,2) - corr_absvn_mean],...
+        'alpha',absvelnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
     boundedline(nbrDistBins/1000,corr_an_mean,[corr_an_mean - corr_an_ci(:,1), corr_an_ci(:,2) - corr_an_mean],...
         'alpha',accnbrcorrFig.Children,'cmap',plotColors(strainCtr,:))
     
     % 2d histogram of angles between velocity and neighbor, for this
     % strain
     set(0,'CurrentFigure',angleFig)
-    anglehist = histogram2conditional(nbrDist/1000,real(acos(velnbrcorr)),2,'BinWidth',[distBinWidth/1000 pi/16]); % need to take real part as dot products can be just above or below 1 (less than 1e-6)
+    anglehist = histogram2conditional(nbrDist/1000,real(acos(velnbrcorr)),2,'BinWidth',[distBinWidth/1000 pi/10]); % need to take real part as dot products can be just above or below 1 (less than 1e-6)
     anglehist.EdgeColor = 'none';
+    anglehistBinCounts{strainCtr} = anglehist.BinCounts;
     colormap(flipud(cmap_Blues))
     hc = colorbar;
     hc.Label.String = 'relative frequency';
     xlabel('distance to neighbor (mm)')
     ylabel('vel. angle w.r.t. neighbor dir. (rad)')
+    ylim([0 pi])
+    box on
     figurename = ['figures/correlation/phaseSpecific/anglehist_'  strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
     exportfig(gcf,[figurename '.eps'],exportOptions)
     system(['epstopdf ' figurename '.eps']);
     system(['rm ' figurename '.eps']);
-    ylim([0 pi])
-    box on
+    
     
     % plot pair-correlation
     pcf = cat(2,pcf{:});
@@ -337,15 +343,15 @@ for strainCtr = 1:nStrains
     end
 end
 %% format and export figures
-for figHandle = [dircorrFig, velcorrFig, velnbrcorrFig, accnbrcorrFig, poscorrFig] % common formating for all figures
+for figHandle = [dircorrFig, velcorrFig, velnbrcorrFig, absvelnbrcorrFig, accnbrcorrFig, poscorrFig] % common formating for all figures
     set(figHandle,'PaperUnits','centimeters')
     figHandle.Children.XLim = [0 maxDist]/1000;
     figHandle.Children.XGrid = 'on';
     figHandle.Children.YGrid = 'on';
     figHandle.Children.Box = 'on';
     set(figHandle.Children,'XTick',distxticks,'XTickLabel',num2str(distxticks'))
-    if figHandle~=poscorrFig
-        figHandle.Children.YLim = [-0.2 0.2];
+    if figHandle~=poscorrFig&&figHandle~=absvelnbrcorrFig
+        figHandle.Children.YLim = [-0.25 0.25];
     end
 end
 
@@ -376,6 +382,16 @@ exportfig(velnbrcorrFig,[figurename '.eps'],exportOptions)
 system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
 
+% absolute value of correlation of velocity with direction to neighbor
+ylabel(absvelnbrcorrFig.Children,'$\langle|\vec{v}\cdot\vec{r}_\mathrm{nbr}|/(|\vec{v}||\vec{r}_\mathrm{nbr}|)\rangle$','Interpreter','LaTeX')
+xlabel(absvelnbrcorrFig.Children,'distance to neighbor (mm)')
+absvelnbrcorrFig.Children.YLim = [0 1];
+legend(absvelnbrcorrFig.Children,lineHandles,strains)
+figurename = ['figures/correlation/phaseSpecific/absvelnbrcorr_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+exportfig(absvelnbrcorrFig,[figurename '.eps'],exportOptions)
+system(['epstopdf ' figurename '.eps']);
+system(['rm ' figurename '.eps']);
+
 % correlation of acceleration with direction to neighbor
 ylabel(accnbrcorrFig.Children,'acceleration-dir. to neighbor corr.')
 xlabel(accnbrcorrFig.Children,'distance to neighbor (mm)')
@@ -384,6 +400,28 @@ figurename = ['figures/correlation/phaseSpecific/accnbrcorr_' wormnum '_' phase 
 exportfig(accnbrcorrFig,[figurename '.eps'],exportOptions)
 system(['epstopdf ' figurename '.eps']);
 system(['rm ' figurename '.eps']);
+
+% 2d histogram of angles between velocity and neighbor, difference between strains
+angleDiffFig = figure;
+set(0,'CurrentFigure',angleDiffFig)
+plotBinsx = anglehist.XBinEdges(1:end-1) + diff(anglehist.XBinEdges)/2;
+plotBinsy = anglehist.YBinEdges(1:end-1) + diff(anglehist.YBinEdges)/2;
+surface(plotBinsx,plotBinsy,...
+    (anglehistBinCounts{1} - anglehistBinCounts{2})','EdgeColor','none')
+load('~/Dropbox/Utilities/colormaps_ascii/diverging/cmap_BuRd.txt')
+colormap(flipud(cmap_BuRd))
+hc = colorbar;
+caxis([-1 1]*max(abs(caxis)))
+hc.Label.String = 'difference in rel. freq., npr-1 to N2';
+xlabel('distance to neighbor (mm)')
+ylabel('vel. angle w.r.t. neighbor dir. (rad)')
+ylim([0 pi])
+box on
+figurename = ['figures/correlation/phaseSpecific/anglehistDiff_'  strains{strainCtr} '_' wormnum '_' phase '_data' num2str(dataset) '_' markerType ];     if useJoinedTraj, figurename = [figurename '_jointraj']; end
+exportfig(gcf,[figurename '.eps'],exportOptions)
+system(['epstopdf ' figurename '.eps']);
+system(['rm ' figurename '.eps']);
+
 
 % pair-correlation function
 poscorrFig.Children.YLim(1) = 0;

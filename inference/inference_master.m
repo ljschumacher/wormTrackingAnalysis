@@ -14,20 +14,21 @@ switch model
     case 'PRW_4D_wa_r2'
         param_names = {'drdN_rev','dkdN_dwell','dkdN_undwell','f_hapt'};
         num_statistics = 4;
-        % load original priors (that have been adjusted to log-scale for parameter 4)
-        load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
-            '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
-            'revdensity_haptotaxis_weighted_additive.mat'],'prior_npr1','supportLimits');
-        prior{1} = prior_npr1;
-        load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
-            '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
-            'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
-        prior{2} = prior_N2;
+% %         % load original priors (that have been adjusted to log-scale for parameter 4)
+% %         load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
+% %             '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
+% %             'revdensity_haptotaxis_weighted_additive.mat'],'prior_npr1','supportLimits');
+% %         prior{1} = prior_npr1;
+% %         load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
+% %             '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
+% %             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
+% %         prior{2} = prior_N2;
         % load support Limits from r1 posteriors - the proposal distribution
         load(['inf_results/posteriors_log_PRW_4D_wa_r1_0.1.mat'],'supportLimits')
-        % load r1 posteriors - the proposal distribution
+        % load r1 posteriors - the new prior
         load(['inf_results/posteriors_log_PRW_4D_wa_r1_0.1.mat'],'posterior');
         proposal = posterior;
+        prior = posterior;
         sumstat_filename = 'sumstats_PRW_4D_wa_r2.mat';
         sim_file_lists = {'datalists/PRW_4D_wa_r2_27384_samples_npr1like.txt';
             'datalists/PRW_4D_wa_r2_13341_samples_N2like.txt'};
@@ -115,7 +116,7 @@ else
         accept_ratio, param_names, param_return, prior,proposal,scaleflag);
     save(optimresults_filename,'weights_optim','min_obj','model','accept_ratio')
 end
-weights_optim %= [1 1 1 1]
+weights_optim = [1 1 1 1]
 %% Obtain distances between each of the experiments and simulations
 expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
 % check marginals of distances against parameters
@@ -182,11 +183,11 @@ elseif strcmp(model,'PRW_4D_wa_r2')
         % % replicate multivariate kernel density estimation using a gaussian mixture model
         % prior = mvksdensity(paramCombis(sampleIndcs,:),paramCombis,'Bandwidth',bw);
         kde_weights = 1./expsim_dists{strainCtr}(chosen_samples{strainCtr},1);
-        % adjust weighting for change of priors
-        prior_weights = pdf(prior{strainCtr},chosen_params{strainCtr})...
-            ./(1e-3 + pdf(proposal{strainCtr},chosen_params{strainCtr})); % use some regularization
+% %         % adjust weighting for change of priors
+% %         prior_weights = pdf(prior{strainCtr},chosen_params{strainCtr})...
+% %             ./(1e-3 + pdf(proposal{strainCtr},chosen_params{strainCtr})); % use some regularization
         posterior{strainCtr} = gmdistribution(chosen_params{strainCtr},...
-            bw.^2,kde_weights.*prior_weights);
+            bw.^2,kde_weights);
     end
 end
 % save posterior for later sampling
