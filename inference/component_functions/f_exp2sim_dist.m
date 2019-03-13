@@ -20,7 +20,6 @@ for strainCtr = 1:numStrains
     for statCtr = 1:num_statistics
         exp_data = exp_ss_array{strainCtr,1+statCtr};
         assert(~any(exp_data(:)==0),'zero-experimental data, cannot compute log-distances')
-        exp_err_mean = std(exp_data)./(sqrt(size(exp_data,1)));
         for simCtr = 1:numSims
             sim_data = sim_ss_array{strainCtr}{simCtr,1+statCtr};
             dim_factor = 1./sqrt(size(exp_data,2)); % correction factor for higher dimensional summary statistics

@@ -13,14 +13,14 @@ function [ speed, velocity_x, velocity_y, speedSigned, acceleration_x, accelerat
 % smoothing: smoothing window size (set to 0 to disable smoothing)
 
 
-% centroids of midbody skeleton
-x = mean(xcoords(skelIndcs,:))*pixelsize;
-y = mean(ycoords(skelIndcs,:))*pixelsize;
+% centroids of desired part of skeleton
+x = squeeze(mean(skelData(1,skelIndcs,:))*pixelsize);
+y = squeeze(mean(skelData(2,skelIndcs,:))*pixelsize);
 % change in centroid position over time
 dxdFrame = gradient(x)*frameRate;
 dydFrame = gradient(y)*frameRate;
 % speed and velocity
-dFramedt = gradient(double(trajData.frame_number))';
+dFramedt = gradient(single(trajData.frame_number));
 speed = sqrt(dxdFrame.^2 + dydFrame.^2)./dFramedt;
 velocity_x = dxdFrame./dFramedt;
 velocity_y = dydFrame./dFramedt;
@@ -32,10 +32,10 @@ acceleration_y = gradient(velocity_y)./dFramedt;
 [~, dyds] = gradient(squeeze(skelData(2,skelIndcs,:)),-1);
 [~, dxds] = gradient(squeeze(skelData(1,skelIndcs,:)),-1);
 % sign speed based on relative orientation of velocity to body
-speedSigned = getSignedSpeed([velocity_x; velocity_y],[mean(dxds); mean(dyds)]);
+speedSigned = getSignedSpeed([velocity_x'; velocity_y'],[mean(dxds); mean(dyds)]);
 if filter
     % ignore first and last frames of each worm's track
-    wormChangeIndcs = gradient(double(trajData.worm_index_joined))~=0;
+    wormChangeIndcs = gradient(double(trajData.worm_index_manual))~=0;
     speedSigned(wormChangeIndcs)=NaN;
     % ignore frames with bad skeletonization
     speedSigned(trajData.is_good_skel~=1)=NaN;

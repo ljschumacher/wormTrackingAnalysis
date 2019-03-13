@@ -19,7 +19,7 @@ exportOptions = struct('Format','eps2',...
     'LineWidth',1);
 load ~/Dropbox/Utilities/colormaps_ascii/increasing_cool/cmap_Blues.txt
 addpath('auxiliary/')
-
+addpath('filters/')
 %% set parameters
 if dataset ==1
     strains = {'N2','npr1'}; %{'npr1','HA','N2'}
@@ -42,10 +42,13 @@ pixelsize = 100/19.5; % 100 microns are 19.5 pixels
 minSpeedPerFrame = pixelsize/2; % minimum speed to consider for reversals, per frame. worms slower than this are considered paused and not moving forward or backward
 speedBinLimits = containers.Map({'npr1','N2'},{400, 300});
 densityBinLimits = containers.Map({'npr1','N2'},{10.5, 5.5});
+speedThreshold = containers.Map({'npr1','N2'},{100,50});
 nStrains = length(strains);
 plotColors = flipud(lines(nStrains));
 % lineHandles = NaN(nStrains,1);
 densityBinWidth = 0.25;
+nDensityBins = 10; % for plotting speed histograms
+speedFractions = NaN(nStrains,nDensityBins,2);
 speedBinWidth = 10;
 numSubSamples = 100;
 sampleSizeFraction = 1;
@@ -61,19 +64,16 @@ for strainCtr = 1:nStrains
     strain = strains{strainCtr};
     %% load data
     if dataset ==1
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_list_lslx.xlsx'],1,'A1:E15','basic');
     elseif dataset ==2
-        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_g_list.xlsx'],1,'A1:E15','basic');
+        [phaseFrames,filenames,~] = xlsread(['datalists/' strain '_' wormnum '_g_list_lslx.xlsx'],1,'A1:E15','basic');
     end
-    if ~useJoinedTraj
-        filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
-            '/data2/databackup/data/twoColour/ResultsUnjoinedTrajectories/');
-    end
+%     if ~useJoinedTraj
+%         filenames = strrep(filenames,'/data2/shared/data/twoColour/Results/',...
+%             '/data2/databackup/data/twoColour/ResultsUnjoinedTrajectories/');
+%     end
     %% intialize variables
     numFiles = length(filenames);
-%     %%%%%%% temporary fix while I can't remote mount the data
-%     load(['workspace' num2str(strainCtr) '.mat'])
-%     %%%%%%%
     knndensity = cell(numFiles,1);
     knndensityAtRev = cell(numFiles,1);
     knndensityAtFwd = cell(numFiles,1);
@@ -177,10 +177,8 @@ for strainCtr = 1:nStrains
     signedSpeeds = vertcat(signedSpeeds{:});
     %% loop over density estimates
 %     densityFig = figure; hold on
-%     speedAbsHist2Dfig = figure; hold on
-%     colormap(speedAbsHist2Dfig,flipud(cmap_Blues))
-%     speedSignedHist2Dfig = figure; hold on
-%     colormap(speedSignedHist2Dfig,flipud(cmap_Blues))
+    speedAbsHist2Dfig = figure; hold on
+    colormap(speedAbsHist2Dfig,flipud(cmap_Blues))
     for k = knnbrNumValues
         % initialize figures
         if strainCtr==1
@@ -188,54 +186,57 @@ for strainCtr = 1:nStrains
             fwdFig = figure; hold on
             revfwdFig = figure; hold on
         end
-        %% plot "convergence" of knn density estimate
+%         %% plot "convergence" of knn density estimate
 %         histogram(densityFig.Children, knndensity(:,k),'Normalization','Probability','DisplayStyle','stairs','BinLimits',[0 20])
-%         % for absolute speed
-%         h = histogram2(speedAbsHist2Dfig.Children,knndensity(:,k),abs(signedSpeeds),...
-%             'DisplayStyle','tile','YBinLimits',[0 speedBinLimits(strain)],...
-%             'BinWidth',[densityBinWidth, speedBinWidth],'XBinLimits',[0 densityBinLimits(strain)],'EdgeColor','none','Normalization','Probability');
-%         normfactor = sum(h.BinCounts,2); % for conditional normalisation
-%         normfactor(normfactor==0) = 1;
-%         h.BinCounts = h.BinCounts./normfactor; % conditional normalisation
-%         xlabel(speedAbsHist2Dfig.Children,['local density, \rho_' num2str(k) ' (worms/mm^2)'])
-%         ylabel(speedAbsHist2Dfig.Children,'speed (\mum/s)')
-%         figurename = ['figures/reversals/phaseSpecific/speedabs-density_knn' num2str(k) ...
-%             '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
-%         formatAndExportFigure(speedAbsHist2Dfig,figurename,useJoinedTraj,exportOptions)
-%         % plot individual histograms for first few density bins
-%         if k==6
-%             speedAbsHistFig = figure; hold on
-%             nDensityBins = 10;
-%             speedAbsHistFig.Children.ColorOrder = flipud(cool(nDensityBins));
-%             for binCtr = 1:nDensityBins
-%                 thisBinLogInd = knndensity(:,k)>=h.XBinEdges(binCtr)&knndensity(:,k)<h.XBinEdges(binCtr+1);
-%                 [thisbincounts, thisbinedges] = histcounts(abs(signedSpeeds(thisBinLogInd)),...
-%                     'BinWidth',2*h.BinWidth(2),'Normalization','Probability');
-%                 plot(speedAbsHistFig.Children,thisbinedges(1:end-1)+h.BinWidth(2),thisbincounts);
-%             end
-%             speedAbsHistFig.Children.Box = 'on';
-%             if strcmp(strain,'npr1')
-%                 speedAbsHistFig.Children.XLim(2) = 600;
-%             elseif strcmp(strain,'N2')
-%                 speedAbsHistFig.Children.XLim(2) = 400;
-%             end
-%             speedAbsHistFig.Children.YTick = [0 0.05 0.1 0.15 0.2];
-%             xlabel(speedAbsHistFig.Children,'speed (\mum/s)')
-%             ylabel(speedAbsHistFig.Children,'relative frequency')
-%             % add a colorbar
-%             hcb = colorbar;
-%             hcb.Location = 'east';
-%             colormap(flipud(cool(nDensityBins)));
-%             hcb.Ticks = [0 1];
-%             hcb.Label.String = 'local density';
-%             hcb.TickLabels = {'0',num2str(h.XBinEdges(nDensityBins+1))};
-%             hcb.Position(4) = 0.5;
-%             hcb.Position(2) = 0.25;
-%             % export figure
-%             figurename = ['figures/reversals/phaseSpecific/speedabs-density_1D_knn' num2str(k) ...
-%                 '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
-%             formatAndExportFigure(speedAbsHistFig,figurename,useJoinedTraj,exportOptions)
-%         end
+        %% plot 2d histogram of absolute speed vs density
+        h = histogram2(speedAbsHist2Dfig.Children,knndensity(:,k),abs(signedSpeeds),...
+            'DisplayStyle','tile','YBinLimits',[minSpeedPerFrame*frameRate speedBinLimits(strain)],...
+            'BinWidth',[densityBinWidth, speedBinWidth],'XBinLimits',[0 densityBinLimits(strain)],'EdgeColor','none','Normalization','Probability');
+        normfactor = sum(h.BinCounts,2); % for conditional normalisation
+        normfactor(normfactor==0) = 1;
+        h.BinCounts = h.BinCounts./normfactor; % conditional normalisation
+        xlabel(speedAbsHist2Dfig.Children,['local density, \rho_' num2str(k) ' (worms/mm^2)'])
+        ylabel(speedAbsHist2Dfig.Children,'speed (\mum/s)')
+        figurename = ['figures/reversals/phaseSpecific/speedabs-density_knn' num2str(k) ...
+            '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+        formatAndExportFigure(speedAbsHist2Dfig,figurename,useJoinedTraj,exportOptions)
+        %% plot speed histograms for first few density bins
+        if k==6
+            speedAbsHistFig = figure; hold on
+            speedAbsHistFig.Children.ColorOrder = flipud(cool(nDensityBins));
+            for binCtr = 1:nDensityBins
+                thisBinLogInd = knndensity(:,k)>=h.XBinEdges(binCtr)&knndensity(:,k)<h.XBinEdges(binCtr+1);
+                [thisbincounts, thisbinedges] = histcounts(abs(signedSpeeds(thisBinLogInd)),...
+                    'BinWidth',2*h.BinWidth(2),'Normalization','Probability');
+                plot(speedAbsHistFig.Children,thisbinedges(1:end-1)+h.BinWidth(2),thisbincounts);
+                % calculate proportion in high and low speed states
+                speedFractions(strainCtr,binCtr,1) = sum(thisbincounts(thisbinedges<=speedThreshold(strain)));
+                speedFractions(strainCtr,binCtr,2) = sum(thisbincounts(thisbinedges>speedThreshold(strain)...
+                                                &thisbinedges<=350));
+            end
+            speedAbsHistFig.Children.Box = 'on';
+            if strcmp(strain,'npr1')
+                speedAbsHistFig.Children.XLim(2) = 600;
+            elseif strcmp(strain,'N2')
+                speedAbsHistFig.Children.XLim(2) = 400;
+            end
+            speedAbsHistFig.Children.YTick = [0 0.05 0.1 0.15 0.2];
+            xlabel(speedAbsHistFig.Children,'speed (\mum/s)')
+            ylabel(speedAbsHistFig.Children,'relative frequency')
+            % add a colorbar
+            hcb = colorbar;
+            hcb.Location = 'east';
+            colormap(flipud(cool(nDensityBins)));
+            hcb.Ticks = [0 1];
+            hcb.Label.String = 'local density';
+            hcb.TickLabels = {'0',num2str(h.XBinEdges(nDensityBins+1))};
+            hcb.Position(4) = 0.5;
+            hcb.Position(2) = 0.25;
+            % export figure
+            figurename = ['figures/reversals/phaseSpecific/speedabs-density_1D_knn' num2str(k) ...
+                '_pharynx_' strain '_' wormnum '_' phase '_data' num2str(dataset)];
+            formatAndExportFigure(speedAbsHistFig,figurename,useJoinedTraj,exportOptions)
+        end
         %% plot increase in reversal frequency vs density
         [~, densitybins] = histcounts(knndensityAtRev(:,k),'BinWidth',densityBinWidth,'BinLimits',[0 densityBinLimits(strain)]);
         % subsample to estimate variability
@@ -257,8 +258,8 @@ for strainCtr = 1:nStrains
         if strainCtr==nStrains
             xlabel(revFig.Children,['local density, \rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(revFig.Children,'relative reversal rate')
-%             revFig.Children.YLim = [0 3];
-            revFig.Children.XLim(2) = 6;
+            revFig.Children.YLim(1) = 0;
+            revFig.Children.XLim(2) = 5;
             revFig.Children.Box = 'on';
             figurename = ['figures/reversals/phaseSpecific/reversals-density_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
@@ -282,8 +283,8 @@ for strainCtr = 1:nStrains
         if strainCtr==nStrains
             xlabel(fwdFig.Children,['local density, \rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(fwdFig.Children,'relative forward rate')
-%             fwdFig.Children.YLim = [0 3];
-            fwdFig.Children.XLim(2) = 6;
+            fwdFig.Children.YLim(1) = 0;
+            fwdFig.Children.XLim(2) = 5;
             fwdFig.Children.Box = 'on';
             figurename = ['figures/reversals/phaseSpecific/forwards-density_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
@@ -308,8 +309,8 @@ for strainCtr = 1:nStrains
         if strainCtr==nStrains
             xlabel(revfwdFig.Children,['local density, \rho_' num2str(k) ' (worms/mm^2)'])
             ylabel(revfwdFig.Children,'relative reorientation rate')
-%             revfwdFig.Children.YLim = [0 3];
-            revfwdFig.Children.XLim(2) = 6;
+            revfwdFig.Children.YLim(1) = 0;
+            revfwdFig.Children.XLim(2) = 5;
             revfwdFig.Children.Box = 'on';
             figurename = ['figures/reversals/phaseSpecific/reorient-density_knn' num2str(k) ...
                 '_pharynx_' wormnum '_' phase '_data' num2str(dataset)];
@@ -326,6 +327,16 @@ for strainCtr = 1:nStrains
 %     formatAndExportFigure(densityFig,figurename,useJoinedTraj,exportOptions)
 end
 
+% plot ratio of speed fractions vs density
+figure
+thisDensityBins = 0:densityBinWidth:(nDensityBins-1)*densityBinWidth;
+plot(thisDensityBins,speedFractions(1,:,1)./speedFractions(1,:,2),'Color',plotColors(1,:))
+hold on
+plot(thisDensityBins,speedFractions(2,:,1)./speedFractions(2,:,2),'Color',plotColors(2,:))
+ylabel('P_s/P_f')
+xlabel(['local density, \rho_' num2str(k) ' (worms/mm^2)'])
+legend(strains,'Location','NorthWest')
+formatAndExportFigure(gcf,'speedRatios',false,exportOptions)
 end
 
 function subsamples = subsampleRevFreq(knndensityAtRev,knndensity,densitybins,...

@@ -6,23 +6,10 @@ function [weights_optim, min_obj] = inference_master(model,accept_ratio)
 % stats within the loop over frames, rather than looping over frames for each stat
 addpath('component_functions');
 
-% % set overall parameters
-% model = 'log-rods'; % 'rods' or 'worms'
-% accept_ratio = 0.005, 0.01, 0.02, or 0.05
-
 switch model
     case 'PRW_4D_wa_r2'
         param_names = {'drdN_rev','dkdN_dwell','dkdN_undwell','f_hapt'};
         num_statistics = 4;
-% %         % load original priors (that have been adjusted to log-scale for parameter 4)
-% %         load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
-% %             '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
-% %             'revdensity_haptotaxis_weighted_additive.mat'],'prior_npr1','supportLimits');
-% %         prior{1} = prior_npr1;
-% %         load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
-% %             '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
-% %             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
-% %         prior{2} = prior_N2;
         % load support Limits from r1 posteriors - the proposal distribution
         load(['inf_results/posteriors_log_PRW_4D_wa_r1_0.1.mat'],'supportLimits')
         % load r1 posteriors - the new prior
@@ -32,28 +19,28 @@ switch model
         sumstat_filename = 'sumstats_PRW_4D_wa_r2.mat';
         sim_file_lists = {'datalists/PRW_4D_wa_r2_27384_samples_npr1like.txt';
             'datalists/PRW_4D_wa_r2_13341_samples_N2like.txt'};
-        filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r2/npr_1/'; ...
-            '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r2/N2/'};
+        filepath = {'../../../sworm-model/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r2/npr_1/'; ...
+            '../../../sworm-model/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r2/N2/'};
         scaleflag = 'linear';
         supportLimits(1,4)=-4; % fix support limits
     case 'PRW_4D_wa_r1'
         param_names = {'drdN_rev','dkdN_dwell','dkdN_undwell','f_hapt'};
         num_statistics = 4;
         % load old priors
-        load(['../../../sworm-model/woidModel/sampling/priors4D_M_18_noVolExcl'...
+        load(['../../../sworm-model/sampling/priors4D_M_18_noVolExcl'...
             '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
             'revdensity_haptotaxis_weighted_additive_WRONGBANDWIDTH.mat'],'prior_npr1','supportLimits');
         proposal{1} = prior_npr1;
-        load(['../../../sworm-model/woidModel/sampling/priors4D_M_18_noVolExcl'...
+        load(['../../../sworm-model/sampling/priors4D_M_18_noVolExcl'...
             '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
             'revdensity_haptotaxis_weighted_additive_WRONGBANDWIDTH.mat'],'prior_N2');
         proposal{2} = prior_N2;
         % load corrected priors
-        load(['../../../sworm-model/woidModel/sampling/priors4D_M_18_noVolExcl'...
+        load(['../../../sworm-model/sampling/priors4D_M_18_noVolExcl'...
             '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
             'revdensity_haptotaxis_weighted_additive.mat'],'prior_npr1','supportLimits');
         prior{1} = prior_npr1;
-        load(['../../../sworm-model/woidModel/sampling/priors4D_M_18_noVolExcl'...
+        load(['../../../sworm-model/sampling/priors4D_M_18_noVolExcl'...
             '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
             'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
         prior{2} = prior_N2;
@@ -61,26 +48,26 @@ switch model
         sumstat_filename = 'sumstats_PRW_4D_wa_r1.mat';
         sim_file_lists = {'datalists/PRW_4D_wa_r1_11214_samples_npr1like.txt';
             'datalists/PRW_4D_wa_r1_1394_samples_N2like.txt'};
-        filepath = {'../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'; ...
-            '../../../sworm-model/woidModel/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
+        filepath = {'../../../sworm-model/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/npr_1/'; ...
+            '../../../sworm-model/results/woidlinos/paramSamples/PRW_4D_taxis_weighted_additive_r1/N2/'};
         scaleflag = 'linear';
     case 'PRW_2D_pilot'
         param_names = {'drdN_rev','dkdN_dwell'};
         num_statistics = 4;
         sumstat_filename = 'sumstats_PRW_2D_pilot.mat';
         sim_file_lists = {'datalists/PRW_2D_pilot.txt'};
-        filepath = {'../../../sworm-model/woidModel/results/woidlinos/floppy/'};
+        filepath = {'../../../sworm-model/results/woidlinos/floppy/'};
         scaleflag = 'linear';
         supportLimits = [0 0; 1 1];
     case 'worms'
         param_names = {'revRateClusterEdge','dkdN_dwell'};
         num_statistics = 4; % 5th stat, polar order, did not seem to work well
-        load('../../../sworm-model/woidModel/paramSamples_wM36_nSim20000_nParam2.mat')
+        load('../../../sworm-model/paramSamples_wM36_nSim20000_nParam2.mat')
         supportLimits = [revRate_range; dkdN_range]';
         sumstat_filename = ['sumstats_20k_samples_wM36.mat'];
         sim_file_lists = {'datalists/woidM36_20k_samples_npr1like.txt';...
             'datalists/woidM36_20k_samples_N2like.txt'};
-        filepath = '../../../sworm-model/woidModel/results/paramSampleResults/woids/';
+        filepath = '../../../sworm-model/results/paramSampleResults/woids/';
         scaleflag = 'linear';
 end
 nParams = length(param_names);
@@ -140,17 +127,17 @@ end
     exp_strain_list,[accept_ratio],{'r''','k''_s','k''_f','log_{10}f_t'},...
     param_return,true,supportLimits,scaleflag,model);
 % display filenames for best simulations
-disp(['best npr-1:' sim_file_names{1}{chosen_samples{1}(1)}])
-disp(['best N2:' sim_file_names{2}{chosen_samples{2}(1)}])
+disp(['best npr-1 (' num2str(expsim_dists{1}(chosen_samples{1}(1))) '): ' sim_file_names{1}{chosen_samples{1}(1)}])
+disp(['best N2 (' num2str(expsim_dists{2}(chosen_samples{2}(1))) '): ' sim_file_names{2}{chosen_samples{2}(1)}])
 
 %% save posterior distribution
 if strcmp(model,'PRW_4D_wa_r1')
     % load original priors (that have been adjusted to log-scale for parameter 4)
-    load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
+    load(['../../../sworm-model/sampling/priors4D_log_M_18_noVolExcl'...
         '_angleNoise_0.05_k_theta_0_slowing_stochastic_bynode_dwell_0.0036_1.1_' ...
         'revdensity_haptotaxis_weighted_additive.mat'],'prior_npr1','supportLimits');
     log_prior{1} = prior_npr1;
-    load(['../../../sworm-model/woidModel/sampling/priors4D_log_M_18_noVolExcl'...
+    load(['../../../sworm-model/sampling/priors4D_log_M_18_noVolExcl'...
         '_angleNoise_0.0326_k_theta_0_slowing_stochastic_bynode_dwell_0.25_0.45_' ...
         'revdensity_haptotaxis_weighted_additive.mat'],'prior_N2');
     log_prior{2} = prior_N2;
@@ -250,24 +237,8 @@ for statCtr = 3:4
         '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
 end
 
-% make table or so of summary stat weightings?
 %% test coverage
 % f_test_coverage(chosen_samples,200,ones(size(1./expsim_dists(1,chosen_samples,1))),...
 %     sim_ss_array,weights_optim,accept_ratio,param_names,param_return,supportRange,true,strain,model)
 
-% %% plot surface of dissimilatirity
-% figure
-% xq = logspace(-1,1,100);
-% yq = logspace(-3,0,100);
-% [XQ, YQ] = meshgrid(xq,yq);
-% for distCtr = 1:(num_statistics+1)
-%     subplot(1,num_statistics+1,distCtr)
-%     F = RegularizeData3D(paramSamples.revRateClusterEdge,paramSamples.dkdN,squeeze(expsim_dists(1,:,distCtr))',...
-%     xq,yq,'smoothness',2e-2,'interp','bicubic','overlap',0.2);
-%     contourf(xq,yq,F,100,'EdgeColor','none')
-%     set(gca,'XScale','log','YScale','log')
-%     if distCtr>1
-%         title(['S_' num2str(distCtr-1) ', w=' num2str(weights_optim(distCtr-1),2)], 'FontWeight', 'normal')
-%     end
-% end
 end
