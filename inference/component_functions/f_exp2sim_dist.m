@@ -26,7 +26,7 @@ for strainCtr = 1:numStrains
             % Compute the distance between this simulation and the
             % reference - careful not to take log(0)
             if size(exp_data,2)>1
-            sim_data = max(sim_data,mean(exp_data)/1000); % to prevent log(0)
+            sim_data = max(sim_data,5e-3);%mean(exp_data)/1000); % to prevent log(0)
             end
             expsim_dists{strainCtr}(simCtr,1+statCtr) = sum(vecnorm(...
                 (log(exp_data) - log(sim_data))... % take scaled difference of all observed values of this summary stat and this simulated one

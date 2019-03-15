@@ -1,5 +1,5 @@
 function [weights_optim,min_obj] = f_optim_posterior(exp_ss_array, sim_ss_array,...
-    p_cutoff, param_names, param_values, prior,proposal,scaleflag)
+    p_cutoff, param_names, param_values, prior,proposal,scaleflag,dist_method)
 % Optimise the weights of summary statistics to maximise the Hellinger
 % distance between the prior and posterior, and return the the appropriate distances
 % between each of the simulations and the experimental references
@@ -20,7 +20,7 @@ numStats = size(exp_ss_array,2) - 1;
 lambda = 1e-4; % regularization parameter
 % define the objective function for joint optimisation over both strains
 L = @(x) hellinger(x,exp_ss_array,sim_ss_array,p_cutoff,param_names,...
-    param_values,prior,proposal) ...
+    param_values,prior,proposal,dist_method) ...
     + lambda*norm(x,1); % include regularisation
 nIter = max(10*numStats,50);
 initial_weights = lhsdesign(nIter,numStats);% just specify the extreme values in here, the rest should be filled in by ga randomly
@@ -45,9 +45,13 @@ weights_optim = weights_optim./sum(weights_optim);
 end
 
 function L = hellinger(weights,exp_ss_array,sim_ss_array,p_cutoff,...
-    param_names,param_values,prior,proposal)
+    param_names,param_values,prior,proposal,dist_method)
 % for given weights, compute the distances
-expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, weights);
+if strcmp(dist_method,'log')
+    expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array, weights);
+elseif strcmp(dist_method,'log_0inStd')
+    expsim_dists = f_exp2sim_dist_0inStd(exp_ss_array, sim_ss_array, weights);
+end
 % for these distances, select fraction of closest parameters
 [chosen_params, chosen_samples] = f_infer_params(...
     expsim_dists, [], p_cutoff, param_names, param_values, false, []);

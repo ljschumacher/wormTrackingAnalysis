@@ -1,4 +1,4 @@
-function [weights_optim, min_obj] = inference_master(model,accept_ratio)
+function [weights_optim, min_obj] = inference_master(model,accept_ratio,dist_method)
 % Inference framework
 
 % issues/to-do:
@@ -6,6 +6,9 @@ function [weights_optim, min_obj] = inference_master(model,accept_ratio)
 % stats within the loop over frames, rather than looping over frames for each stat
 addpath('component_functions');
 
+if nargin<3
+    dist_method = 'log';
+end
 switch model
     case 'PRW_4D_wa_r2'
         param_names = {'drdN_rev','dkdN_dwell','dkdN_undwell','f_hapt'};
@@ -95,17 +98,22 @@ if strcmp(model,'PRW_4D_wa_r2')
 end
 %% optimise weightings of summary statistics for model and strain
 optimresults_filename = ['optim_results/optimresults_' model '_alpha_' num2str(accept_ratio) '.mat'];
+% note that the filename above currently is not specific to dist_method
 if exist(optimresults_filename,'file')
     load(optimresults_filename)
 else
     disp('optimising weights...')
     [weights_optim, min_obj] = f_optim_posterior(exp_ss_array, sim_ss_array,...
-        accept_ratio, param_names, param_return, prior,proposal,scaleflag);
-    save(optimresults_filename,'weights_optim','min_obj','model','accept_ratio')
+        accept_ratio, param_names, param_return, prior,proposal,scaleflag,dist_method);
+    save(optimresults_filename,'weights_optim','min_obj','model','accept_ratio','dist_method')
 end
 weights_optim = [1 1 1 1]
 %% Obtain distances between each of the experiments and simulations
-expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
+if strcmp(dist_method,'log')
+    expsim_dists = f_exp2sim_dist(exp_ss_array, sim_ss_array,weights_optim);
+elseif strcmp(dist_method,'log_0inStd')
+    expsim_dists = f_exp2sim_dist_0inStd(exp_ss_array, sim_ss_array,weights_optim);
+end
 % check marginals of distances against parameters
 for strainCtr = 1:length(sim_ss_array)
     figure
@@ -179,8 +187,8 @@ elseif strcmp(model,'PRW_4D_wa_r2')
 end
 % save posterior for later sampling
 save(['inf_results/posteriors_log_' model '_' num2str(accept_ratio) ...
-    '.mat'],'bw','supportLimits','posterior','param_names','num_statistics',...
-    'weights_optim','scaleflag')
+    '_' dist_method '.mat'],'bw','supportLimits','posterior','param_names','num_statistics',...
+    'weights_optim','scaleflag','dist_method')
 %% Plot summary statistics of experiments and best samples
 exportOptions = struct('Format','eps2','Color','rgb','Width',10,...
     'Resolution',300,'FontMode','fixed','FontSize',10,'LineWidth',1);
@@ -212,7 +220,7 @@ for statCtr = 1:2
     legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best sim.'],[exp_strain_list{2} ' best sim.'])
     %     legend([exp_strain_list{1} ' mean'],['simulation'])
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
-        '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
+        '_alpha_' num2str(accept_ratio) '_' model '_' dist_method ],exportOptions)
 end
 for statCtr = 3:4
     sumStatFig = figure;
@@ -234,7 +242,7 @@ for statCtr = 3:4
     subplot(1,2,1)
     title(['S_' num2str(statCtr) ', weight ' num2str(100*weights_optim(statCtr)./sum(weights_optim),3) '%'])
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
-        '_alpha_' num2str(accept_ratio) '_' model],exportOptions)
+        '_alpha_' num2str(accept_ratio) '_' model '_' dist_method ],exportOptions)
 end
 
 %% test coverage

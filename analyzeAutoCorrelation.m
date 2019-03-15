@@ -69,6 +69,10 @@ exportOptions = struct('Format','eps2',...
 %% initialize figures
 vaccorrFig = figure; hold on
 
+%% temporarily skip N2 for 40 worm bodywall data as those trajectories have not been curated
+if strcmp(wormnum,'40')&&strcmp(markerType,'bodywall')
+    nStrains = 1;
+end
 %% loop through strains
 for strainCtr = 1:nStrains
     %% load file lists
@@ -114,8 +118,13 @@ for strainCtr = 1:nStrains
         %clustering statistics
         if strcmp(markerType,'bodywall')
             % filter red data by skeleton length
-            trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
-                filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+            if strcmp(wormnum,'1W')
+                trajData.filtered = trajData.filtered&...
+                    filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+            else
+                trajData.filtered = trajData.filtered&logical(trajData.is_good_skel)&...
+                    filterSkelLength(skelData,pixelsize,minSkelLength,maxSkelLength);
+            end
         end
         % apply phase restriction
         phaseFilter_logInd = trajData.frame_number < lastFrame & trajData.frame_number > firstFrame;
