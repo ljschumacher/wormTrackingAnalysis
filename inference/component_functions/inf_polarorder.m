@@ -43,7 +43,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     % Compute the average g(r) over the sampled timepoints
     polar_order = mean(p_order_store);
     
-elseif format == 'experiment'
+elseif strcmp(format,'experiment')
     % Analagous code for obtaining the same gr output from the
     % experimental .hdf5 data structure
     

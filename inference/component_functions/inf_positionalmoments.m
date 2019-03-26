@@ -68,7 +68,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
         %         rad_gyr(frameCtr) = sum(sum(c0.*c0))/num_worms; % this gives the same as the variane above
     end
     
-elseif format == 'experiment'
+elseif strcmp(format,'experiment')
     % Analagous code for producing same histcount outputs from the
     % experimental .hdf5 output format
     

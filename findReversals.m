@@ -38,6 +38,10 @@ for revCtr = 1:nRevs
         end
         if ~isnan(revStartInd(revCtr))
             revDisplacement(revCtr) = sum(abs(signedSpeed((revStartInd(revCtr)+1):revEndIndMatched(revCtr))))/frameRate;
+            % here we divide by frameRate as the speed is unit of
+            % microns/s, do to get the displacement per frame (which we
+            % want to sum up to get the path length), we need to convert
+            % back to microns/frame
         end
     else % reversal still ongoing when tracking ends
         [revStartInd(revCtr), revEndIndMatched(revCtr)] = findLastTracked(revStartInd(revCtr),...

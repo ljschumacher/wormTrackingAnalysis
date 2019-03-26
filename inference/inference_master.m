@@ -208,6 +208,11 @@ for statCtr = 1:2
         for ii=1:1
             semilogy(plotbins(1:nBins),sim_ss_array{strainCtr}{chosen_samples{strainCtr}(ii),statCtr+1},'LineWidth',2,'Color',plotColors(strainCtr,:))
         end
+        % also plot distance-weighted average of all accepted samples
+        semilogy(plotbins(1:nBins),...
+            weightedStats(vertcat(sim_ss_array{strainCtr}{chosen_samples{strainCtr},statCtr+1}),...
+            1./expsim_dists{1}(chosen_samples{strainCtr},1),'w'),...
+            '--','LineWidth',2,'Color',plotColors(strainCtr,:))
     end
     xlabel('r (mm)')
     if statCtr==2
@@ -217,7 +222,8 @@ for statCtr = 1:2
         ylim([0.5 100])
     end
     title(['S_' num2str(statCtr) ])%', weight ' num2str(100*weights_optim(statCtr)./sum(weights_optim),3) '%'])
-    legend([exp_strain_list{1} ' mean'],[exp_strain_list{2} ' mean'],[exp_strain_list{1} ' best sim.'],[exp_strain_list{2} ' best sim.'])
+    legend([exp_strain_list{1} ' expmnt.'],[exp_strain_list{2} ' expmnt.'],...
+        ['best simulation'],['posterior mean'])
     %     legend([exp_strain_list{1} ' mean'],['simulation'])
     formatAndExportFigure(sumStatFig,['figures/S_' num2str(statCtr) ...
         '_alpha_' num2str(accept_ratio) '_' model '_' dist_method ],exportOptions)

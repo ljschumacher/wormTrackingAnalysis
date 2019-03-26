@@ -65,7 +65,7 @@ if strcmp(format,'simulation') || strcmp(format,'complexsim')||strcmp(format,'si
     branch_hist = histcounts(clustDists(:), branch_bins, ...
         'Normalization', 'probability');
     
-elseif format == 'experiment'
+elseif strcmp(format,'experiment')
     % Analagous code for producing same histcount outputs from the
     % experimental .hdf5 output format
     
